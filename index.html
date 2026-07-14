@@ -236,9 +236,16 @@
   .seg button.on{background:var(--surface); color:var(--ink); font-weight:700; box-shadow:0 1px 2px rgba(0,0,0,.1)}
   .seg button:hover:not(.on){color:var(--ink-2)}
   .drink-stats{padding:2px 16px 16px}
-  .dk-top{display:flex; gap:20px; margin:8px 0 12px}
+  .dk-top{display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin:8px 0 12px; flex-wrap:wrap}
+  .dk-nums{display:flex; gap:20px; flex:none}
   .dk-top b{display:block; font-size:22px; font-weight:800; font-variant-numeric:tabular-nums; letter-spacing:-.02em}
   .dk-top span{font-size:11.5px; color:var(--ink-3)}
+  .dk-week{display:flex; gap:7px; align-items:flex-end; margin-left:auto; padding-top:2px}
+  .dw{display:flex; flex-direction:column; align-items:center; gap:5px}
+  .dwd{font-size:10.5px; color:var(--ink-3); line-height:1}
+  .dwd.td{color:var(--accent-ink); font-weight:700}
+  .dwdot{width:9px; height:9px; border-radius:50%; background:var(--ink-3)}
+  .dwdot.on{background:#E4574C}
   .dk-row{display:flex; align-items:center; gap:9px; margin:7px 0}
   .dk-row .nm{width:42px; font-size:12px; color:var(--ink-2); flex:none}
   .dk-bar{flex:1; height:9px; background:var(--surface-2); border-radius:5px; overflow:hidden}
@@ -418,12 +425,12 @@
               <input type="text" id="m-dinner-people" placeholder="누구와 · 쉼표로 구분" autocomplete="off">
             </div>
             <div class="meal drink">
-              <span class="meal-h">🍺 음주 <span class="lab-hint">병 수</span></span>
+              <span class="meal-h">🍺 음주 <span class="lab-hint">병 수 · 0.5=반병</span></span>
               <div class="drink-grid">
-                <label>맥주<input type="number" min="0" step="1" inputmode="numeric" id="d-beer" placeholder="0"></label>
-                <label>소주<input type="number" min="0" step="1" inputmode="numeric" id="d-soju" placeholder="0"></label>
-                <label>막걸리<input type="number" min="0" step="1" inputmode="numeric" id="d-makgeolli" placeholder="0"></label>
-                <label>기타<input type="number" min="0" step="1" inputmode="numeric" id="d-etc" placeholder="0"></label>
+                <label>맥주<input type="number" min="0" step="0.5" inputmode="decimal" id="d-beer" placeholder="0"></label>
+                <label>소주<input type="number" min="0" step="0.5" inputmode="decimal" id="d-soju" placeholder="0"></label>
+                <label>막걸리<input type="number" min="0" step="0.5" inputmode="decimal" id="d-makgeolli" placeholder="0"></label>
+                <label>기타<input type="number" min="0" step="0.5" inputmode="decimal" id="d-etc" placeholder="0"></label>
               </div>
             </div>
           </div>
@@ -927,7 +934,7 @@
   function readMeals(){ var m={}; MEALS.forEach(function(x){ m[x.key]={place:mval("m-"+x.key+"-place"), food:mval("m-"+x.key+"-food"), people:parseNames(mval("m-"+x.key+"-people"))}; }); return m; }
   function loadMeals(meals){ MEALS.forEach(function(x){ var v=(meals&&meals[x.key])||{}; var p=document.getElementById("m-"+x.key+"-place"), f=document.getElementById("m-"+x.key+"-food"), w=document.getElementById("m-"+x.key+"-people"); if(p)p.value=v.place||""; if(f)f.value=v.food||""; if(w)w.value=(v.people||[]).join(", "); }); }
   function mealPeople(m){ var out=[]; if(m) MEALS.forEach(function(x){ ((m[x.key]||{}).people||[]).forEach(function(n){ if(out.indexOf(n)<0)out.push(n); }); }); return out; }
-  function readDrinks(){ var d={}; DRINKS.forEach(function(x){ var v=parseInt(mval("d-"+x.key),10); d[x.key]=(isNaN(v)||v<0)?0:v; }); return d; }
+  function readDrinks(){ var d={}; DRINKS.forEach(function(x){ var v=parseFloat(mval("d-"+x.key)); d[x.key]=(isNaN(v)||v<0)?0:v; }); return d; }
   function loadDrinks(dr){ DRINKS.forEach(function(x){ var el=document.getElementById("d-"+x.key); if(el){ var v=(dr&&+dr[x.key])||0; el.value=v?v:""; } }); }
 
   function renderDraftChips(){
@@ -1011,7 +1018,13 @@
       total+=s;
     });
     var maxv=1; DRINKS.forEach(function(x){ maxv=Math.max(maxv,totals[x.key]); });
-    var html='<div class="dk-top"><div><b>'+total+'</b><span>총 병 수</span></div><div><b>'+Object.keys(days).length+'</b><span>마신 날</span></div></div>';
+    // 지난 7일 스트립 (기간 토글과 무관하게 항상 오늘까지 7일)
+    var drank={}; state.entries.forEach(function(e){ if(e.drinks && drinkTotal(e.drinks)>0) drank[e.date]=1; });
+    var strip='';
+    for(var wi=6; wi>=0; wi--){ var dd=new Date(); dd.setDate(dd.getDate()-wi); var ds=fmt(dd);
+      strip+='<div class="dw"><span class="dwd'+(wi===0?' td':'')+'">'+DOW[dd.getDay()]+'</span><span class="dwdot'+(drank[ds]?' on':'')+'"></span></div>'; }
+    var html='<div class="dk-top"><div class="dk-nums"><div><b>'+total+'</b><span>총 병 수</span></div><div><b>'+Object.keys(days).length+'</b><span>마신 날</span></div></div>'
+      +'<div class="dk-week" title="지난 7일 · 붉은색=마신 날">'+strip+'</div></div>';
     if(total===0) html+='<div class="dk-empty">이 기간엔 음주 기록이 없어요.</div>';
     else DRINKS.forEach(function(x){
       var v=totals[x.key], w=Math.round(v/maxv*100);
