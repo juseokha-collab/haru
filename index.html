@@ -543,7 +543,7 @@
   // ---------- state ----------
   var state = load();
   var draft = { date: todayStr(), people: [], schedule:"", meals:emptyMeals(), drinks:emptyDrinks(), thoughts:"", learning:"" };
-  var hiddenRels = {}, hidePlaces=false, drinkPeriod="month", view="graph", recapMonth="", minMeet=3;
+  var hiddenRels = {}, hidePlaces=true, drinkPeriod="month", view="graph", recapMonth="", minMeet=3;
 
   function load(){
     try{ var s=JSON.parse(localStorage.getItem(KEY)); if(s&&s.entries) return s; }catch(e){}
