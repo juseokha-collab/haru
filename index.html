@@ -1342,6 +1342,7 @@
   try{ firebase.initializeApp(window.FIREBASE_CONFIG); }catch(e){ return; }
   var auth=firebase.auth(), db=firebase.firestore();
   try{ db.enablePersistence({synchronizeTabs:true}).catch(function(){}); }catch(e){}
+  auth.getRedirectResult().catch(function(e){ if(e&&e.message) console.warn("redirect sign-in:", e.message); });
 
   var area=document.getElementById("authArea");
   if(area) area.hidden=false;
@@ -1357,7 +1358,12 @@
       area.innerHTML='<button class="btn primary" id="hSignIn">Google 로그인 · 동기화</button>';
       document.getElementById("hSignIn").onclick=function(){
         var p=new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(p).catch(function(e){ alert("로그인 실패: "+(e&&e.message||e)); });
+        var mobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        if(mobile){ auth.signInWithRedirect(p); return; }
+        auth.signInWithPopup(p).catch(function(e){
+          if(e && (e.code==="auth/popup-blocked" || e.code==="auth/popup-closed-by-user" || e.code==="auth/cancelled-popup-request")){ auth.signInWithRedirect(p); }
+          else alert("로그인 실패: "+(e&&e.message||e));
+        });
       };
     }
   }
