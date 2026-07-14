@@ -401,6 +401,7 @@
               <option value="fri">친구</option>
               <option value="fam">가족</option>
               <option value="work">직장</option>
+              <option value="mn">엠앤</option>
               <option value="acq">지인</option>
               <option value="etc">기타</option>
             </select>
@@ -518,10 +519,11 @@
     fam:{name:"가족", color:"#E58A8A"},
     fri:{name:"친구", color:"#5FBFA0"},
     work:{name:"직장", color:"#6FA8DC"},
+    mn:{name:"엠앤", color:"#D96BA6"},
     acq:{name:"지인", color:"#B394E0"},
     etc:{name:"기타", color:"#E0B24C"}
   };
-  var REL_ORDER=["fam","fri","work","acq","etc"];
+  var REL_ORDER=["fam","fri","work","mn","acq","etc"];
   var MEALS=[{key:"breakfast",ico:"🌅",label:"아침"},{key:"lunch",ico:"☀️",label:"점심"},{key:"dinner",ico:"🌙",label:"저녁"}];
   function emptyMeals(){ var m={}; MEALS.forEach(function(x){ m[x.key]={place:"",food:"",people:[]}; }); return m; }
   function mealHasContent(m){ return !!m && MEALS.some(function(x){ var v=m[x.key]||{}; return v.place||v.food||(v.people&&v.people.length); }); }
