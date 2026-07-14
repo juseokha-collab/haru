@@ -315,6 +315,11 @@
   .modal-actions .btn{padding:9px 16px}
   .btn.primary.danger{background:var(--c-fam); border-color:var(--c-fam); color:#fff}
 
+  /* 좁은 화면(폰)에선 백업/초기화 버튼 숨김 — 테마·로그인만 유지 */
+  @media (max-width:640px){
+    #exportBtn, #importBtn, #resetBtn{ display:none; }
+  }
+
   @media (prefers-reduced-motion:reduce){ *{scroll-behavior:auto} .modal-input.shake{animation:none} }
 </style>
 
@@ -1292,7 +1297,7 @@
     if(t) document.documentElement.setAttribute("data-theme",t);
     localStorage.setItem("haru.theme", t||"");
   }
-  (function(){ var saved=localStorage.getItem("haru.theme"); if(saved) document.documentElement.setAttribute("data-theme",saved); })();
+  (function(){ var saved=localStorage.getItem("haru.theme"); document.documentElement.setAttribute("data-theme", saved || "dark"); })();
   $("#themeBtn").onclick=function(){
     var cur=document.documentElement.getAttribute("data-theme");
     if(!cur) cur = matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";
