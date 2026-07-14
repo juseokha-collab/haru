@@ -307,6 +307,10 @@
   .modal-input:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft)}
   .modal-input.shake{animation:shake .35s; border-color:var(--c-fam)}
   @keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+  .tmodal{max-width:520px}
+  .tmodal-area{width:100%; height:210px; margin-top:12px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11px; line-height:1.45; color:var(--ink); background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:10px; outline:0; resize:vertical; white-space:pre; overflow:auto}
+  .tmodal-area:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft)}
+  .linkbtn{border:0; background:none; color:var(--accent-ink); font:inherit; font-size:inherit; text-decoration:underline; cursor:pointer; padding:0}
   .modal-actions{display:flex; justify-content:flex-end; gap:8px; margin-top:18px}
   .modal-actions .btn{padding:9px 16px}
   .btn.primary.danger{background:var(--c-fam); border-color:var(--c-fam); color:#fff}
@@ -481,6 +485,18 @@
   </div>
 </div>
 
+<div class="modal-back" id="tModalBack" hidden>
+  <div class="modal tmodal" role="dialog" aria-modal="true">
+    <div class="modal-title" id="tModalTitle"></div>
+    <div class="modal-msg" id="tModalMsg"></div>
+    <textarea class="tmodal-area" id="tModalArea" spellcheck="false" autocomplete="off"></textarea>
+    <div class="modal-actions">
+      <button class="btn ghost" id="tModalCancel">닫기</button>
+      <button class="btn primary" id="tModalOk">확인</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
   "use strict";
@@ -565,6 +581,23 @@
     back.onclick=function(e){ if(e.target===back) close(); };
     if(o.requireText) inp.onkeydown=function(e){ if(e.key==="Enter") go(); };
     document.onkeydown=function(e){ if(e.key==="Escape") close(); };
+  }
+
+  // 텍스트 백업/복원 모달 (다운로드가 막힌 환경 대비)
+  function textModal(o){
+    var back=document.getElementById("tModalBack"), area=document.getElementById("tModalArea"),
+        ok=document.getElementById("tModalOk"), cancel=document.getElementById("tModalCancel");
+    document.getElementById("tModalTitle").textContent=o.title||"";
+    if(o.messageHtml) document.getElementById("tModalMsg").innerHTML=o.messageHtml;
+    else document.getElementById("tModalMsg").textContent=o.message||"";
+    area.value=o.value||""; area.readOnly=!!o.readOnly;
+    ok.textContent=o.okText||"확인";
+    back.hidden=false;
+    setTimeout(function(){ area.focus(); if(o.readOnly) area.select(); if(o.wire) o.wire(); }, 30);
+    function close(){ back.hidden=true; ok.onclick=cancel.onclick=back.onclick=null; }
+    ok.onclick=function(){ var r=o.onOk?o.onOk(area.value):true; if(r!==false) close(); };
+    cancel.onclick=close;
+    back.onclick=function(e){ if(e.target===back) close(); };
   }
 
   // ---------- derived graph model ----------
@@ -1151,28 +1184,30 @@
     if(nx) nx.onclick=function(){ if(recapMonth<monthStr(new Date())){ recapMonth=shiftMonth(recapMonth,1); renderRecapView(); } };
   }
 
-  // ---------- backup: 내보내기 / 가져오기 ----------
+  // ---------- backup: 내보내기 / 가져오기 (텍스트 기반 — 샌드박스에서도 동작) ----------
+  function startImport(data){
+    if(!data || !Array.isArray(data.entries)){ flash("‘하루’ 백업 형식이 아니에요."); return; }
+    askConfirm({ title:"백업 불러오기", message:"현재 기록을 이 백업("+data.entries.length+"일치)으로 덮어쓸까요?\n지금 데이터는 사라집니다.", okText:"덮어쓰기", danger:true, onOk:function(){
+      state={ people:data.people||{}, entries:data.entries||[], events:data.events||[] };
+      save(); resetDraft(); refresh(); rebuild(); closeDetail(); updateCalStatus();
+      flash("불러왔어요 ✦ ("+state.entries.length+"일치)");
+    }});
+  }
   $("#exportBtn").onclick=function(){
-    try{
-      var blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
-      var url=URL.createObjectURL(blob), a=document.createElement("a");
-      a.href=url; a.download="haru-backup-"+todayStr()+".json"; document.body.appendChild(a); a.click();
-      document.body.removeChild(a); setTimeout(function(){ URL.revokeObjectURL(url); },1000);
-      flash("백업 파일을 내려받았어요 ✦");
-    }catch(e){ flash("내보내기에 실패했어요."); }
+    var json=JSON.stringify(state,null,2);
+    // 호스팅 환경에선 파일로도 저장(샌드박스에선 조용히 무시됨)
+    try{ var blob=new Blob([json],{type:"application/json"}); var url=URL.createObjectURL(blob), a=document.createElement("a"); a.href=url; a.download="haru-backup-"+todayStr()+".json"; document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(function(){ URL.revokeObjectURL(url); },1000); }catch(e){}
+    textModal({ title:"백업 내보내기", message:"아래 내용 전체를 복사하세요 (전체선택 Ctrl+A → 복사 Ctrl+C). 다른 기기의 ‘가져오기’에 붙여넣으면 기록이 옮겨집니다.", value:json, readOnly:true, okText:"복사",
+      onOk:function(v){ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(v).then(function(){ flash("복사됐어요 ✦"); }, function(){ flash("전체 선택 후 Ctrl+C 로 복사하세요"); }); } else { flash("전체 선택 후 Ctrl+C 로 복사하세요"); } return false; } });
   };
-  $("#importBtn").onclick=function(){ $("#importFile").click(); };
+  $("#importBtn").onclick=function(){
+    textModal({ title:"백업 가져오기", messageHtml:"다른 기기에서 복사한 백업 텍스트를 아래에 붙여넣고 <b>불러오기</b>를 누르세요. 또는 <button type=\"button\" class=\"linkbtn\" id=\"tPickFile\">파일에서 선택</button>.", value:"", readOnly:false, okText:"불러오기",
+      wire:function(){ var b=document.getElementById("tPickFile"); if(b) b.onclick=function(){ $("#importFile").click(); }; },
+      onOk:function(v){ v=(v||"").trim(); if(!v){ flash("붙여넣은 내용이 없어요."); return false; } var data; try{ data=JSON.parse(v); }catch(e){ flash("붙여넣은 내용이 올바른 형식이 아니에요."); return false; } startImport(data); return true; } });
+  };
   $("#importFile").addEventListener("change",function(){
     var f=this.files[0]; if(!f)return; var rd=new FileReader();
-    rd.onload=function(){
-      var data; try{ data=JSON.parse(rd.result); }catch(e){ flash("올바른 백업 파일이 아니에요."); return; }
-      if(!data || !Array.isArray(data.entries)){ flash("‘하루’ 백업 형식이 아니에요."); return; }
-      askConfirm({ title:"백업 불러오기", message:"현재 기록을 이 백업("+data.entries.length+"일치)으로 덮어쓸까요?\n지금 데이터는 사라집니다. 먼저 내보내기로 백업을 권장해요.", okText:"덮어쓰기", danger:true, onOk:function(){
-        state={ people:data.people||{}, entries:data.entries||[], events:data.events||[] };
-        save(); resetDraft(); refresh(); rebuild(); closeDetail(); updateCalStatus();
-        flash("백업을 불러왔어요 ✦ ("+state.entries.length+"일치)");
-      }});
-    };
+    rd.onload=function(){ var data; try{ data=JSON.parse(rd.result); }catch(e){ flash("올바른 백업 파일이 아니에요."); return; } startImport(data); };
     rd.readAsText(f); this.value="";
   });
 
