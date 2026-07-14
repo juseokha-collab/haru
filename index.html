@@ -243,9 +243,10 @@
   .dk-week{display:flex; gap:7px; align-items:flex-end; margin-left:auto; padding-top:2px}
   .dw{display:flex; flex-direction:column; align-items:center; gap:5px}
   .dwd{font-size:10.5px; color:var(--ink-3); line-height:1}
-  .dwd.td{color:var(--accent-ink); font-weight:700}
-  .dwdot{width:9px; height:9px; border-radius:50%; background:var(--ink-3)}
-  .dwdot.on{background:#E4574C}
+  .dwdot{width:9px; height:9px; border-radius:50%; background:transparent}
+  .dwdot.lv1{background:#4FBE86}
+  .dwdot.lv2{background:#E4574C}
+  .dwdot.lv3{background:#A81E15}
   .dk-row{display:flex; align-items:center; gap:9px; margin:7px 0}
   .dk-row .nm{width:42px; font-size:12px; color:var(--ink-2); flex:none}
   .dk-bar{flex:1; height:9px; background:var(--surface-2); border-radius:5px; overflow:hidden}
@@ -528,6 +529,8 @@
   var DRINKS=[{key:"beer",label:"맥주",color:"#E0B24C"},{key:"soju",label:"소주",color:"#6FB49A"},{key:"makgeolli",label:"막걸리",color:"#CBB994"},{key:"etc",label:"기타",color:"#B394E0"}];
   function emptyDrinks(){ var d={}; DRINKS.forEach(function(x){ d[x.key]=0; }); return d; }
   function drinkTotal(d){ if(!d) return 0; var s=0; DRINKS.forEach(function(x){ s+=(+d[x.key]||0); }); return s; }
+  // 음주량 레벨: 0=안마심, 1=초록(1병 미만), 2=붉은색(~1병), 3=진한 붉은색(2병+/맥주 3병+)
+  function drinkLevel(d){ if(!d) return 0; var score=(+d.beer||0)+(+d.soju||0)*1.5+(+d.makgeolli||0)+(+d.etc||0); if(score<=0) return 0; if(score<1) return 1; if(score<3) return 2; return 3; }
   var reduce = matchMedia("(prefers-reduced-motion:reduce)").matches;
 
   // ---------- state ----------
@@ -1018,13 +1021,13 @@
       total+=s;
     });
     var maxv=1; DRINKS.forEach(function(x){ maxv=Math.max(maxv,totals[x.key]); });
-    // 지난 7일 스트립 (기간 토글과 무관하게 항상 오늘까지 7일)
-    var drank={}; state.entries.forEach(function(e){ if(e.drinks && drinkTotal(e.drinks)>0) drank[e.date]=1; });
+    // 지난 7일 스트립 (어제까지 · 마신 날만 점, 음주량에 따라 색)
+    var lvMap={}; state.entries.forEach(function(e){ if(e.drinks){ var lv=drinkLevel(e.drinks); if(lv>0) lvMap[e.date]=lv; } });
     var strip='';
-    for(var wi=6; wi>=0; wi--){ var dd=new Date(); dd.setDate(dd.getDate()-wi); var ds=fmt(dd);
-      strip+='<div class="dw"><span class="dwd'+(wi===0?' td':'')+'">'+DOW[dd.getDay()]+'</span><span class="dwdot'+(drank[ds]?' on':'')+'"></span></div>'; }
+    for(var wi=7; wi>=1; wi--){ var dd=new Date(); dd.setDate(dd.getDate()-wi); var ds=fmt(dd), lv=lvMap[ds]||0;
+      strip+='<div class="dw"><span class="dwd">'+DOW[dd.getDay()]+'</span><span class="dwdot lv'+lv+'"></span></div>'; }
     var html='<div class="dk-top"><div class="dk-nums"><div><b>'+total+'</b><span>총 병 수</span></div><div><b>'+Object.keys(days).length+'</b><span>마신 날</span></div></div>'
-      +'<div class="dk-week" title="지난 7일 · 붉은색=마신 날">'+strip+'</div></div>';
+      +'<div class="dk-week" title="어제까지 최근 7일 · 초록<1병, 붉은색~1병, 진한 붉은색 2병+">'+strip+'</div></div>';
     if(total===0) html+='<div class="dk-empty">이 기간엔 음주 기록이 없어요.</div>';
     else DRINKS.forEach(function(x){
       var v=totals[x.key], w=Math.round(v/maxv*100);
