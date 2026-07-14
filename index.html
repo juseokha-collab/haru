@@ -1358,11 +1358,11 @@
       area.innerHTML='<button class="btn primary" id="hSignIn">Google 로그인 · 동기화</button>';
       document.getElementById("hSignIn").onclick=function(){
         var p=new firebase.auth.GoogleAuthProvider();
-        var mobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        if(mobile){ auth.signInWithRedirect(p); return; }
         auth.signInWithPopup(p).catch(function(e){
-          if(e && (e.code==="auth/popup-blocked" || e.code==="auth/popup-closed-by-user" || e.code==="auth/cancelled-popup-request")){ auth.signInWithRedirect(p); }
-          else alert("로그인 실패: "+(e&&e.message||e));
+          var c=e&&e.code;
+          if(c==="auth/popup-closed-by-user" || c==="auth/cancelled-popup-request") return;
+          if(c==="auth/popup-blocked" || c==="auth/operation-not-supported-in-this-environment"){ auth.signInWithRedirect(p); return; }
+          alert("로그인 실패: "+(e&&e.message||e));
         });
       };
     }
