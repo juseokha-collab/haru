@@ -297,7 +297,7 @@
   .msg{font-size:12px; color:var(--accent-ink); padding:0 16px 12px; min-height:16px}
 
   /* Timeline */
-  .tl{max-height:520px; overflow:auto; padding:2px 8px 10px}
+  .tl{max-height:520px; overflow:auto; padding:2px 16px 18px 10px; scrollbar-gutter:stable}
   .tl-item{padding:12px 8px; border-bottom:1px solid var(--border); cursor:pointer; border-radius:8px; transition:.12s}
   .tl-item:hover{background:var(--surface-2)}
   .tl-item:last-child{border-bottom:0}
@@ -1068,7 +1068,7 @@
   function drinksHtml(d){
     if(!d || drinkTotal(d)===0) return "";
     var parts=[]; DRINKS.forEach(function(x){ if(+d[x.key]>0) parts.push(esc(x.label)+" "+(+d[x.key])); });
-    return '<div class="tl-meal">🍺 '+parts.join(" · ")+'</div>';
+    return '<div class="tl-meal">'+parts.join(" · ")+'</div>';
   }
   function periodCut(p){ if(p==="all") return "0000-00-00"; var days=p==="week"?6:p==="month"?29:364; return fmt(new Date(Date.now()-days*864e5)); }
   function renderDrinkStats(){
