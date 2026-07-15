@@ -339,6 +339,24 @@
   .foot{margin-top:22px; text-align:center; color:var(--ink-3); font-size:12px}
   .foot b{color:var(--ink-2); font-weight:600}
 
+  /* Today's Photo */
+  .photo-field{margin-top:2px}
+  .photo-preview{width:100%; aspect-ratio:4/3; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; overflow:hidden; display:flex; align-items:center; justify-content:center}
+  .photo-preview img{width:100%; height:100%; object-fit:cover; display:block}
+  .photo-empty{font-size:12px; color:var(--ink-3)}
+  .photo-actions{display:flex; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap}
+  .photo-actions .btn{cursor:pointer}
+  .photo-msg{font-size:11.5px; color:var(--accent-ink)}
+  #photoCaption{margin-top:8px}
+  .tl-photo{width:100%; max-height:170px; object-fit:cover; border-radius:10px; margin-top:8px; display:block; background:var(--surface-2)}
+  .cv-cam{margin-left:auto; font-size:9px; line-height:1}
+  .pv-photos{display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px}
+  .pg-cell{position:relative; aspect-ratio:1/1; border-radius:12px; overflow:hidden; cursor:pointer; background:var(--sky-1); border:1px solid rgba(150,166,210,.16)}
+  .pg-cell img{width:100%; height:100%; object-fit:cover; display:block; transition:transform .2s}
+  .pg-cell:hover img{transform:scale(1.05)}
+  .pg-date{position:absolute; top:6px; left:8px; font-size:11px; font-weight:800; color:#fff; text-shadow:0 1px 3px rgba(0,0,0,.7); font-variant-numeric:tabular-nums; z-index:2}
+  .pg-cap{position:absolute; left:0; right:0; bottom:0; padding:16px 8px 6px; background:linear-gradient(0deg, rgba(8,11,20,.9), transparent); color:#fff; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+
   /* in-app confirm modal (sandbox blocks native confirm/prompt) */
   .modal-back{position:fixed; inset:0; z-index:100; background:rgba(10,13,22,.55); backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; padding:20px}
   .modal-back[hidden]{display:none}
@@ -393,7 +411,7 @@
         </div>
         <div class="sky-tools">
           <div class="seg on-sky tabs" id="viewTabs">
-            <button type="button" data-v="graph" class="on">성좌</button><button type="button" data-v="places">장소</button><button type="button" data-v="recap">이달의 회고</button>
+            <button type="button" data-v="graph" class="on">성좌</button><button type="button" data-v="places">장소</button><button type="button" data-v="recap">이달의 회고</button><button type="button" data-v="photo">사진</button>
           </div>
           <div class="seg on-sky" id="minMeetSeg" title="이 횟수 이상 만난 사람만 표시">
             <button type="button" data-m="1">1+</button><button type="button" data-m="2" class="on">2+</button><button type="button" data-m="3">3+</button><button type="button" data-m="5">5+</button><button type="button" data-m="10">10+</button>
@@ -412,6 +430,7 @@
       </div>
       <div class="panel-view" id="placesView" hidden></div>
       <div class="panel-view" id="recapView" hidden></div>
+      <div class="panel-view" id="photoView" hidden></div>
       <div class="stat-row">
         <span class="st"><b id="s-people">0</b><i>명</i></span>
         <span class="sep">/</span>
@@ -491,6 +510,18 @@
           <button class="btn" id="addP">추가</button>
         </div>
         <div class="chips" id="pchips"></div>
+
+        <label>오늘의 사진 <span class="lab-hint">하루 대표 사진</span></label>
+        <div class="photo-field">
+          <div class="photo-preview" id="photoPreview"><span class="photo-empty">사진 없음</span></div>
+          <div class="photo-actions">
+            <label class="btn mini-btn" for="photoInput">📷 사진 추가/변경</label>
+            <input type="file" id="photoInput" accept="image/*" style="display:none">
+            <button type="button" class="btn ghost mini-btn" id="photoRemove" hidden>제거</button>
+            <span class="photo-msg" id="photoMsg"></span>
+          </div>
+          <input type="text" class="name-in" id="photoCaption" placeholder="사진 설명(캡션) · 선택" autocomplete="off">
+        </div>
       </div>
 
       <div class="cgroup">
@@ -1026,7 +1057,7 @@
   $("#pname").addEventListener("keydown",function(e){ if(e.key==="Enter"){e.preventDefault(); addPerson();} });
   document.querySelector(".meals").addEventListener("change",function(e){ if(e.target.classList.contains("meal-same") && e.target.checked) applyMealSame(); });
 
-  function loadDraft(){ var scs=document.querySelectorAll(".meal-same"); for(var si=0;si<scs.length;si++) scs[si].checked=false; $("#date").value=draft.date; $("#schedule").value=draft.schedule||""; loadMeals(draft.meals); loadDrinks(draft.drinks); $("#thoughts").value=draft.thoughts; $("#learning").value=draft.learning; renderDraftChips(); $("#editing").textContent = existingFor(draft.date)?"· 이 날짜 기록 수정 중":""; }
+  function loadDraft(){ var scs=document.querySelectorAll(".meal-same"); for(var si=0;si<scs.length;si++) scs[si].checked=false; loadPhotoForDate(draft.date); $("#date").value=draft.date; $("#schedule").value=draft.schedule||""; loadMeals(draft.meals); loadDrinks(draft.drinks); $("#thoughts").value=draft.thoughts; $("#learning").value=draft.learning; renderDraftChips(); $("#editing").textContent = existingFor(draft.date)?"· 이 날짜 기록 수정 중":""; }
   function existingFor(date){ return state.entries.filter(function(e){return e.date===date;})[0]; }
 
   function saveEntry(){
@@ -1052,6 +1083,7 @@
   function resetDraft(){ draft={date:todayStr(), people:[], schedule:"", meals:emptyMeals(), drinks:emptyDrinks(), thoughts:"", learning:""}; loadDraft(); }
   $("#saveBtn").onclick=saveEntry;
   $("#saveBtn2").onclick=saveEntry;
+  $("#date").addEventListener("change",function(){ loadPhotoForDate(this.value||todayStr()); });
   $("#clearBtn").onclick=function(){ resetDraft(); flash(""); };
   function flash(m){ $("#msg").textContent=m; if(m) setTimeout(function(){ if($("#msg").textContent===m)$("#msg").textContent=""; },2600); }
 
@@ -1126,6 +1158,7 @@
           (ppl?'<div class="tl-people">'+ppl+'</div>':'')+
           mealsHtml(e.meals)+
           drinksHtml(e.drinks)+
+          (photoDates[e.date]?'<img class="tl-photo" data-date="'+e.date+'" alt="">':'')+
           (note?'<div class="tl-note">'+esc(note)+'</div>':'');
         item.onclick=function(ev){ if(ev.target.classList.contains("tl-del")){ askConfirm({title:"기록 삭제", message:e.date.slice(5).replace("-",".")+" 기록을 삭제할까요?", okText:"삭제", danger:true, onOk:function(){ delEntry(e); }}); return; } editEntry(e); };
       } else {
@@ -1189,7 +1222,97 @@
     var target=Math.round(mc.offsetHeight - sideOther);
     tl.style.height=Math.max(160,target)+"px";
   }
-  function refresh(){ renderTimeline(); renderStats(); renderDrinkStats(); renderCalendar(); if(view==="places") renderPlacesView(); if(view==="recap") renderRecapView(); syncTimelineHeight(); }
+  // ---------- Today's Photo (IndexedDB 로컬 + 로그인 시 Firestore 동기화) ----------
+  var PhotoDB=(function(){
+    var dbp=null, ok=("indexedDB" in window);
+    function open(){ if(dbp) return dbp; dbp=new Promise(function(res,rej){ try{ var r=indexedDB.open("haru-photos",1); r.onupgradeneeded=function(){ r.result.createObjectStore("photos",{keyPath:"date"}); }; r.onsuccess=function(){res(r.result);}; r.onerror=function(){rej(r.error);}; }catch(e){ rej(e); } }); return dbp; }
+    function store(mode){ return open().then(function(db){ return db.transaction("photos",mode).objectStore("photos"); }); }
+    return {
+      ok:ok,
+      get:function(date){ if(!ok)return Promise.resolve(null); return store("readonly").then(function(s){ return new Promise(function(res){ var r=s.get(date); r.onsuccess=function(){res(r.result||null);}; r.onerror=function(){res(null);}; }); }).catch(function(){return null;}); },
+      set:function(rec){ if(!ok)return Promise.resolve(false); return store("readwrite").then(function(s){ return new Promise(function(res){ var r=s.put(rec); r.onsuccess=function(){res(true);}; r.onerror=function(){res(false);}; }); }).catch(function(){return false;}); },
+      del:function(date){ if(!ok)return Promise.resolve(false); return store("readwrite").then(function(s){ return new Promise(function(res){ var r=s.delete(date); r.onsuccess=function(){res(true);}; r.onerror=function(){res(false);}; }); }).catch(function(){return false;}); },
+      keys:function(){ if(!ok)return Promise.resolve([]); return store("readonly").then(function(s){ return new Promise(function(res){ var r=s.getAllKeys(); r.onsuccess=function(){res(r.result||[]);}; r.onerror=function(){res([]);}; }); }).catch(function(){return [];}); },
+      all:function(){ if(!ok)return Promise.resolve([]); return store("readonly").then(function(s){ return new Promise(function(res){ var out=[]; var r=s.openCursor(); r.onsuccess=function(){ var c=r.result; if(c){out.push(c.value); c.continue();} else res(out); }; r.onerror=function(){res(out);}; }); }).catch(function(){return [];}); }
+    };
+  })();
+  var photoDates={};
+  function loadPhotoDates(){ return PhotoDB.keys().then(function(ks){ photoDates={}; ks.forEach(function(k){ photoDates[k]=true; }); }); }
+  function compressImage(file, maxDim, quality){
+    return new Promise(function(res){
+      var url=URL.createObjectURL(file), img=new Image();
+      img.onload=function(){
+        var w=img.naturalWidth||img.width, h=img.naturalHeight||img.height, scale=Math.min(1, maxDim/Math.max(w,h));
+        var cw=Math.max(1,Math.round(w*scale)), ch=Math.max(1,Math.round(h*scale));
+        var c=document.createElement("canvas"); c.width=cw; c.height=ch;
+        c.getContext("2d").drawImage(img,0,0,cw,ch);
+        URL.revokeObjectURL(url);
+        try{ res(c.toDataURL("image/jpeg", quality)); }catch(e){ res(null); }
+      };
+      img.onerror=function(){ URL.revokeObjectURL(url); res(null); };
+      img.src=url;
+    });
+  }
+  function refreshPhotoUI(){ renderTimeline(); loadTimelinePhotos(); renderCalendar(); if(view==="photo") renderPhotoGallery(); syncTimelineHeight(); }
+  function savePhoto(date, img, caption){
+    var rec={date:date, img:img, caption:caption||"", ts:Date.now()};
+    photoDates[date]=true; PhotoDB.set(rec);
+    if(window.HARU && window.HARU.cloudPhoto) try{ window.HARU.cloudPhoto.set(date, rec); }catch(e){}
+    refreshPhotoUI();
+  }
+  function removePhoto(date){
+    delete photoDates[date]; PhotoDB.del(date);
+    if(window.HARU && window.HARU.cloudPhoto) try{ window.HARU.cloudPhoto.del(date); }catch(e){}
+    refreshPhotoUI();
+  }
+  function importCloudPhoto(rec){ if(!rec||!rec.date||!rec.img) return; photoDates[rec.date]=true; PhotoDB.set(rec).then(function(){ if(pendingPhotoDate===rec.date) loadPhotoForDate(rec.date); loadTimelinePhotos(); renderCalendar(); if(view==="photo") renderPhotoGallery(); }); }
+
+  var pendingPhotoDate=null;
+  function loadPhotoForDate(date){
+    pendingPhotoDate=date;
+    var prev=$("#photoPreview"), rm=$("#photoRemove"), cap=$("#photoCaption");
+    if(!prev) return;
+    PhotoDB.get(date).then(function(rec){
+      if(pendingPhotoDate!==date) return;
+      if(rec && rec.img){ prev.innerHTML='<img alt="오늘의 사진" src="'+rec.img+'">'; rm.hidden=false; cap.value=rec.caption||""; }
+      else { prev.innerHTML='<span class="photo-empty">사진 없음</span>'; rm.hidden=true; cap.value=""; }
+    });
+  }
+  $("#photoInput").addEventListener("change",function(){
+    var f=this.files[0]; this.value=""; if(!f) return;
+    var date=$("#date").value||todayStr();
+    $("#photoMsg").textContent="처리 중…";
+    compressImage(f, 1000, 0.7).then(function(dataURI){
+      if(!dataURI){ $("#photoMsg").textContent="이미지를 읽지 못했어요."; return; }
+      var kb=Math.round(dataURI.length/1024*0.75);
+      savePhoto(date, dataURI, $("#photoCaption").value.trim());
+      $("#photoPreview").innerHTML='<img alt="오늘의 사진" src="'+dataURI+'">'; $("#photoRemove").hidden=false;
+      $("#photoMsg").textContent="저장됨 ("+kb+"KB) ✦";
+      setTimeout(function(){ if($("#photoMsg").textContent.indexOf("저장됨")===0) $("#photoMsg").textContent=""; },2600);
+    });
+  });
+  $("#photoRemove").onclick=function(){ var date=$("#date").value||todayStr(); removePhoto(date); $("#photoPreview").innerHTML='<span class="photo-empty">사진 없음</span>'; this.hidden=true; $("#photoCaption").value=""; $("#photoMsg").textContent=""; };
+  $("#photoCaption").addEventListener("change",function(){
+    var date=$("#date").value||todayStr(); if(!photoDates[date]) return;
+    PhotoDB.get(date).then(function(rec){ if(rec){ rec.caption=$("#photoCaption").value.trim(); rec.ts=Date.now(); PhotoDB.set(rec); if(window.HARU&&window.HARU.cloudPhoto) try{window.HARU.cloudPhoto.set(date,rec);}catch(e){} if(view==="photo") renderPhotoGallery(); } });
+  });
+  function loadTimelinePhotos(){
+    var imgs=document.querySelectorAll("img.tl-photo[data-date]:not([data-loaded])");
+    Array.prototype.forEach.call(imgs,function(el){ var d=el.getAttribute("data-date"); el.setAttribute("data-loaded","1"); PhotoDB.get(d).then(function(rec){ if(rec&&rec.img) el.src=rec.img; else { el.remove(); } }); });
+  }
+  function renderPhotoGallery(){
+    var el=$("#photoView"); if(!el) return;
+    PhotoDB.all().then(function(list){
+      list.sort(function(a,b){ return a.date<b.date?1:a.date>b.date?-1:0; });
+      if(!list.length){ el.innerHTML='<div class="pv-empty">아직 사진이 없어요.<br>오늘 기록의 <b>오늘의 사진</b>에서 하루를 대표하는 한 장을 담아보세요.</div>'; return; }
+      var html='<div class="pv-h"><h3>Today\'s Photo</h3><b style="color:var(--sky-ink-2);font-size:12px;font-weight:600">'+list.length+'장</b></div><div class="pv-photos">';
+      list.forEach(function(p){ var wd=DOW[parseD(p.date).getDay()]; html+='<button class="pg-cell" data-date="'+p.date+'"><span class="pg-date">'+p.date.slice(5).replace("-",".")+' ('+wd+')</span><img loading="lazy" src="'+p.img+'" alt="">'+(p.caption?'<span class="pg-cap">'+esc(p.caption)+'</span>':'')+'</button>'; });
+      html+='</div>'; el.innerHTML=html;
+      Array.prototype.forEach.call(el.querySelectorAll(".pg-cell"),function(b){ b.onclick=function(){ openDay(b.getAttribute("data-date")); }; });
+    });
+  }
+
+  function refresh(){ renderTimeline(); renderStats(); renderDrinkStats(); renderCalendar(); if(view==="places") renderPlacesView(); if(view==="recap") renderRecapView(); if(view==="photo") renderPhotoGallery(); loadTimelinePhotos(); syncTimelineHeight(); }
   $("#drinkSeg").addEventListener("click",function(e){
     var b=e.target.closest("button"); if(!b)return;
     drinkPeriod=b.getAttribute("data-p");
@@ -1203,13 +1326,15 @@
     $("#graphView").hidden = v!=="graph";
     $("#placesView").hidden = v!=="places";
     $("#recapView").hidden = v!=="recap";
+    $("#photoView").hidden = v!=="photo";
     $("#legend").style.display = v==="graph"?"":"none";
     $("#searchWrap").style.display = v==="graph"?"":"none";
     $("#minMeetSeg").style.display = v==="graph"?"":"none";
-    $("#skyTitle").textContent = {graph:"인맥 성좌", places:"자주 가는 곳", recap:"이달의 회고"}[v];
+    $("#skyTitle").textContent = {graph:"인맥 성좌", places:"자주 가는 곳", recap:"이달의 회고", photo:"Today's Photo"}[v];
     var tabs=$("#viewTabs").children; for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle("on", tabs[i].getAttribute("data-v")===v);
     if(v==="places") renderPlacesView();
     else if(v==="recap") renderRecapView();
+    else if(v==="photo") renderPhotoGallery();
     else alpha=Math.max(alpha,0.5);
   }
   $("#viewTabs").addEventListener("click",function(e){ var b=e.target.closest("button"); if(b) setView(b.getAttribute("data-v")); });
@@ -1320,7 +1445,8 @@
       var place='';
       if(e && e.meals){ var pls=[]; MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m&&m.place&&pls.indexOf(m.place)<0) pls.push(m.place); }); if(pls.length) place='<div class="cv-place">🍴 '+esc(pls.join(" · "))+'</div>'; }
       var title=e?' title="'+ds.slice(5).replace("-",".")+' · '+esc(calSummary(e))+'"':'';
-      html+='<button class="'+cls+'" data-date="'+ds+'"'+title+'><div class="cv-top"><span class="cv-d">'+d+'</span>'+dot+'</div>'+ppl+place+'</button>';
+      var cam=photoDates[ds]?'<span class="cv-cam">📷</span>':'';
+      html+='<button class="'+cls+'" data-date="'+ds+'"'+title+'><div class="cv-top"><span class="cv-d">'+d+'</span>'+dot+cam+'</div>'+ppl+place+'</button>';
     }
     grid.innerHTML=html;
   }
@@ -1462,7 +1588,8 @@
     var d=new Date();
     $("#today").textContent = d.getFullYear()+". "+pad(d.getMonth()+1)+". "+pad(d.getDate())+". ("+DOW[d.getDay()]+")";
   })();
-  renderLegend(); loadDraft(); refresh();
+  renderLegend();
+  loadPhotoDates().then(function(){ loadDraft(); refresh(); });
   resize(); rebuild();
   var _rzT=null;
   window.addEventListener("resize",function(){ resize(); if(_rzT)clearTimeout(_rzT); _rzT=setTimeout(syncTimelineHeight,120); });
@@ -1481,7 +1608,9 @@
       if(!keepDraft) resetDraft();
       refresh(); rebuild(); closeDetail(); updateCalStatus();
     },
-    onSave:null
+    onSave:null,
+    cloudPhoto:null,
+    importCloudPhoto:function(rec){ importCloudPhoto(rec); }
   };
 })();
 </script>
@@ -1531,8 +1660,22 @@
   auth.onAuthStateChanged(function(user){
     renderAuth(user);
     if(unsub){ unsub(); unsub=null; }
-    if(!user){ docRef=null; lastJson=null; HARU.onSave=null; return; }
+    if(!user){ docRef=null; lastJson=null; HARU.onSave=null; HARU.cloudPhoto=null; return; }
     docRef=db.collection("users").doc(user.uid).collection("app").doc("state");
+    // Today's Photo 동기화 (사진 1장 = 문서 1개)
+    var photoCol=db.collection("users").doc(user.uid).collection("photos");
+    HARU.cloudPhoto={
+      set:function(date,rec){ photoCol.doc(date).set({img:rec.img, caption:rec.caption||"", ts:rec.ts||Date.now()}).catch(function(){}); },
+      del:function(date){ photoCol.doc(date).delete().catch(function(){}); }
+    };
+    (function(){ // 증분 pull: 마지막 동기화 이후 사진만
+      var lastPS=+(localStorage.getItem("haru.photoSync")||0);
+      photoCol.where("ts",">",lastPS).get().then(function(snap){
+        var mx=lastPS;
+        snap.forEach(function(doc){ var v=doc.data(); if(!v||!v.img)return; if((v.ts||0)>mx)mx=v.ts; try{ HARU.importCloudPhoto({date:doc.id, img:v.img, caption:v.caption||"", ts:v.ts||0}); }catch(e){} });
+        localStorage.setItem("haru.photoSync", String(mx));
+      }).catch(function(e){ console.warn("photo sync", e&&e.message); });
+    })();
     docRef.get().then(function(snap){
       var d=snap.exists?snap.data():null;
       if(d && d.json){
