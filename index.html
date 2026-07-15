@@ -86,9 +86,19 @@
   .auth .btn{padding:7px 12px}
 
   /* ---- App grid ---- */
-  .app{display:grid; grid-template-columns:1fr 384px; gap:18px; align-items:start}
+  .app{display:grid; grid-template-columns:1fr 384px; gap:18px; align-items:stretch}
   @media (max-width:980px){ .app{grid-template-columns:1fr} }
   .main-col{display:flex; flex-direction:column; gap:18px; min-width:0}
+  @media (min-width:981px){
+    .tl-card{flex:1 1 auto; min-height:0; display:flex; flex-direction:column}
+    .tl-card .tl{flex:1 1 auto; max-height:none}
+  }
+  /* 오늘 기록(전체 폭) 3열 */
+  .composer-wide .save-row{padding-top:8px}
+  @media (min-width:761px){
+    .cfields{display:grid; grid-template-columns:1.05fr 1fr 1fr; gap:0 26px; align-items:start}
+  }
+  .cgroup{min-width:0}
 
   /* 기록 달력 */
   .cv-nav{display:flex; align-items:center; gap:8px}
@@ -98,15 +108,18 @@
   .cv-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:5px; padding:6px 16px 10px}
   .cv-wd{text-align:center; font-size:11px; color:var(--ink-3); padding:2px 0 4px}
   .cv-wd.sun{color:#D98A8A}
-  .cv-cell{min-height:46px; border:1px solid transparent; background:var(--surface-2); border-radius:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; font-family:inherit; padding:4px 0; transition:.12s}
+  .cv-cell{min-height:58px; border:1px solid transparent; background:var(--surface-2); border-radius:10px; display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:2px; cursor:pointer; font-family:inherit; padding:5px 7px 4px; transition:.12s; overflow:hidden; text-align:left}
   .cv-cell.blank{background:transparent; cursor:default; pointer-events:none}
-  .cv-cell:hover:not(.blank){border-color:var(--accent); background:var(--surface)}
-  .cv-d{font-size:12.5px; color:var(--ink-3); font-variant-numeric:tabular-nums; line-height:1}
+  .cv-cell.has{background:var(--accent-soft)}
+  .cv-cell:hover:not(.blank){border-color:var(--accent)}
+  .cv-top{display:flex; align-items:center; gap:5px}
+  .cv-d{font-size:12px; color:var(--ink-3); font-variant-numeric:tabular-nums; line-height:1}
   .cv-cell.has .cv-d{color:var(--ink); font-weight:700}
   .cv-cell.today{border-color:var(--accent)}
   .cv-cell.today .cv-d{color:var(--accent-ink); font-weight:800}
-  .cv-dot{width:6px; height:6px; border-radius:50%; background:var(--accent)}
-  .cv-cell:not(.has) .cv-dot{visibility:hidden}
+  .cv-dot{width:7px; height:7px; border-radius:50%; flex:none}
+  .cv-ppl{display:flex; flex-direction:column; overflow:hidden; margin-top:1px}
+  .cv-ppl span{font-size:10px; color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.4}
   .cv-hint{font-size:11.5px; color:var(--ink-3); padding:0 16px 14px; line-height:1.5}
   .cv-hint b{color:var(--ink-2); font-weight:600}
 
@@ -169,13 +182,13 @@
   .detail .rec .rd{flex:none; font-size:11px; font-variant-numeric:tabular-nums; color:var(--sky-ink-2); width:36px}
   .detail .rec .rt{font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 
-  .stat-row{display:flex; gap:0; border-top:1px solid var(--border)}
-  .stat{flex:1; min-width:0; padding:11px 14px; text-align:left; border-right:1px solid var(--border)}
-  .stat:last-child{border-right:0}
-  .stat b{display:block; font-size:20px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
-  .stat span{font-size:11.5px; color:var(--ink-3)}
-  #s-top{font-size:17px; line-height:1.2}
-  #s-top .s-more{font-size:11.5px; font-weight:600; color:var(--ink-3); white-space:nowrap}
+  .stat-row{display:flex; align-items:baseline; flex-wrap:wrap; gap:6px 12px; border-top:1px solid var(--border); padding:13px 16px}
+  .st{display:inline-flex; align-items:baseline; gap:5px; min-width:0}
+  .st b{font-size:20px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; color:var(--ink)}
+  .st i{font-style:normal; font-size:11.5px; font-weight:600; color:var(--ink-3)}
+  .stat-row .sep{color:var(--ink-3); font-size:13px; opacity:.6}
+  #s-top{font-size:20px; font-weight:800; letter-spacing:-.02em; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  #s-top .s-more{font-size:11.5px; font-weight:600; color:var(--ink-3); margin-left:3px}
 
   /* tabs on the dark sky header */
   .seg.on-sky{background:rgba(255,255,255,.09); border-color:rgba(150,166,210,.32)}
@@ -403,17 +416,20 @@
       <div class="panel-view" id="placesView" hidden></div>
       <div class="panel-view" id="recapView" hidden></div>
       <div class="stat-row">
-        <div class="stat"><b id="s-people">0</b><span>기록된 사람</span></div>
-        <div class="stat"><b id="s-days">0</b><span>기록한 날</span></div>
-        <div class="stat"><b id="s-week">0</b><span>최근 7일 만난 사람</span></div>
-        <div class="stat"><b id="s-top">–</b><span>가장 자주 만난</span></div>
+        <span class="st"><b id="s-people">0</b><i>명</i></span>
+        <span class="sep">/</span>
+        <span class="st"><b id="s-days">0</b><i>days</i></span>
+        <span class="sep">/</span>
+        <span class="st"><b id="s-week">0</b><i>in 7days</i></span>
+        <span class="sep">/</span>
+        <span class="st"><b id="s-top">–</b></span>
       </div>
     </section>
 
     <!-- ===== 기록 달력 ===== -->
     <section class="card calcard">
       <div class="card-h">
-        <h2>📅 기록 달력</h2>
+        <h2>📅</h2>
         <div class="cv-nav">
           <button type="button" id="cvPrev" aria-label="이전 달">‹</button>
           <b id="cvLbl"></b>
@@ -428,73 +444,8 @@
     <!-- ===== Sidebar ===== -->
     <div class="side">
       <section class="card">
-        <div class="card-h"><h2>✦ 오늘 기록</h2><div class="ch-right"><span class="sub" id="editing"></span><button class="btn primary mini-btn" id="saveBtn2">저장</button></div></div>
-        <div class="field">
-          <label for="date">날짜</label>
-          <input type="date" id="date">
-
-          <label for="schedule">주요 일정</label>
-          <input type="text" class="name-in" id="schedule" placeholder="오늘의 주요 일정 · 한 일" autocomplete="off">
-
-          <label>만난 사람</label>
-          <div class="add-person">
-            <input class="name-in" id="pname" placeholder="이름" autocomplete="off">
-            <select id="prel">
-              <option value="fri">친구</option>
-              <option value="fam">가족</option>
-              <option value="work">직장</option>
-              <option value="mn">SK</option>
-              <option value="acq">지인</option>
-              <option value="etc">기타</option>
-            </select>
-            <button class="btn" id="addP">추가</button>
-          </div>
-          <div class="chips" id="pchips"></div>
-
-          <label>식사</label>
-          <div class="meals">
-            <div class="meal">
-              <div class="meal-h row"><span>🌅 아침</span><label class="same-chk sm"><input type="checkbox" class="meal-same" data-meal="breakfast"> 동일</label></div>
-              <div class="meal-grid"><input type="text" id="m-breakfast-place" placeholder="어디서" autocomplete="off"><input type="text" id="m-breakfast-food" placeholder="무엇을" autocomplete="off"></div>
-              <input type="text" id="m-breakfast-people" placeholder="누구와 · 쉼표로 구분" autocomplete="off">
-            </div>
-            <div class="meal">
-              <div class="meal-h row"><span>☀️ 점심</span><label class="same-chk sm"><input type="checkbox" class="meal-same" data-meal="lunch"> 동일</label></div>
-              <div class="meal-grid"><input type="text" id="m-lunch-place" placeholder="어디서" autocomplete="off"><input type="text" id="m-lunch-food" placeholder="무엇을" autocomplete="off"></div>
-              <input type="text" id="m-lunch-people" placeholder="누구와 · 쉼표로 구분" autocomplete="off">
-            </div>
-            <div class="meal">
-              <div class="meal-h row"><span>🌙 저녁</span><label class="same-chk sm"><input type="checkbox" class="meal-same" data-meal="dinner"> 동일</label></div>
-              <div class="meal-grid"><input type="text" id="m-dinner-place" placeholder="어디서" autocomplete="off"><input type="text" id="m-dinner-food" placeholder="무엇을" autocomplete="off"></div>
-              <input type="text" id="m-dinner-people" placeholder="누구와 · 쉼표로 구분" autocomplete="off">
-            </div>
-            <div class="meal drink">
-              <span class="meal-h">🍺 음주 <span class="lab-hint">병 수 · 0.5=반병</span></span>
-              <div class="drink-grid">
-                <label>맥주<input type="number" min="0" step="0.5" inputmode="decimal" id="d-beer" placeholder="0"></label>
-                <label>소주<input type="number" min="0" step="0.5" inputmode="decimal" id="d-soju" placeholder="0"></label>
-                <label>막걸리<input type="number" min="0" step="0.5" inputmode="decimal" id="d-makgeolli" placeholder="0"></label>
-                <label>기타<input type="number" min="0" step="0.5" inputmode="decimal" id="d-etc" placeholder="0"></label>
-              </div>
-            </div>
-          </div>
-
-          <label for="thoughts">고민 · 생각</label>
-          <textarea id="thoughts" placeholder="오늘 마음에 남은 고민이나 생각…"></textarea>
-
-          <label for="learning">학습 · 배운 것</label>
-          <textarea id="learning" placeholder="새로 알게 된 것, 공부한 것…"></textarea>
-        </div>
-        <div class="msg" id="msg"></div>
-        <div class="save-row">
-          <button class="btn primary" id="saveBtn">저장</button>
-          <button class="btn ghost" id="clearBtn">비우기</button>
-        </div>
-      </section>
-
-      <section class="card">
         <div class="card-h">
-          <h2>🍺 음주 추이</h2>
+          <h2>🍺</h2>
           <div class="seg" id="drinkSeg">
             <button type="button" data-p="week">1주</button><button type="button" data-p="month" class="on">1달</button><button type="button" data-p="year">1년</button><button type="button" data-p="all">전체</button>
           </div>
@@ -502,7 +453,7 @@
         <div class="drink-stats" id="drinkStats"></div>
       </section>
 
-      <section class="card">
+      <section class="card tl-card">
         <div class="card-h">
           <h2>타임라인</h2>
           <button class="btn ghost mini-btn" id="calBtn" aria-expanded="false">📅 캘린더 가져오기</button>
@@ -525,6 +476,68 @@
       </section>
     </div>
   </div>
+
+  <!-- ===== 오늘 기록 (전체 폭) ===== -->
+  <section class="card composer-wide">
+    <div class="card-h"><h2>✦ 오늘 기록</h2><div class="ch-right"><span class="sub" id="editing"></span><button class="btn primary mini-btn" id="saveBtn2">저장</button></div></div>
+    <div class="field cfields">
+      <div class="cgroup">
+        <label for="date">날짜</label>
+        <input type="date" id="date">
+        <label for="schedule">주요 일정</label>
+        <input type="text" class="name-in" id="schedule" placeholder="오늘의 주요 일정 · 한 일" autocomplete="off">
+        <label>만난 사람</label>
+        <div class="add-person">
+          <input class="name-in" id="pname" placeholder="이름" autocomplete="off">
+          <select id="prel">
+            <option value="fri">친구</option><option value="fam">가족</option><option value="work">직장</option><option value="mn">SK</option><option value="acq">지인</option><option value="etc">기타</option>
+          </select>
+          <button class="btn" id="addP">추가</button>
+        </div>
+        <div class="chips" id="pchips"></div>
+      </div>
+
+      <div class="cgroup">
+        <label>식사</label>
+        <div class="meals">
+          <div class="meal">
+            <div class="meal-h row"><span>🌅 아침</span><label class="same-chk sm"><input type="checkbox" class="meal-same" data-meal="breakfast"> 동일</label></div>
+            <div class="meal-grid"><input type="text" id="m-breakfast-place" placeholder="어디서" autocomplete="off"><input type="text" id="m-breakfast-food" placeholder="무엇을" autocomplete="off"></div>
+            <input type="text" id="m-breakfast-people" placeholder="누구와 · 쉼표로 구분" autocomplete="off">
+          </div>
+          <div class="meal">
+            <div class="meal-h row"><span>☀️ 점심</span><label class="same-chk sm"><input type="checkbox" class="meal-same" data-meal="lunch"> 동일</label></div>
+            <div class="meal-grid"><input type="text" id="m-lunch-place" placeholder="어디서" autocomplete="off"><input type="text" id="m-lunch-food" placeholder="무엇을" autocomplete="off"></div>
+            <input type="text" id="m-lunch-people" placeholder="누구와 · 쉼표로 구분" autocomplete="off">
+          </div>
+          <div class="meal">
+            <div class="meal-h row"><span>🌙 저녁</span><label class="same-chk sm"><input type="checkbox" class="meal-same" data-meal="dinner"> 동일</label></div>
+            <div class="meal-grid"><input type="text" id="m-dinner-place" placeholder="어디서" autocomplete="off"><input type="text" id="m-dinner-food" placeholder="무엇을" autocomplete="off"></div>
+            <input type="text" id="m-dinner-people" placeholder="누구와 · 쉼표로 구분" autocomplete="off">
+          </div>
+        </div>
+      </div>
+
+      <div class="cgroup">
+        <label>음주 <span class="lab-hint">병 수 · 0.5=반병</span></label>
+        <div class="drink-grid">
+          <label>맥주<input type="number" min="0" step="0.5" inputmode="decimal" id="d-beer" placeholder="0"></label>
+          <label>소주<input type="number" min="0" step="0.5" inputmode="decimal" id="d-soju" placeholder="0"></label>
+          <label>막걸리<input type="number" min="0" step="0.5" inputmode="decimal" id="d-makgeolli" placeholder="0"></label>
+          <label>기타<input type="number" min="0" step="0.5" inputmode="decimal" id="d-etc" placeholder="0"></label>
+        </div>
+        <label for="thoughts">고민 · 생각</label>
+        <textarea id="thoughts" placeholder="오늘 마음에 남은 고민이나 생각…"></textarea>
+        <label for="learning">학습 · 배운 것</label>
+        <textarea id="learning" placeholder="새로 알게 된 것, 공부한 것…"></textarea>
+      </div>
+    </div>
+    <div class="msg" id="msg"></div>
+    <div class="save-row">
+      <button class="btn primary" id="saveBtn">저장</button>
+      <button class="btn ghost" id="clearBtn">비우기</button>
+    </div>
+  </section>
 
   <div class="foot">데이터는 이 브라우저에만 저장돼요 · <b>하루</b>를 매일 열어 별을 늘려보세요</div>
 </div>
@@ -1288,10 +1301,16 @@
     for(var d=1;d<=daysIn;d++){
       var ds=y+"-"+pad(mo+1)+"-"+pad(d), e=byDate[ds];
       var cls='cv-cell'+(e?' has':'')+(ds===today?' today':'');
-      var dotStyle='';
-      if(e && e.drinks && drinkTotal(e.drinks)>0){ var lv=drinkLevel(e.drinks); dotStyle=' style="background:'+(lv===1?'#4FBE86':lv===3?'#A81E15':'#E4574C')+'"'; }
+      var dot='';
+      if(e && e.drinks && drinkTotal(e.drinks)>0){ var lv=drinkLevel(e.drinks); dot='<span class="cv-dot" style="background:'+(lv===1?'#4FBE86':lv===3?'#A81E15':'#E4574C')+'"></span>'; }
+      var ppl='';
+      if(e && e.people && e.people.length){
+        var show=e.people.slice(0,2).map(function(n){ return '<span>'+esc(n)+'</span>'; }).join('');
+        var more=e.people.length>2 ? '<span>+'+(e.people.length-2)+'</span>' : '';
+        ppl='<div class="cv-ppl">'+show+more+'</div>';
+      }
       var title=e?' title="'+ds.slice(5).replace("-",".")+' · '+esc(calSummary(e))+'"':'';
-      html+='<button class="'+cls+'" data-date="'+ds+'"'+title+'><span class="cv-d">'+d+'</span><span class="cv-dot"'+dotStyle+'></span></button>';
+      html+='<button class="'+cls+'" data-date="'+ds+'"'+title+'><div class="cv-top"><span class="cv-d">'+d+'</span>'+dot+'</div>'+ppl+'</button>';
     }
     grid.innerHTML=html;
   }
