@@ -130,9 +130,8 @@
   .card-h .sub{font-size:12px; color:var(--ink-3)}
 
   /* ---- Constellation panel ---- */
-  .sky-card{overflow:hidden; position:relative}
-  .sky-head{position:relative; z-index:3; padding:14px 16px 12px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
-    background:linear-gradient(180deg, rgba(12,15,26,.9), rgba(12,15,26,0)); }
+  .sky-card{overflow:hidden; position:relative; background:radial-gradient(130% 100% at 50% 0%, var(--sky-1), var(--sky-0) 62%)}
+  .sky-head{position:relative; z-index:3; padding:14px 16px 12px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap}
   .sky-title{color:var(--sky-ink); display:flex; flex-direction:column; gap:1px}
   .sky-title h2{margin:0; font-size:15px; font-weight:700; color:var(--sky-ink)}
   .sky-title .k{font-family:var(--font-serif); font-style:italic; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--sky-ink-2)}
@@ -144,7 +143,7 @@
   .search svg{color:#AEB6CF}
   .search svg{opacity:.7}
 
-  .legend{position:relative; z-index:3; display:flex; gap:7px; flex-wrap:wrap; padding:0 16px 12px; background:linear-gradient(180deg, rgba(12,15,26,.9), rgba(12,15,26,0))}
+  .legend{position:relative; z-index:3; display:flex; gap:7px; flex-wrap:wrap; padding:0 16px 12px; background:transparent}
   .chip{display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--sky-ink-2);
     border:1px solid rgba(150,166,210,.22); background:rgba(255,255,255,.04); padding:4px 9px; border-radius:20px; cursor:pointer; transition:.15s; user-select:none}
   .chip .dot{width:8px; height:8px; border-radius:50%}
@@ -152,7 +151,7 @@
   .chip[aria-pressed="false"]{opacity:.4}
   .chip:hover{border-color:rgba(150,166,210,.5)}
 
-  .sky-wrap{position:relative; background:radial-gradient(120% 90% at 50% 8%, var(--sky-1), var(--sky-0) 70%);}
+  .sky-wrap{position:relative; background:transparent}
   canvas#sky{display:block; width:100%; height:560px; touch-action:none}
   @media (max-width:980px){ canvas#sky{height:440px} }
 
@@ -183,7 +182,7 @@
   .detail .rec .rd{flex:none; font-size:11px; font-variant-numeric:tabular-nums; color:var(--sky-ink-2); width:36px}
   .detail .rec .rt{font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 
-  .stat-row{display:flex; align-items:baseline; flex-wrap:wrap; gap:6px 12px; border-top:1px solid var(--border); padding:13px 16px}
+  .stat-row{display:flex; align-items:baseline; flex-wrap:wrap; gap:6px 12px; border-top:1px solid var(--sky-line); padding:13px 16px; background:var(--surface)}
   .st{display:inline-flex; align-items:baseline; gap:5px; min-width:0}
   .st b{font-size:20px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; color:var(--ink)}
   .st i{font-style:normal; font-size:11.5px; font-weight:600; color:var(--ink-3)}
