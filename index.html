@@ -86,14 +86,11 @@
   .auth .btn{padding:7px 12px}
 
   /* ---- App grid ---- */
-  .app{display:grid; grid-template-columns:1fr 384px; gap:18px; align-items:stretch}
+  .app{display:grid; grid-template-columns:1fr 384px; gap:18px; align-items:start}
   @media (max-width:980px){ .app{grid-template-columns:1fr} }
   .main-col{display:flex; flex-direction:column; gap:18px; min-width:0}
-  @media (min-width:981px){
-    .side{min-height:0}
-    .tl-card{flex:1 1 auto; min-height:0; display:flex; flex-direction:column}
-    .tl-card .tl{flex:1 1 auto; min-height:0; max-height:none; overflow-y:auto}
-  }
+  .tl-card{display:flex; flex-direction:column; min-height:0}
+  .tl-card .tl{overflow-y:auto}
   /* 오늘 기록(전체 폭) 3열 */
   .composer-wide .save-row{padding-top:8px}
   @media (min-width:761px){
@@ -1180,7 +1177,18 @@
     if(hit){ hover=hit; selectNode(hit); }
   });
 
-  function refresh(){ renderTimeline(); renderStats(); renderDrinkStats(); renderCalendar(); if(view==="places") renderPlacesView(); if(view==="recap") renderRecapView(); }
+  // 타임라인 높이를 좌측(성좌+달력) 높이에 맞춰 정렬 → 내부 스크롤
+  function syncTimelineHeight(){
+    var tl=document.getElementById("timeline"); if(!tl) return;
+    if(window.innerWidth<981){ tl.style.height=""; tl.style.maxHeight=""; return; }
+    var mc=document.querySelector(".main-col"), side=document.querySelector(".side");
+    if(!mc||!side) return;
+    tl.style.maxHeight="none"; tl.style.height="auto";
+    var sideOther=side.offsetHeight - tl.offsetHeight;
+    var target=Math.round(mc.offsetHeight - sideOther);
+    tl.style.height=Math.max(160,target)+"px";
+  }
+  function refresh(){ renderTimeline(); renderStats(); renderDrinkStats(); renderCalendar(); if(view==="places") renderPlacesView(); if(view==="recap") renderRecapView(); syncTimelineHeight(); }
   $("#drinkSeg").addEventListener("click",function(e){
     var b=e.target.closest("button"); if(!b)return;
     drinkPeriod=b.getAttribute("data-p");
@@ -1321,8 +1329,8 @@
     else { draft={date:ds, people:[], schedule:"", meals:emptyMeals(), drinks:emptyDrinks(), thoughts:"", learning:""}; loadDraft(); window.scrollTo({top:0, behavior:reduce?"auto":"smooth"}); }
   }
   $("#cvGrid").addEventListener("click",function(ev){ var b=ev.target.closest(".cv-cell"); if(!b||b.classList.contains("blank"))return; openDay(b.getAttribute("data-date")); });
-  $("#cvPrev").onclick=function(){ calMonth=shiftMonth(calMonth,-1); renderCalendar(); };
-  $("#cvNext").onclick=function(){ calMonth=shiftMonth(calMonth,1); renderCalendar(); };
+  $("#cvPrev").onclick=function(){ calMonth=shiftMonth(calMonth,-1); renderCalendar(); syncTimelineHeight(); };
+  $("#cvNext").onclick=function(){ calMonth=shiftMonth(calMonth,1); renderCalendar(); syncTimelineHeight(); };
 
   // ---------- backup: 내보내기 / 가져오기 (텍스트 기반 — 샌드박스에서도 동작) ----------
   function startImport(data){
@@ -1455,8 +1463,11 @@
   })();
   renderLegend(); loadDraft(); refresh();
   resize(); rebuild();
-  window.addEventListener("resize",function(){ resize(); });
+  var _rzT=null;
+  window.addEventListener("resize",function(){ resize(); if(_rzT)clearTimeout(_rzT); _rzT=setTimeout(syncTimelineHeight,120); });
   if("ResizeObserver" in window){ new ResizeObserver(function(){ resize(); }).observe(canvas); }
+  window.addEventListener("load", syncTimelineHeight);
+  requestAnimationFrame(function(){ syncTimelineHeight(); });
   requestAnimationFrame(loop);
 
   // 외부(클라우드 동기화) 연동용 최소 API
