@@ -88,6 +88,27 @@
   /* ---- App grid ---- */
   .app{display:grid; grid-template-columns:1fr 384px; gap:18px; align-items:start}
   @media (max-width:980px){ .app{grid-template-columns:1fr} }
+  .main-col{display:flex; flex-direction:column; gap:18px; min-width:0}
+
+  /* 기록 달력 */
+  .cv-nav{display:flex; align-items:center; gap:8px}
+  .cv-nav button{width:27px; height:27px; border-radius:8px; border:1px solid var(--border); background:var(--surface-2); color:var(--ink); cursor:pointer; font-size:14px}
+  .cv-nav button:hover{border-color:var(--accent); color:var(--accent-ink)}
+  .cv-nav b{font-variant-numeric:tabular-nums; font-size:13.5px; min-width:96px; text-align:center}
+  .cv-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:5px; padding:6px 16px 10px}
+  .cv-wd{text-align:center; font-size:11px; color:var(--ink-3); padding:2px 0 4px}
+  .cv-wd.sun{color:#D98A8A}
+  .cv-cell{min-height:46px; border:1px solid transparent; background:var(--surface-2); border-radius:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; font-family:inherit; padding:4px 0; transition:.12s}
+  .cv-cell.blank{background:transparent; cursor:default; pointer-events:none}
+  .cv-cell:hover:not(.blank){border-color:var(--accent); background:var(--surface)}
+  .cv-d{font-size:12.5px; color:var(--ink-3); font-variant-numeric:tabular-nums; line-height:1}
+  .cv-cell.has .cv-d{color:var(--ink); font-weight:700}
+  .cv-cell.today{border-color:var(--accent)}
+  .cv-cell.today .cv-d{color:var(--accent-ink); font-weight:800}
+  .cv-dot{width:6px; height:6px; border-radius:50%; background:var(--accent)}
+  .cv-cell:not(.has) .cv-dot{visibility:hidden}
+  .cv-hint{font-size:11.5px; color:var(--ink-3); padding:0 16px 14px; line-height:1.5}
+  .cv-hint b{color:var(--ink-2); font-weight:600}
 
   .card{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow)}
   .card-h{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px 12px}
@@ -351,6 +372,7 @@
   </header>
 
   <div class="app">
+    <div class="main-col">
     <!-- ===== Constellation ===== -->
     <section class="card sky-card" aria-label="인맥 성좌">
       <div class="sky-head">
@@ -363,7 +385,7 @@
             <button type="button" data-v="graph" class="on">성좌</button><button type="button" data-v="places">장소</button><button type="button" data-v="recap">이달의 회고</button>
           </div>
           <div class="seg on-sky" id="minMeetSeg" title="이 횟수 이상 만난 사람만 표시">
-            <button type="button" data-m="1">1+</button><button type="button" data-m="3" class="on">3+</button><button type="button" data-m="5">5+</button><button type="button" data-m="10">10+</button>
+            <button type="button" data-m="1">1+</button><button type="button" data-m="2" class="on">2+</button><button type="button" data-m="3">3+</button><button type="button" data-m="5">5+</button><button type="button" data-m="10">10+</button>
           </div>
           <div class="search" id="searchWrap">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
@@ -387,6 +409,21 @@
         <div class="stat"><b id="s-top">–</b><span>가장 자주 만난</span></div>
       </div>
     </section>
+
+    <!-- ===== 기록 달력 ===== -->
+    <section class="card calcard">
+      <div class="card-h">
+        <h2>📅 기록 달력</h2>
+        <div class="cv-nav">
+          <button type="button" id="cvPrev" aria-label="이전 달">‹</button>
+          <b id="cvLbl"></b>
+          <button type="button" id="cvNext" aria-label="다음 달">›</button>
+        </div>
+      </div>
+      <div class="cv-grid" id="cvGrid"></div>
+      <div class="cv-hint">날짜를 누르면 그날 기록을 <b>수정</b>하거나 새로 <b>작성</b>할 수 있어요 · 점=기록 있음(색=음주량)</div>
+    </section>
+    </div><!-- /main-col -->
 
     <!-- ===== Sidebar ===== -->
     <div class="side">
@@ -543,7 +580,7 @@
   // ---------- state ----------
   var state = load();
   var draft = { date: todayStr(), people: [], schedule:"", meals:emptyMeals(), drinks:emptyDrinks(), thoughts:"", learning:"" };
-  var hiddenRels = {}, hidePlaces=true, drinkPeriod="month", view="graph", recapMonth="", minMeet=3;
+  var hiddenRels = {}, hidePlaces=true, drinkPeriod="month", view="graph", recapMonth="", minMeet=2, calMonth="";
 
   function load(){
     try{ var s=JSON.parse(localStorage.getItem(KEY)); if(s&&s.entries) return s; }catch(e){}
@@ -1131,7 +1168,7 @@
     if(hit){ hover=hit; selectNode(hit); }
   });
 
-  function refresh(){ renderTimeline(); renderStats(); renderDrinkStats(); if(view==="places") renderPlacesView(); if(view==="recap") renderRecapView(); }
+  function refresh(){ renderTimeline(); renderStats(); renderDrinkStats(); renderCalendar(); if(view==="places") renderPlacesView(); if(view==="recap") renderRecapView(); }
   $("#drinkSeg").addEventListener("click",function(e){
     var b=e.target.closest("button"); if(!b)return;
     drinkPeriod=b.getAttribute("data-p");
@@ -1227,6 +1264,45 @@
     if(pv) pv.onclick=function(){ recapMonth=shiftMonth(recapMonth,-1); renderRecapView(); };
     if(nx) nx.onclick=function(){ if(recapMonth<monthStr(new Date())){ recapMonth=shiftMonth(recapMonth,1); renderRecapView(); } };
   }
+
+  // ---------- 기록 달력 ----------
+  var WDOW=["일","월","화","수","목","금","토"];
+  function calSummary(e){
+    var bits=[];
+    if(e.schedule) bits.push(e.schedule);
+    if(e.people && e.people.length) bits.push("만난 사람 "+e.people.length);
+    if(e.drinks && drinkTotal(e.drinks)>0) bits.push("음주 "+drinkTotal(e.drinks));
+    if(e.learning) bits.push("학습");
+    return bits.join(" · ")||"기록";
+  }
+  function renderCalendar(){
+    var grid=$("#cvGrid"); if(!grid) return;
+    if(!calMonth) calMonth=monthStr(new Date());
+    var p=calMonth.split("-"), y=+p[0], mo=+p[1]-1;
+    $("#cvLbl").textContent=y+"년 "+(mo+1)+"월";
+    var byDate={}; state.entries.forEach(function(e){ byDate[e.date]=e; });
+    var startDow=new Date(y,mo,1).getDay(), daysIn=new Date(y,mo+1,0).getDate(), today=todayStr();
+    var html='';
+    WDOW.forEach(function(w,i){ html+='<div class="cv-wd'+(i===0?' sun':'')+'">'+w+'</div>'; });
+    for(var b=0;b<startDow;b++) html+='<div class="cv-cell blank"></div>';
+    for(var d=1;d<=daysIn;d++){
+      var ds=y+"-"+pad(mo+1)+"-"+pad(d), e=byDate[ds];
+      var cls='cv-cell'+(e?' has':'')+(ds===today?' today':'');
+      var dotStyle='';
+      if(e && e.drinks && drinkTotal(e.drinks)>0){ var lv=drinkLevel(e.drinks); dotStyle=' style="background:'+(lv===1?'#4FBE86':lv===3?'#A81E15':'#E4574C')+'"'; }
+      var title=e?' title="'+ds.slice(5).replace("-",".")+' · '+esc(calSummary(e))+'"':'';
+      html+='<button class="'+cls+'" data-date="'+ds+'"'+title+'><span class="cv-d">'+d+'</span><span class="cv-dot"'+dotStyle+'></span></button>';
+    }
+    grid.innerHTML=html;
+  }
+  function openDay(ds){
+    var e=state.entries.filter(function(x){return x.date===ds;})[0];
+    if(e){ editEntry(e); }
+    else { draft={date:ds, people:[], schedule:"", meals:emptyMeals(), drinks:emptyDrinks(), thoughts:"", learning:""}; loadDraft(); window.scrollTo({top:0, behavior:reduce?"auto":"smooth"}); }
+  }
+  $("#cvGrid").addEventListener("click",function(ev){ var b=ev.target.closest(".cv-cell"); if(!b||b.classList.contains("blank"))return; openDay(b.getAttribute("data-date")); });
+  $("#cvPrev").onclick=function(){ calMonth=shiftMonth(calMonth,-1); renderCalendar(); };
+  $("#cvNext").onclick=function(){ calMonth=shiftMonth(calMonth,1); renderCalendar(); };
 
   // ---------- backup: 내보내기 / 가져오기 (텍스트 기반 — 샌드박스에서도 동작) ----------
   function startImport(data){
