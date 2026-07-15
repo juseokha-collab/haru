@@ -92,6 +92,7 @@
   .tl-card{display:flex; flex-direction:column; min-height:0}
   .tl-card .tl{overflow-y:auto}
   /* 오늘 기록(전체 폭) 3열 */
+  .composer-wide{margin-top:24px}
   .composer-wide .save-row{padding-top:8px}
   @media (min-width:761px){
     .cfields{display:grid; grid-template-columns:1.05fr 1fr 1fr; gap:0 26px; align-items:start}
@@ -407,7 +408,6 @@
       <div class="sky-wrap" id="graphView">
         <canvas id="sky"></canvas>
         <div class="empty-sky" id="emptySky"><div>아직 기록이 없어요.<br>오른쪽에서 오늘 만난 사람을 적어보면<br>여기에 별이 하나씩 떠올라요.</div></div>
-        <div class="hint">별(사람)·사각(식당)을 드래그 · 마우스를 올려 인연을 확인하세요</div>
         <div class="detail" id="detail"></div>
       </div>
       <div class="panel-view" id="placesView" hidden></div>
@@ -518,7 +518,7 @@
         <label>음주 <span class="lab-hint">병 수 · 0.5=반병</span></label>
         <div class="drink-grid">
           <label title="맥주">🍺<input type="number" min="0" step="0.5" inputmode="decimal" id="d-beer" placeholder="0"></label>
-          <label title="소주">🍶<input type="number" min="0" step="0.5" inputmode="decimal" id="d-soju" placeholder="0"></label>
+          <label title="소주">🍾<input type="number" min="0" step="0.5" inputmode="decimal" id="d-soju" placeholder="0"></label>
           <label title="막걸리">🥛<input type="number" min="0" step="0.5" inputmode="decimal" id="d-makgeolli" placeholder="0"></label>
           <label title="기타">🍷<input type="number" min="0" step="0.5" inputmode="decimal" id="d-etc" placeholder="0"></label>
         </div>
@@ -579,7 +579,7 @@
   function emptyMeals(){ var m={}; MEALS.forEach(function(x){ m[x.key]={place:"",food:"",people:[]}; }); return m; }
   function mealHasContent(m){ return !!m && MEALS.some(function(x){ var v=m[x.key]||{}; return v.place||v.food||(v.people&&v.people.length); }); }
   var PLACE_COLOR="#8C93A6";
-  var DRINKS=[{key:"beer",label:"🍺",ko:"맥주",color:"#E0B24C"},{key:"soju",label:"🍶",ko:"소주",color:"#6FB49A"},{key:"makgeolli",label:"🥛",ko:"막걸리",color:"#CBB994"},{key:"etc",label:"🍷",ko:"기타",color:"#B394E0"}];
+  var DRINKS=[{key:"beer",label:"🍺",ko:"맥주",color:"#E0B24C"},{key:"soju",label:"🍾",ko:"소주",color:"#6FB49A"},{key:"makgeolli",label:"🥛",ko:"막걸리",color:"#CBB994"},{key:"etc",label:"🍷",ko:"기타",color:"#B394E0"}];
   function emptyDrinks(){ var d={}; DRINKS.forEach(function(x){ d[x.key]=0; }); return d; }
   function drinkTotal(d){ if(!d) return 0; var s=0; DRINKS.forEach(function(x){ s+=(+d[x.key]||0); }); return s; }
   // 음주량 레벨: 0=안마심, 1=초록(1병 미만), 2=붉은색(~1병), 3=진한 붉은색(2병+/맥주 3병+)
@@ -1055,9 +1055,10 @@
   $("#clearBtn").onclick=function(){ resetDraft(); flash(""); };
   function flash(m){ $("#msg").textContent=m; if(m) setTimeout(function(){ if($("#msg").textContent===m)$("#msg").textContent=""; },2600); }
 
+  function scrollToComposer(){ var c=document.querySelector(".composer-wide"); if(c){ c.scrollIntoView({behavior:reduce?"auto":"smooth", block:"start"}); var f=document.getElementById("schedule"); } }
   function editEntry(e){
     draft={ date:e.date, people:e.people.map(function(n){return {name:n, rel:relOf(n)};}), schedule:e.schedule||"", meals:e.meals?JSON.parse(JSON.stringify(e.meals)):emptyMeals(), drinks:e.drinks?JSON.parse(JSON.stringify(e.drinks)):emptyDrinks(), thoughts:e.thoughts, learning:e.learning };
-    loadDraft(); window.scrollTo({top:0, behavior: reduce?"auto":"smooth"});
+    loadDraft(); scrollToComposer();
   }
   function delEntry(e){
     state.entries=state.entries.filter(function(x){return x.id!==e.id;});
@@ -1085,7 +1086,7 @@
     var strip='';
     for(var wi=7; wi>=1; wi--){ var dd=new Date(); dd.setDate(dd.getDate()-wi); var ds=fmt(dd), lv=lvMap[ds]||0;
       strip+='<div class="dw"><span class="dwd">'+DOW[dd.getDay()]+'</span><span class="dwdot lv'+lv+'"></span></div>'; }
-    var html='<div class="dk-top"><div class="dk-nums"><span class="dk-stat" title="총 병 수">🍾 <b>'+total+'</b></span><span class="dk-stat" title="마신 날">📆 <b>'+Object.keys(days).length+'</b></span></div>'
+    var html='<div class="dk-top"><div class="dk-nums"><span class="dk-stat" title="총 병 수">🍻 <b>'+total+'</b></span><span class="dk-stat" title="마신 날">📆 <b>'+Object.keys(days).length+'</b></span></div>'
       +'<div class="dk-week" title="어제까지 최근 7일 · 초록<1병, 붉은색~1병, 진한 붉은색 2병+">'+strip+'</div></div>';
     if(total===0) html+='<div class="dk-empty">이 기간엔 음주 기록이 없어요.</div>';
     else DRINKS.forEach(function(x){
@@ -1326,7 +1327,7 @@
   function openDay(ds){
     var e=state.entries.filter(function(x){return x.date===ds;})[0];
     if(e){ editEntry(e); }
-    else { draft={date:ds, people:[], schedule:"", meals:emptyMeals(), drinks:emptyDrinks(), thoughts:"", learning:""}; loadDraft(); window.scrollTo({top:0, behavior:reduce?"auto":"smooth"}); }
+    else { draft={date:ds, people:[], schedule:"", meals:emptyMeals(), drinks:emptyDrinks(), thoughts:"", learning:""}; loadDraft(); scrollToComposer(); }
   }
   $("#cvGrid").addEventListener("click",function(ev){ var b=ev.target.closest(".cv-cell"); if(!b||b.classList.contains("blank"))return; openDay(b.getAttribute("data-date")); });
   $("#cvPrev").onclick=function(){ calMonth=shiftMonth(calMonth,-1); renderCalendar(); syncTimelineHeight(); };
@@ -1364,7 +1365,7 @@
     var ex=existingFor(ev.date);
     if(ex){ editEntry(ex); } else { draft={date:ev.date, people:[], schedule:ev.title||"", meals:emptyMeals(), drinks:emptyDrinks(), thoughts:"", learning:""}; }
     (ev.attendees||[]).forEach(function(nm){ if(!draft.people.some(function(p){return p.name===nm;})) draft.people.push({name:nm, rel:relOf(nm)}); });
-    loadDraft(); flash("‘"+ev.title+"’ 일정을 기록으로 옮겨왔어요"); window.scrollTo({top:0, behavior:reduce?"auto":"smooth"});
+    loadDraft(); flash("‘"+ev.title+"’ 일정을 기록으로 옮겨왔어요"); scrollToComposer();
   }
   function delEvent(ev){ state.events=(state.events||[]).filter(function(x){return x.id!==ev.id;}); save(); refresh(); rebuild(); updateCalStatus(); }
 
