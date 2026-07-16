@@ -281,6 +281,16 @@
   .dwdot.lv1{background:#4FBE86}
   .dwdot.lv2{background:#E4574C}
   .dwdot.lv3{background:#A81E15}
+  /* 음주 카드 컴팩트(세로 축소) */
+  .drink-card .card-h{padding:9px 16px 3px}
+  .drink-card .drink-stats{padding:0 16px 12px}
+  .drink-card .dk-top{margin:4px 0 7px}
+  .drink-card .dk-stat{font-size:14px}
+  .drink-card .dk-stat b{font-size:19px}
+  .drink-card .dk-row{margin:3px 0}
+  .drink-card .dk-bar{height:7px}
+  .drink-card .dw{gap:4px}
+  .drink-card .dwdot{width:8px; height:8px}
   .dk-row{display:flex; align-items:center; gap:9px; margin:7px 0}
   .dk-row .nm{width:42px; font-size:12px; color:var(--ink-2); flex:none}
   .dk-bar{flex:1; height:9px; background:var(--surface-2); border-radius:5px; overflow:hidden}
@@ -458,9 +468,9 @@
 
     <!-- ===== Sidebar ===== -->
     <div class="side">
-      <section class="card">
+      <section class="card drink-card">
         <div class="card-h">
-          <h2>🍺</h2>
+          <h2 class="dk-title"></h2>
           <div class="seg" id="drinkSeg">
             <button type="button" data-p="week">1주</button><button type="button" data-p="month" class="on">1달</button><button type="button" data-p="year">1년</button><button type="button" data-p="all">전체</button>
           </div>
@@ -620,7 +630,7 @@
   // ---------- state ----------
   var state = load();
   var draft = { date: todayStr(), people: [], schedule:"", meals:emptyMeals(), drinks:emptyDrinks(), thoughts:"", learning:"" };
-  var hiddenRels = {}, hidePlaces=true, drinkPeriod="month", view="graph", recapMonth="", minMeet=2, calMonth="";
+  var hiddenRels = {}, hidePlaces=true, drinkPeriod="month", view="graph", recapMonth="", minMeet=2, calMonth="", searchQ="";
 
   function load(){
     try{ var s=JSON.parse(localStorage.getItem(KEY)); if(s&&s.entries) return s; }catch(e){}
@@ -754,7 +764,15 @@
   function rebuild(){
     var g=buildGraph();
     var allNames=Object.keys(g.meetings);
-    var names=allNames.filter(function(n){ return g.meetings[n]>=minMeet; });
+    var names;
+    if(searchQ){
+      var matched={}; allNames.forEach(function(n){ if(n.indexOf(searchQ)>=0) matched[n]=1; });
+      var keep={}; for(var mn in matched) keep[mn]=1;
+      Object.keys(g.pairs).forEach(function(k){ var ab=k.split(g.S1), a=ab[0], b=ab[1]; if(matched[a]) keep[b]=1; if(matched[b]) keep[a]=1; });
+      names=allNames.filter(function(n){ return keep[n]; });
+    } else {
+      names=allNames.filter(function(n){ return g.meetings[n]>=minMeet; });
+    }
     var pnames=Object.keys(g.places||{});
     var prev={}; nodes.forEach(function(n){ prev[(n.type==="place"?"§":"")+n.name]=n; });
     nodes=[]; nodeIndex={}; placeIndex={};
@@ -805,11 +823,14 @@
 
     alpha=1;
     var emp=$("#emptySky");
-    if(names.length||pnames.length){ emp.style.display="none"; }
+    var visPlaces = hidePlaces? 0 : pnames.length;
+    if(names.length||visPlaces){ emp.style.display="none"; }
     else { emp.style.display="flex";
-      emp.firstElementChild.innerHTML = allNames.length
-        ? ("‘"+minMeet+"회 이상’ 만난 사람이 없어요.<br>위에서 기준(1+/3+…)을 낮춰보세요.")
-        : "아직 기록이 없어요.<br>오른쪽에서 오늘 만난 사람을 적어보면<br>여기에 별이 하나씩 떠올라요."; }
+      emp.firstElementChild.innerHTML = searchQ
+        ? ("‘"+esc(searchQ)+"’와(과) 관련된 사람이 없어요.<br>검색어를 지우면 전체가 보여요.")
+        : (allNames.length
+          ? ("‘"+minMeet+"회 이상’ 만난 사람이 없어요.<br>위에서 기준(1+/3+…)을 낮춰보세요.")
+          : "아직 기록이 없어요.<br>오른쪽에서 오늘 만난 사람을 적어보면<br>여기에 별이 하나씩 떠올라요."); }
   }
 
   function visible(node){ if(node.type==="place") return !hidePlaces; return node.me || !hiddenRels[node.rel]; }
@@ -1206,9 +1227,11 @@
 
   // search
   $("#search").addEventListener("input",function(){
-    var q=this.value.trim(); if(!q){ hover=null; return; }
-    var hit=nodes.filter(function(n){return n.name.indexOf(q)>=0;})[0];
-    if(hit){ hover=hit; selectNode(hit); }
+    searchQ=this.value.trim();
+    closeDetail(); hover=null;
+    rebuild();
+    if(searchQ){ var hit=nodes.filter(function(n){return !n.me && n.name.indexOf(searchQ)>=0;})[0]; if(hit) hover=hit; }
+    alpha=Math.max(alpha,0.6);
   });
 
   // 타임라인 높이를 좌측(성좌+달력) 높이에 맞춰 정렬 → 내부 스크롤
