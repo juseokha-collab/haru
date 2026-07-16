@@ -264,6 +264,9 @@
   .meal-h.row>span{flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .same-chk.sm{font-size:11px; font-weight:500}
   .meal-grid{display:grid; grid-template-columns:1fr 1fr; gap:6px; margin:6px 0}
+  .place-wrap{position:relative; display:block}
+  .place-wrap input[type=text]{padding-right:26px}
+  .golf-chk{position:absolute; right:7px; top:50%; transform:translateY(-50%); margin:0; width:14px; height:14px; cursor:pointer; accent-color:#3FA35A}
   .meal input{font-family:inherit; font-size:12.5px; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:7px 9px; outline:0; width:100%; transition:.15s}
   .meal input::placeholder{color:var(--ink-3)}
   .meal input:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft)}
@@ -547,17 +550,17 @@
         <div class="meals">
           <div class="meal">
             <div class="meal-h row"><span>🌅 아침</span><label class="same-chk sm"><input type="checkbox" class="meal-same" data-meal="breakfast"> 동일</label></div>
-            <div class="meal-grid"><input type="text" id="m-breakfast-place" placeholder="어디서" autocomplete="off"><input type="text" id="m-breakfast-food" placeholder="무엇을" autocomplete="off"></div>
+            <div class="meal-grid"><span class="place-wrap"><input type="text" id="m-breakfast-place" placeholder="어디서" autocomplete="off"><input type="checkbox" class="golf-chk" data-meal="breakfast" title="골프장이면 체크 → 성좌에 ⛳"></span><input type="text" id="m-breakfast-food" placeholder="무엇을" autocomplete="off"></div>
             <input type="text" id="m-breakfast-people" placeholder="누구와 · 쉼표로 구분" autocomplete="off">
           </div>
           <div class="meal">
             <div class="meal-h row"><span>☀️ 점심</span><label class="same-chk sm"><input type="checkbox" class="meal-same" data-meal="lunch"> 동일</label></div>
-            <div class="meal-grid"><input type="text" id="m-lunch-place" placeholder="어디서" autocomplete="off"><input type="text" id="m-lunch-food" placeholder="무엇을" autocomplete="off"></div>
+            <div class="meal-grid"><span class="place-wrap"><input type="text" id="m-lunch-place" placeholder="어디서" autocomplete="off"><input type="checkbox" class="golf-chk" data-meal="lunch" title="골프장이면 체크 → 성좌에 ⛳"></span><input type="text" id="m-lunch-food" placeholder="무엇을" autocomplete="off"></div>
             <input type="text" id="m-lunch-people" placeholder="누구와 · 쉼표로 구분" autocomplete="off">
           </div>
           <div class="meal">
             <div class="meal-h row"><span>🌙 저녁</span><label class="same-chk sm"><input type="checkbox" class="meal-same" data-meal="dinner"> 동일</label></div>
-            <div class="meal-grid"><input type="text" id="m-dinner-place" placeholder="어디서" autocomplete="off"><input type="text" id="m-dinner-food" placeholder="무엇을" autocomplete="off"></div>
+            <div class="meal-grid"><span class="place-wrap"><input type="text" id="m-dinner-place" placeholder="어디서" autocomplete="off"><input type="checkbox" class="golf-chk" data-meal="dinner" title="골프장이면 체크 → 성좌에 ⛳"></span><input type="text" id="m-dinner-food" placeholder="무엇을" autocomplete="off"></div>
             <input type="text" id="m-dinner-people" placeholder="누구와 · 쉼표로 구분" autocomplete="off">
           </div>
         </div>
@@ -639,6 +642,7 @@
 
   // ---------- state ----------
   var state = load();
+  state.golf = state.golf || {};
   var draft = { date: todayStr(), people: [], schedule:"", meals:emptyMeals(), drinks:emptyDrinks(), thoughts:"", learning:"" };
   var hiddenRels = {}, hidePlaces=true, drinkPeriod="month", view="graph", recapMonth="", minMeet=2, calMonth="", searchQ="";
 
@@ -762,6 +766,8 @@
   var nodes=[], nodeIndex={}, links=[], me=null;
   var W=0,H=0,DPR=Math.min(2,window.devicePixelRatio||1);
   var hover=null, selected=null, dragging=null, alpha=1, t0=performance.now();
+  var rafId=null, idleCount=0, PLACE_CAP=20;
+  function wake(){ idleCount=0; if(rafId==null) rafId=requestAnimationFrame(loop); }
 
   function resize(){
     var r=canvas.getBoundingClientRect();
@@ -807,6 +813,7 @@
     // 표시된 '사람'과 연결된 장소만 (나와의 링크는 만들지 않음 → 개수·속도 절감)
     var showPlace={}; Object.keys(g.pplace||{}).forEach(function(k){ var ab=k.split(g.S1); if(nodeIndex[ab[1]]) showPlace[ab[0]]=1; });
     var pnames=Object.keys(g.places||{}).filter(function(pl){ return showPlace[pl]; });
+    if(pnames.length>PLACE_CAP){ pnames.sort(function(a,b){ return g.places[b].visits-g.places[a].visits; }); pnames=pnames.slice(0,PLACE_CAP); }
 
     var maxV=1; pnames.forEach(function(pl){ maxV=Math.max(maxV,g.places[pl].visits); });
     pnames.forEach(function(pl,i){
@@ -814,6 +821,7 @@
       var ang=(i/Math.max(1,pnames.length))*Math.PI*2+0.6;
       var node = p || { name:pl, x:W/2+Math.cos(ang)*205+(Math.random()*40-20), y:H/2+Math.sin(ang)*185+(Math.random()*40-20), vx:0, vy:0 };
       node.type="place";
+      node.golf=!!(state.golf && state.golf[pl]);
       node.visits=g.places[pl].visits;
       node.last=g.places[pl].last;
       node.r=6+Math.sqrt(g.places[pl].visits/maxV)*9;
@@ -843,6 +851,7 @@
         : (allNames.length
           ? ("‘"+minMeet+"회 이상’ 만난 사람이 없어요.<br>위에서 기준(1+/3+…)을 낮춰보세요.")
           : "아직 기록이 없어요.<br>오른쪽에서 오늘 만난 사람을 적어보면<br>여기에 별이 하나씩 떠올라요."); }
+    wake();
   }
 
   function visible(node){ if(node.type==="place") return !hidePlaces; return node.me || !hiddenRels[node.rel]; }
@@ -881,7 +890,7 @@
     me.vx+=(W/2-me.x)*0.02*k; me.vy+=(H/2-me.y)*0.02*k;
     me.vx*=damping; me.vy*=damping; me.x+=me.vx; me.y+=me.vy;
 
-    if(alpha>0.02) alpha*=0.99;
+    if(alpha>0.02) alpha*=0.985;
   }
 
   function draw(now){
@@ -904,8 +913,9 @@
     nodes.forEach(function(n){
       if(!visible(n)) return;
       var isPlace = n.type==="place";
+      var isGolf = isPlace && n.golf;
       var tw = reduce?0:Math.sin((now-t0)/900 + n.phase)*0.12;
-      var col= isPlace? PLACE_COLOR : REL[n.rel].color;
+      var col= isGolf? "#5BAE6E" : (isPlace? PLACE_COLOR : REL[n.rel].color);
       var dim = focus && focus!==n && !neigh[n.name];
       var a = dim?0.28:1;
       // glow
@@ -913,17 +923,20 @@
       gr.addColorStop(0, hexA(col, (isPlace?0.30:(0.5+tw))*a));
       gr.addColorStop(1, hexA(col,0));
       ctx.fillStyle=gr; ctx.beginPath(); ctx.arc(n.x,n.y,n.r*2.4,0,6.29); ctx.fill();
-      // core (사람=원, 장소=둥근 사각)
-      ctx.fillStyle=hexA(col, a); ctx.lineWidth=1.5; ctx.strokeStyle=hexA("#0C0F1A",a*0.5);
-      if(isPlace){ roundRect(n.x-n.r, n.y-n.r, n.r*2, n.r*2, Math.max(3,n.r*0.35)); ctx.fill(); ctx.stroke(); }
-      else { ctx.beginPath(); ctx.arc(n.x,n.y,n.r,0,6.29); ctx.fill(); ctx.stroke(); }
+      // core (사람=원, 골프장=⛳, 그 외 장소=둥근 사각)
+      if(isGolf){ ctx.font=Math.round(n.r*2.5)+"px "+BODY_FONT; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.globalAlpha=a; ctx.fillText("⛳", n.x, n.y); ctx.globalAlpha=1; }
+      else {
+        ctx.fillStyle=hexA(col, a); ctx.lineWidth=1.5; ctx.strokeStyle=hexA("#0C0F1A",a*0.5);
+        if(isPlace){ roundRect(n.x-n.r, n.y-n.r, n.r*2, n.r*2, Math.max(3,n.r*0.35)); ctx.fill(); ctx.stroke(); }
+        else { ctx.beginPath(); ctx.arc(n.x,n.y,n.r,0,6.29); ctx.fill(); ctx.stroke(); }
+      }
       // label
       var showLabel = isPlace || n.r>13 || focus===n || neigh[n.name] || nodes.length<=8;
       if(showLabel && !dim){
         ctx.font=(isPlace?"600 11px ":"600 12px ")+BODY_FONT;
         ctx.textAlign="center"; ctx.textBaseline="top";
         ctx.fillStyle= isPlace? "rgba(184,190,206,"+a+")" : "rgba(231,234,244,"+a+")";
-        ctx.fillText((isPlace?"🍴 ":"")+n.name, n.x, n.y+n.r+4);
+        ctx.fillText((isGolf?"":(isPlace?"🍴 ":""))+n.name, n.x, n.y+n.r+4);
       }
     });
 
@@ -939,9 +952,12 @@
   }
 
   function loop(now){
-    if(!reduce || alpha>0.02) tick();
+    var act=(!reduce && alpha>0.02) || !!dragging || !!hover;
+    if(act) tick();
     draw(now);
-    requestAnimationFrame(loop);
+    if(act) idleCount=0; else idleCount++;
+    if(idleCount>8){ rafId=null; return; }   // 유휴 → 렌더 정지(반짝임도 멈춤)
+    rafId=requestAnimationFrame(loop);
   }
 
   function hexA(hex,a){
@@ -960,21 +976,23 @@
   }
   canvas.addEventListener("mousemove",function(ev){
     var p=pos(ev);
-    if(dragging){ dragging.x=p.x; dragging.y=p.y; dragging.vx=0; dragging.vy=0; alpha=Math.max(alpha,0.5); return; }
-    var pk=pick(p);
+    if(dragging){ dragging.x=p.x; dragging.y=p.y; dragging.vx=0; dragging.vy=0; alpha=Math.max(alpha,0.5); wake(); return; }
+    var pk=pick(p), prev=hover;
     hover=(pk && pk.type==="place")?null:pk;   // 식당·장소는 연결 강조 안 함
     canvas.style.cursor=pk?"pointer":"default";
+    if(hover!==prev) wake();
   });
-  canvas.addEventListener("mousedown",function(ev){ var p=pos(ev); dragging=pick(p); if(dragging&&!dragging.me){ selectNode(dragging); } });
-  window.addEventListener("mouseup",function(){ dragging=null; });
-  canvas.addEventListener("click",function(ev){ var p=pos(ev); var n=pick(p); if(n&&!n.me) selectNode(n); else if(!n) closeDetail(); });
+  canvas.addEventListener("mouseleave",function(){ if(hover){ hover=null; wake(); } });
+  canvas.addEventListener("mousedown",function(ev){ var p=pos(ev); dragging=pick(p); if(dragging&&!dragging.me){ selectNode(dragging); } wake(); });
+  window.addEventListener("mouseup",function(){ if(dragging){ dragging=null; wake(); } });
+  canvas.addEventListener("click",function(ev){ var p=pos(ev); var n=pick(p); if(n&&!n.me) selectNode(n); else if(!n) closeDetail(); wake(); });
   // touch
-  canvas.addEventListener("touchstart",function(ev){ var p=pos(ev); dragging=pick(p); if(dragging&&!dragging.me) selectNode(dragging); },{passive:true});
-  canvas.addEventListener("touchmove",function(ev){ if(dragging){ var p=pos(ev); dragging.x=p.x; dragging.y=p.y; alpha=Math.max(alpha,0.5); ev.preventDefault(); } },{passive:false});
-  canvas.addEventListener("touchend",function(){ dragging=null; });
+  canvas.addEventListener("touchstart",function(ev){ var p=pos(ev); dragging=pick(p); if(dragging&&!dragging.me) selectNode(dragging); wake(); },{passive:true});
+  canvas.addEventListener("touchmove",function(ev){ if(dragging){ var p=pos(ev); dragging.x=p.x; dragging.y=p.y; alpha=Math.max(alpha,0.5); wake(); ev.preventDefault(); } },{passive:false});
+  canvas.addEventListener("touchend",function(){ dragging=null; wake(); });
 
-  function selectNode(n){ if(n.type==="place") return; selected=n; showDetail(n); }
-  function closeDetail(){ selected=null; $("#detail").classList.remove("show"); }
+  function selectNode(n){ if(n.type==="place") return; selected=n; showDetail(n); wake(); }
+  function closeDetail(){ selected=null; $("#detail").classList.remove("show"); wake(); }
 
   function byDateDesc(a,b){ return a.date<b.date?1:a.date>b.date?-1:0; }
   function entriesForPerson(name){
@@ -1059,7 +1077,7 @@
   function mval(id){ var el=document.getElementById(id); return el?(el.value||"").trim():""; }
   function parseNames(s){ return s? s.split(/[,，]/).map(function(x){return x.trim();}).filter(Boolean):[]; }
   function readMeals(){ var m={}; MEALS.forEach(function(x){ m[x.key]={place:mval("m-"+x.key+"-place"), food:mval("m-"+x.key+"-food"), people:parseNames(mval("m-"+x.key+"-people"))}; }); return m; }
-  function loadMeals(meals){ MEALS.forEach(function(x){ var v=(meals&&meals[x.key])||{}; var p=document.getElementById("m-"+x.key+"-place"), f=document.getElementById("m-"+x.key+"-food"), w=document.getElementById("m-"+x.key+"-people"); if(p)p.value=v.place||""; if(f)f.value=v.food||""; if(w)w.value=(v.people||[]).join(", "); }); }
+  function loadMeals(meals){ MEALS.forEach(function(x){ var v=(meals&&meals[x.key])||{}; var p=document.getElementById("m-"+x.key+"-place"), f=document.getElementById("m-"+x.key+"-food"), w=document.getElementById("m-"+x.key+"-people"); if(p)p.value=v.place||""; if(f)f.value=v.food||""; if(w)w.value=(v.people||[]).join(", "); var chk=document.querySelector('.golf-chk[data-meal="'+x.key+'"]'); if(chk) chk.checked=!!(state.golf && v.place && state.golf[v.place]); }); }
   function mealPeople(m){ var out=[]; if(m) MEALS.forEach(function(x){ ((m[x.key]||{}).people||[]).forEach(function(n){ if(out.indexOf(n)<0)out.push(n); }); }); return out; }
   function readDrinks(){ var d={}; DRINKS.forEach(function(x){ var v=parseFloat(mval("d-"+x.key)); d[x.key]=(isNaN(v)||v<0)?0:v; }); return d; }
   function loadDrinks(dr){ DRINKS.forEach(function(x){ var el=document.getElementById("d-"+x.key); if(el){ var v=(dr&&+dr[x.key])||0; el.value=v?v:""; } }); }
@@ -1089,7 +1107,13 @@
   }
   $("#addP").onclick=addPerson;
   $("#pname").addEventListener("keydown",function(e){ if(e.key==="Enter"){e.preventDefault(); addPerson();} });
-  document.querySelector(".meals").addEventListener("change",function(e){ if(e.target.classList.contains("meal-same") && e.target.checked) applyMealSame(); });
+  document.querySelector(".meals").addEventListener("change",function(e){
+    if(e.target.classList.contains("meal-same") && e.target.checked){ applyMealSame(); return; }
+    if(e.target.classList.contains("golf-chk")){
+      var mk=e.target.getAttribute("data-meal"), pl=mval("m-"+mk+"-place");
+      if(pl){ state.golf=state.golf||{}; if(e.target.checked) state.golf[pl]=true; else delete state.golf[pl]; save(); rebuild(); }
+    }
+  });
 
   function loadDraft(){ var scs=document.querySelectorAll(".meal-same"); for(var si=0;si<scs.length;si++) scs[si].checked=false; loadPhotoForDate(draft.date); $("#date").value=draft.date; $("#schedule").value=draft.schedule||""; loadMeals(draft.meals); loadDrinks(draft.drinks); $("#thoughts").value=draft.thoughts; $("#learning").value=draft.learning; renderDraftChips(); $("#editing").textContent = existingFor(draft.date)?"· 이 날짜 기록 수정 중":""; }
   function existingFor(date){ return state.entries.filter(function(e){return e.date===date;})[0]; }
@@ -1098,6 +1122,8 @@
     draft.date=$("#date").value||todayStr();
     draft.schedule=$("#schedule").value.trim();
     draft.meals=readMeals();
+    state.golf=state.golf||{};
+    MEALS.forEach(function(x){ var pl=(draft.meals[x.key]||{}).place; var chk=document.querySelector('.golf-chk[data-meal="'+x.key+'"]'); if(pl){ if(chk&&chk.checked) state.golf[pl]=true; else if(chk) delete state.golf[pl]; } });
     draft.drinks=readDrinks();
     draft.thoughts=$("#thoughts").value.trim();
     draft.learning=$("#learning").value.trim();
@@ -1207,12 +1233,12 @@
     REL_ORDER.forEach(function(r){
       var c=document.createElement("span"); c.className="chip"; c.setAttribute("aria-pressed", hiddenRels[r]?"false":"true");
       c.innerHTML='<span class="dot" style="background:'+REL[r].color+'"></span>'+REL[r].name;
-      c.onclick=function(){ hiddenRels[r]=!hiddenRels[r]; c.setAttribute("aria-pressed",hiddenRels[r]?"false":"true"); alpha=Math.max(alpha,0.4); };
+      c.onclick=function(){ hiddenRels[r]=!hiddenRels[r]; c.setAttribute("aria-pressed",hiddenRels[r]?"false":"true"); alpha=Math.max(alpha,0.4); wake(); };
       l.appendChild(c);
     });
     var pc=document.createElement("span"); pc.className="chip place-chip"; pc.setAttribute("aria-pressed", hidePlaces?"false":"true");
     pc.innerHTML='<span class="dot sq" style="background:'+PLACE_COLOR+'"></span>식당·장소';
-    pc.onclick=function(){ hidePlaces=!hidePlaces; pc.setAttribute("aria-pressed",hidePlaces?"false":"true"); alpha=Math.max(alpha,0.4); };
+    pc.onclick=function(){ hidePlaces=!hidePlaces; pc.setAttribute("aria-pressed",hidePlaces?"false":"true"); alpha=Math.max(alpha,0.4); wake(); };
     l.appendChild(pc);
   }
 
@@ -1362,7 +1388,7 @@
     if(v==="places") renderPlacesView();
     else if(v==="recap") renderRecapView();
     else if(v==="photo") renderPhotoGallery();
-    else alpha=Math.max(alpha,0.5);
+    else { alpha=Math.max(alpha,0.5); wake(); }
   }
   $("#viewTabs").addEventListener("click",function(e){ var b=e.target.closest("button"); if(b) setView(b.getAttribute("data-v")); });
   $("#minMeetSeg").addEventListener("click",function(e){
@@ -1493,7 +1519,7 @@
   function startImport(data){
     if(!data || !Array.isArray(data.entries)){ flash("‘하루’ 백업 형식이 아니에요."); return; }
     askConfirm({ title:"백업 불러오기", message:"현재 기록을 이 백업("+data.entries.length+"일치)으로 덮어쓸까요?\n지금 데이터는 사라집니다.", okText:"덮어쓰기", danger:true, onOk:function(){
-      state={ people:data.people||{}, entries:data.entries||[], events:data.events||[] };
+      state={ people:data.people||{}, entries:data.entries||[], events:data.events||[], golf:data.golf||{} };
       save(); resetDraft(); refresh(); rebuild(); closeDetail(); updateCalStatus();
       flash("불러왔어요 ✦ ("+state.entries.length+"일치)");
     }});
@@ -1609,7 +1635,7 @@
       title:"모든 기록 삭제",
       message:"기록 "+n+"일치와 인맥·식당·음주 데이터가 모두 사라지며 되돌릴 수 없어요.\n정말 삭제하려면 아래에 ‘삭제’ 라고 입력해 주세요.",
       okText:"삭제", danger:true, requireText:"삭제", placeholder:"삭제",
-      onOk:function(){ state={people:{},entries:[],events:[]}; save(); resetDraft(); refresh(); rebuild(); closeDetail(); updateCalStatus(); flash("모든 기록을 삭제했어요."); }
+      onOk:function(){ state={people:{},entries:[],events:[],golf:{}}; save(); resetDraft(); refresh(); rebuild(); closeDetail(); updateCalStatus(); flash("모든 기록을 삭제했어요."); }
     });
   };
 
@@ -1622,18 +1648,18 @@
   loadPhotoDates().then(function(){ loadDraft(); refresh(); });
   resize(); rebuild();
   var _rzT=null;
-  window.addEventListener("resize",function(){ resize(); if(_rzT)clearTimeout(_rzT); _rzT=setTimeout(syncTimelineHeight,120); });
-  if("ResizeObserver" in window){ new ResizeObserver(function(){ resize(); }).observe(canvas); }
+  window.addEventListener("resize",function(){ resize(); wake(); if(_rzT)clearTimeout(_rzT); _rzT=setTimeout(syncTimelineHeight,120); });
+  if("ResizeObserver" in window){ new ResizeObserver(function(){ resize(); wake(); }).observe(canvas); }
   window.addEventListener("load", syncTimelineHeight);
   requestAnimationFrame(function(){ syncTimelineHeight(); });
-  requestAnimationFrame(loop);
+  wake();
 
   // 외부(클라우드 동기화) 연동용 최소 API
   window.HARU={
     get:function(){ return state; },
     replace:function(s, keepDraft){
       if(!s || !Array.isArray(s.entries)) return;
-      state={ people:s.people||{}, entries:s.entries||[], events:s.events||[] };
+      state={ people:s.people||{}, entries:s.entries||[], events:s.events||[], golf:s.golf||{} };
       save();
       if(!keepDraft) resetDraft();
       refresh(); rebuild(); closeDetail(); updateCalStatus();
