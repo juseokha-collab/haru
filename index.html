@@ -647,7 +647,7 @@
   function drinkTotal(d){ if(!d) return 0; var s=0; DRINKS.forEach(function(x){ s+=(+d[x.key]||0); }); return s; }
   // 음주량 레벨: 0=안마심, 1=초록(1병 미만), 2=붉은색(~1병), 3=진한 붉은색(2병+/맥주 3병+)
   function drinkLevel(d){ if(!d) return 0; var score=(+d.beer||0)+(+d.soju||0)*1.5+(+d.makgeolli||0)+(+d.etc||0); if(score<=0) return 0; if(score<1) return 1; if(score<3) return 2; return 3; }
-  var NODE_CAP=40;
+  var NODE_CAP=40, capOn=true;   // 디폴트만 40명 제한, 필터 클릭 시 해제
   var BODY_FONT='"Pretendard Variable",Pretendard,-apple-system,"Malgun Gothic",system-ui,sans-serif';
   var reduce = matchMedia("(prefers-reduced-motion:reduce)").matches;
 
@@ -799,7 +799,7 @@
       names=allNames.filter(function(n){ return keep[n]; });
     } else {
       names=allNames.filter(function(n){ return g.meetings[n]>=minMeet; });
-      if(names.length>NODE_CAP){ names.sort(function(a,b){ return g.meetings[b]-g.meetings[a]; }); names=names.slice(0,NODE_CAP); }
+      if(capOn && names.length>NODE_CAP){ names.sort(function(a,b){ return g.meetings[b]-g.meetings[a]; }); names=names.slice(0,NODE_CAP); }
     }
     var prev={}; nodes.forEach(function(n){ prev[(n.type==="place"?"§":"")+n.name]=n; });
     nodes=[]; nodeIndex={}; placeIndex={};
@@ -945,11 +945,11 @@
       var showLabel = isPlace || n.type==="person" || focus===n || neigh[n.name];
       if(showLabel && !dim){
         var small = (n.type==="person" && n.meet<=2);
-        var fpx = isPlace?11 : (small?6:12);
+        var fpx = isPlace?11 : (small?8:12);
         ctx.font="600 "+fpx+"px "+BODY_FONT;
         ctx.textAlign="center"; ctx.textBaseline="top";
-        ctx.fillStyle= isPlace? "rgba(184,190,206,"+a+")" : "rgba(231,234,244,"+(small?a*0.8:a)+")";
-        ctx.fillText((isGolf?"":(isPlace?"🍴 ":""))+n.name, n.x, n.y+n.r+(small?2:4));
+        ctx.fillStyle= isPlace? "rgba(184,190,206,"+a+")" : "rgba(231,234,244,"+(small?a*0.82:a)+")";
+        ctx.fillText((isGolf?"":(isPlace?"🍴 ":""))+n.name, n.x, n.y+n.r+(small?3:4));
       }
     });
 
@@ -991,7 +991,7 @@
     var p=pos(ev);
     if(dragging){ dragging.x=p.x; dragging.y=p.y; dragging.vx=0; dragging.vy=0; alpha=Math.max(alpha,0.5); wake(); return; }
     var pk=pick(p), prev=hover;
-    hover=(pk && pk.type==="place")?null:pk;   // 식당·장소는 연결 강조 안 함
+    hover=pk;
     canvas.style.cursor=pk?"pointer":"default";
     if(hover!==prev) wake();
   });
@@ -1004,7 +1004,7 @@
   canvas.addEventListener("touchmove",function(ev){ if(dragging){ var p=pos(ev); dragging.x=p.x; dragging.y=p.y; alpha=Math.max(alpha,0.5); wake(); ev.preventDefault(); } },{passive:false});
   canvas.addEventListener("touchend",function(){ dragging=null; wake(); });
 
-  function selectNode(n){ if(n.type==="place") return; selected=n; showDetail(n); wake(); }
+  function selectNode(n){ selected=n; if(n.type!=="place") showDetail(n); wake(); }   // 장소는 하이라이트만(상세 생략)
   function closeDetail(){ selected=null; $("#detail").classList.remove("show"); wake(); }
 
   function byDateDesc(a,b){ return a.date<b.date?1:a.date>b.date?-1:0; }
@@ -1417,6 +1417,7 @@
   $("#minMeetSeg").addEventListener("click",function(e){
     var b=e.target.closest("button"); if(!b) return;
     minMeet=+b.getAttribute("data-m");
+    capOn=false;   // 필터를 직접 누르면 40명 제한 해제 → 해당 조건 전원 표시
     var kids=this.children; for(var i=0;i<kids.length;i++) kids[i].classList.toggle("on", kids[i]===b);
     rebuild();
   });
