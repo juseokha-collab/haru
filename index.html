@@ -451,7 +451,7 @@
           </div>
           <div class="search" id="searchWrap">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-            <input id="search" placeholder="사람 찾기" autocomplete="off">
+            <input id="search" placeholder="사람·장소 찾기" autocomplete="off">
           </div>
         </div>
       </div>
@@ -796,6 +796,8 @@
       var matched={}; allNames.forEach(function(n){ if(n.indexOf(searchQ)>=0) matched[n]=1; });
       var keep={}; for(var mn in matched) keep[mn]=1;
       Object.keys(g.pairs).forEach(function(k){ var ab=k.split(g.S1), a=ab[0], b=ab[1]; if(matched[a]) keep[b]=1; if(matched[b]) keep[a]=1; });
+      // 장소명 검색: 이름이 일치하는 장소에 함께 간 사람도 포함
+      Object.keys(g.pplace||{}).forEach(function(k){ var ab=k.split(g.S1), pl=ab[0], pn=ab[1]; if(pl.indexOf(searchQ)>=0) keep[pn]=1; });
       names=allNames.filter(function(n){ return keep[n]; });
     } else {
       names=allNames.filter(function(n){ return g.meetings[n]>=minMeet; });
@@ -854,18 +856,18 @@
 
     alpha=1;
     var emp=$("#emptySky");
-    var visPlaces = (hideRest && hideGolf)? 0 : pnames.length;
+    var visPlaces = (searchQ || !hideRest || !hideGolf)? pnames.length : 0;
     if(names.length||visPlaces){ emp.style.display="none"; }
     else { emp.style.display="flex";
       emp.firstElementChild.innerHTML = searchQ
-        ? ("‘"+esc(searchQ)+"’와(과) 관련된 사람이 없어요.<br>검색어를 지우면 전체가 보여요.")
+        ? ("‘"+esc(searchQ)+"’와(과) 관련된 내용이 없어요.<br>검색어를 지우면 전체가 보여요.")
         : (allNames.length
           ? ("‘"+minMeet+"회 이상’ 만난 사람이 없어요.<br>위에서 기준(1+/3+…)을 낮춰보세요.")
           : "아직 기록이 없어요.<br>오른쪽에서 오늘 만난 사람을 적어보면<br>여기에 별이 하나씩 떠올라요."); }
     wake();
   }
 
-  function visible(node){ if(node.type==="place") return node.golf? !hideGolf : !hideRest; return node.me || !hiddenRels[node.rel]; }
+  function visible(node){ if(node.type==="place"){ if(searchQ) return true; return node.golf? !hideGolf : !hideRest; } return node.me || !hiddenRels[node.rel]; }
 
   function tick(){
     var damping=0.86, k=alpha;
