@@ -955,8 +955,9 @@
   canvas.addEventListener("mousemove",function(ev){
     var p=pos(ev);
     if(dragging){ dragging.x=p.x; dragging.y=p.y; dragging.vx=0; dragging.vy=0; alpha=Math.max(alpha,0.5); return; }
-    hover=pick(p);
-    canvas.style.cursor=hover?"pointer":"default";
+    var pk=pick(p);
+    hover=(pk && pk.type==="place")?null:pk;   // 식당·장소는 연결 강조 안 함
+    canvas.style.cursor=pk?"pointer":"default";
   });
   canvas.addEventListener("mousedown",function(ev){ var p=pos(ev); dragging=pick(p); if(dragging&&!dragging.me){ selectNode(dragging); } });
   window.addEventListener("mouseup",function(){ dragging=null; });
@@ -966,7 +967,7 @@
   canvas.addEventListener("touchmove",function(ev){ if(dragging){ var p=pos(ev); dragging.x=p.x; dragging.y=p.y; alpha=Math.max(alpha,0.5); ev.preventDefault(); } },{passive:false});
   canvas.addEventListener("touchend",function(){ dragging=null; });
 
-  function selectNode(n){ selected=n; showDetail(n); }
+  function selectNode(n){ if(n.type==="place") return; selected=n; showDetail(n); }
   function closeDetail(){ selected=null; $("#detail").classList.remove("show"); }
 
   function byDateDesc(a,b){ return a.date<b.date?1:a.date>b.date?-1:0; }
@@ -1140,7 +1141,7 @@
     var strip='';
     for(var wi=7; wi>=1; wi--){ var dd=new Date(); dd.setDate(dd.getDate()-wi); var ds=fmt(dd), lv=lvMap[ds]||0;
       strip+='<div class="dw"><span class="dwd">'+DOW[dd.getDay()]+'</span><span class="dwdot lv'+lv+'"></span></div>'; }
-    var wk=$("#dkWeek"); if(wk) wk.innerHTML='<span class="dk-wklabel">마신 날</span>'+strip;
+    var wk=$("#dkWeek"); if(wk) wk.innerHTML=strip;
     var html='';
     if(total===0) html='<div class="dk-empty">이 기간엔 음주 기록이 없어요.</div>';
     else DRINKS.forEach(function(x){
