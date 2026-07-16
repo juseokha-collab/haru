@@ -188,7 +188,8 @@
   .st b{font-size:20px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; color:var(--ink)}
   .st i{font-style:normal; font-size:11.5px; font-weight:600; color:var(--ink-3)}
   .stat-row .sep{color:var(--ink-3); font-size:13px; opacity:.6}
-  #s-top{font-size:11.5px; font-weight:600; color:var(--ink-3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  #s-top{font-size:11.5px; font-weight:600; color:var(--ink-3); line-height:1.55}
+  .stat-row .st-top{flex:1 1 100%; min-width:120px; margin-top:1px}
 
   /* tabs on the dark sky header */
   .seg.on-sky{background:rgba(255,255,255,.09); border-color:rgba(150,166,210,.32)}
@@ -410,7 +411,6 @@
       <button class="btn ghost" id="importBtn" title="백업 파일에서 복원">가져오기</button>
       <input type="file" id="importFile" accept="application/json,.json" style="display:none">
       <button class="btn ghost" id="themeBtn" title="테마 전환">◐ 테마</button>
-      <button class="btn ghost" id="resetBtn" title="모든 기록 삭제">초기화</button>
     </div>
   </header>
 
@@ -421,7 +421,6 @@
       <div class="sky-head">
         <div class="sky-title">
           <span class="k">Constellation</span>
-          <h2 id="skyTitle">인맥 성좌</h2>
         </div>
         <div class="sky-tools">
           <div class="seg on-sky tabs" id="viewTabs">
@@ -451,8 +450,7 @@
         <span class="st"><b id="s-days">0</b><i>days</i></span>
         <span class="sep">/</span>
         <span class="st"><b id="s-week">0</b><i>in 7days</i></span>
-        <span class="sep">/</span>
-        <span class="st"><b id="s-top">–</b></span>
+        <span class="st st-top"><b id="s-top">–</b></span>
       </div>
     </section>
 
@@ -485,7 +483,6 @@
       <section class="card tl-card">
         <div class="card-h">
           <h2>타임라인</h2>
-          <button class="btn ghost mini-btn" id="calBtn" aria-expanded="false">📅 캘린더 가져오기</button>
         </div>
         <div class="cal-panel" id="calPanel" hidden>
           <p>구글 캘린더 → 설정 → <b>가져오기/내보내기</b>에서 받은 <b>.ics</b> 파일을 올리면 일정이 타임라인에 얹히고, 참석자는 인맥 성좌의 별로 이어집니다. 데이터는 이 브라우저에만 저장돼요.</p>
@@ -1219,8 +1216,8 @@
     state.entries.forEach(function(e){ if(e.date>=cut){ e.people.forEach(function(n){wk[n]=1;}); mealPeople(e.meals).forEach(function(n){wk[n]=1;}); } });
     (state.events||[]).forEach(function(ev){ if(ev.date>=cut)(ev.attendees||[]).forEach(function(n){wk[n]=1;}); });
     $("#s-week").textContent=Object.keys(wk).length;
-    var top5=people.sort(function(a,b){return g.meetings[b]-g.meetings[a];}).slice(0,5);
-    $("#s-top").innerHTML = top5.length? top5.map(esc).join(" · ") : "–";
+    var topN=people.sort(function(a,b){return g.meetings[b]-g.meetings[a];}).slice(0,10);
+    $("#s-top").innerHTML = topN.length? topN.map(esc).join(" · ") : "–";
   }
 
   // search
@@ -1351,7 +1348,7 @@
     $("#legend").style.display = v==="graph"?"":"none";
     $("#searchWrap").style.display = v==="graph"?"":"none";
     $("#minMeetSeg").style.display = v==="graph"?"":"none";
-    $("#skyTitle").textContent = {graph:"인맥 성좌", places:"자주 가는 곳", recap:"이달의 회고", photo:"Today's Photo"}[v];
+    var _st=$("#skyTitle"); if(_st) _st.textContent = {graph:"인맥 성좌", places:"자주 가는 곳", recap:"이달의 회고", photo:"Today's Photo"}[v];
     var tabs=$("#viewTabs").children; for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle("on", tabs[i].getAttribute("data-v")===v);
     if(v==="places") renderPlacesView();
     else if(v==="recap") renderRecapView();
@@ -1576,8 +1573,8 @@
     var c=document.getElementById("calClear");
     if(c) c.onclick=function(){ askConfirm({title:"캘린더 일정 삭제", message:"가져온 캘린더 일정을 모두 지울까요? 직접 쓴 기록은 그대로예요.", okText:"모두 지우기", danger:true, onOk:function(){ state.events=[]; save(); refresh(); rebuild(); updateCalStatus(); }}); };
   }
-  $("#calBtn").onclick=function(){ var p=$("#calPanel"); var open=p.hidden; p.hidden=!open; this.setAttribute("aria-expanded", open?"true":"false"); if(open) updateCalStatus(); };
-  $("#calClose").onclick=function(){ $("#calPanel").hidden=true; $("#calBtn").setAttribute("aria-expanded","false"); };
+  if($("#calBtn")) $("#calBtn").onclick=function(){ var p=$("#calPanel"); var open=p.hidden; p.hidden=!open; this.setAttribute("aria-expanded", open?"true":"false"); if(open) updateCalStatus(); };
+  if($("#calClose")) $("#calClose").onclick=function(){ $("#calPanel").hidden=true; var b=$("#calBtn"); if(b) b.setAttribute("aria-expanded","false"); };
   $("#calImport").onclick=function(){ var t=$("#calText").value.trim(); if(t) doImport(t); else $("#calFile").click(); };
   $("#calFile").addEventListener("change",function(){ var f=this.files[0]; if(!f)return; var rd=new FileReader(); rd.onload=function(){ doImport(rd.result); }; rd.readAsText(f); this.value=""; });
   (function(){ var drop=$("#calDrop");
@@ -1597,7 +1594,7 @@
     if(!cur) cur = matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";
     applyTheme(cur==="dark"?"light":"dark");
   };
-  $("#resetBtn").onclick=function(){
+  if($("#resetBtn")) $("#resetBtn").onclick=function(){
     var n=state.entries.length;
     askConfirm({
       title:"모든 기록 삭제",
