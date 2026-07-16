@@ -110,7 +110,7 @@
   .cv-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:5px; padding:6px 16px 10px}
   .cv-wd{text-align:center; font-size:11px; color:var(--ink-3); padding:2px 0 4px}
   .cv-wd.sun{color:#D98A8A}
-  .cv-cell{min-height:66px; border:1px solid transparent; background:var(--surface-2); border-radius:10px; display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:1px; cursor:pointer; font-family:inherit; padding:5px 7px 4px; transition:.12s; overflow:hidden; text-align:left}
+  .cv-cell{min-height:76px; border:1px solid transparent; background:var(--surface-2); border-radius:10px; display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:1px; cursor:pointer; font-family:inherit; padding:5px 7px 4px; transition:.12s; overflow:hidden; text-align:left}
   .cv-cell.blank{background:transparent; cursor:default; pointer-events:none}
   .cv-cell.has{background:var(--accent-soft)}
   .cv-cell:hover:not(.blank){border-color:var(--accent)}
@@ -120,8 +120,15 @@
   .cv-cell.today{border-color:var(--accent)}
   .cv-cell.today .cv-d{color:var(--accent-ink); font-weight:800}
   .cv-dot{width:7px; height:7px; border-radius:50%; flex:none}
-  .cv-ppl{font-size:10px; color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.45; margin-top:1px}
+  .cv-sched{font-size:10px; font-weight:700; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.45; margin-top:2px}
+  .cv-ppl{font-size:10px; color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.45}
   .cv-place{font-size:9.5px; color:var(--ink-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.4}
+  @media (max-width:640px){
+    .cv-cell{min-height:52px; padding:4px 5px}
+    .cv-sched{font-size:9px}
+    .cv-ppl{font-size:9px}
+    .cv-place{display:none}
+  }
   .cv-hint{font-size:11.5px; color:var(--ink-3); padding:0 16px 14px; line-height:1.5}
   .cv-hint b{color:var(--ink-2); font-weight:600}
 
@@ -321,7 +328,7 @@
   .msg{font-size:12px; color:var(--accent-ink); padding:0 16px 12px; min-height:16px}
 
   /* Timeline */
-  .tl{max-height:520px; overflow:auto; padding:2px 16px 18px 10px; scrollbar-gutter:stable}
+  .tl{max-height:520px; overflow:auto; padding:2px 16px 30px 10px; scrollbar-gutter:stable}
   .tl-item{padding:12px 8px; border-bottom:1px solid var(--border); cursor:pointer; border-radius:8px; transition:.12s}
   .tl-item:hover{background:var(--surface-2)}
   .tl-item:last-child{border-bottom:0}
@@ -1133,6 +1140,7 @@
     mealPeople(draft.meals).forEach(function(n){ if(!state.people[n]) state.people[n]={rel:"etc"}; });
     var ex=existingFor(draft.date);
     var names=draft.people.map(function(p){return p.name;});
+    mealPeople(draft.meals).forEach(function(n){ if(names.indexOf(n)<0) names.push(n); }); // 식사 동행도 만난 사람에 포함
     if(ex){ ex.people=names; ex.schedule=draft.schedule; ex.meals=draft.meals; ex.drinks=draft.drinks; ex.thoughts=draft.thoughts; ex.learning=draft.learning; ex.ts=Date.now(); }
     else state.entries.push({id:id(), date:draft.date, people:names, schedule:draft.schedule, meals:draft.meals, drinks:draft.drinks, thoughts:draft.thoughts, learning:draft.learning, ts:Date.now()});
     save();
@@ -1492,6 +1500,7 @@
       var cls='cv-cell'+(e?' has':'')+(ds===today?' today':'');
       var dot='';
       if(e && e.drinks && drinkTotal(e.drinks)>0){ var lv=drinkLevel(e.drinks); dot='<span class="cv-dot" style="background:'+(lv===1?'#4FBE86':lv===3?'#E24B41':'#ECC24A')+'"></span>'; }
+      var sched = (e && e.schedule) ? '<div class="cv-sched">'+esc(e.schedule)+'</div>' : '';
       var ppl='';
       if(e && e.people && e.people.length){
         var names=e.people.slice(0,2).map(esc).join(" ");
@@ -1502,7 +1511,7 @@
       if(e && e.meals){ var pls=[]; MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m&&m.place&&pls.indexOf(m.place)<0) pls.push(m.place); }); if(pls.length) place='<div class="cv-place">🍴 '+esc(pls.join(" · "))+'</div>'; }
       var title=e?' title="'+ds.slice(5).replace("-",".")+' · '+esc(calSummary(e))+'"':'';
       var cam=photoDates[ds]?'<span class="cv-cam">📷</span>':'';
-      html+='<button class="'+cls+'" data-date="'+ds+'"'+title+'><div class="cv-top"><span class="cv-d">'+d+'</span>'+dot+cam+'</div>'+ppl+place+'</button>';
+      html+='<button class="'+cls+'" data-date="'+ds+'"'+title+'><div class="cv-top"><span class="cv-d">'+d+'</span>'+dot+cam+'</div>'+sched+ppl+place+'</button>';
     }
     grid.innerHTML=html;
   }
