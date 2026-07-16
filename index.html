@@ -113,6 +113,8 @@
   .cv-cell{min-height:76px; border:1px solid transparent; background:var(--surface-2); border-radius:10px; display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:1px; cursor:pointer; font-family:inherit; padding:5px 7px 4px; transition:.12s; overflow:hidden; text-align:left}
   .cv-cell.blank{background:transparent; cursor:default; pointer-events:none}
   .cv-cell.has{background:var(--accent-soft)}
+  .cv-cell.mark{background:color-mix(in srgb, #6F7BE0 20%, transparent); border-color:color-mix(in srgb, #6F7BE0 42%, transparent)}
+  .cv-cell.mark .cv-d{color:#6F7BE0}
   .cv-cell:hover:not(.blank){border-color:var(--accent)}
   .cv-top{display:flex; align-items:center; gap:5px}
   .cv-d{font-size:12px; color:var(--ink-3); font-variant-numeric:tabular-nums; line-height:1}
@@ -274,6 +276,7 @@
   .place-wrap{position:relative; display:block}
   .place-wrap input[type=text]{padding-right:26px}
   .golf-chk{position:absolute; right:7px; top:50%; transform:translateY(-50%); margin:0; width:14px; height:14px; cursor:pointer; accent-color:#3FA35A}
+  .mark-chk{position:absolute; right:9px; top:50%; transform:translateY(-50%); margin:0; width:15px; height:15px; cursor:pointer; accent-color:#6F7BE0}
   .meal input{font-family:inherit; font-size:12.5px; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:7px 9px; outline:0; width:100%; transition:.15s}
   .meal input::placeholder{color:var(--ink-3)}
   .meal input:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft)}
@@ -527,8 +530,8 @@
       <div class="cgroup">
         <label for="date">날짜</label>
         <input type="date" id="date">
-        <label for="schedule">주요 일정</label>
-        <input type="text" class="name-in" id="schedule" placeholder="오늘의 주요 일정 · 한 일" autocomplete="off">
+        <label for="schedule">주요 일정 <span class="lab-hint">체크 시 달력 강조</span></label>
+        <span class="place-wrap"><input type="text" class="name-in" id="schedule" placeholder="오늘의 주요 일정 · 한 일" autocomplete="off"><input type="checkbox" id="schedMark" class="mark-chk" title="중요 표시 → 달력 색상 강조"></span>
         <label>만난 사람</label>
         <div class="add-person">
           <input class="name-in" id="pname" placeholder="이름" autocomplete="off">
@@ -590,7 +593,7 @@
     <div class="msg" id="msg"></div>
     <div class="save-row">
       <button class="btn primary" id="saveBtn">저장</button>
-      <button class="btn ghost" id="clearBtn">비우기</button>
+      <button class="btn ghost" id="clearBtn">삭제</button>
     </div>
   </section>
 
@@ -650,7 +653,7 @@
   // ---------- state ----------
   var state = load();
   state.golf = state.golf || {};
-  var draft = { date: todayStr(), people: [], schedule:"", meals:emptyMeals(), drinks:emptyDrinks(), thoughts:"", learning:"" };
+  var draft = { date: todayStr(), people: [], schedule:"", mark:false, meals:emptyMeals(), drinks:emptyDrinks(), thoughts:"", learning:"" };
   var hiddenRels = {}, hidePlaces=true, drinkPeriod="month", view="graph", recapMonth="", minMeet=2, calMonth="", searchQ="";
 
   function load(){
@@ -1122,12 +1125,13 @@
     }
   });
 
-  function loadDraft(){ var scs=document.querySelectorAll(".meal-same"); for(var si=0;si<scs.length;si++) scs[si].checked=false; loadPhotoForDate(draft.date); $("#date").value=draft.date; $("#schedule").value=draft.schedule||""; loadMeals(draft.meals); loadDrinks(draft.drinks); $("#thoughts").value=draft.thoughts; $("#learning").value=draft.learning; renderDraftChips(); $("#editing").textContent = existingFor(draft.date)?"· 이 날짜 기록 수정 중":""; }
+  function loadDraft(){ var scs=document.querySelectorAll(".meal-same"); for(var si=0;si<scs.length;si++) scs[si].checked=false; loadPhotoForDate(draft.date); $("#date").value=draft.date; $("#schedule").value=draft.schedule||""; $("#schedMark").checked=!!draft.mark; loadMeals(draft.meals); loadDrinks(draft.drinks); $("#thoughts").value=draft.thoughts; $("#learning").value=draft.learning; renderDraftChips(); $("#editing").textContent = existingFor(draft.date)?"· 이 날짜 기록 수정 중":""; }
   function existingFor(date){ return state.entries.filter(function(e){return e.date===date;})[0]; }
 
   function saveEntry(){
     draft.date=$("#date").value||todayStr();
     draft.schedule=$("#schedule").value.trim();
+    draft.mark=$("#schedMark").checked;
     draft.meals=readMeals();
     state.golf=state.golf||{};
     MEALS.forEach(function(x){ var pl=(draft.meals[x.key]||{}).place; var chk=document.querySelector('.golf-chk[data-meal="'+x.key+'"]'); if(pl){ if(chk&&chk.checked) state.golf[pl]=true; else if(chk) delete state.golf[pl]; } });
@@ -1141,23 +1145,27 @@
     var ex=existingFor(draft.date);
     var names=draft.people.map(function(p){return p.name;});
     mealPeople(draft.meals).forEach(function(n){ if(names.indexOf(n)<0) names.push(n); }); // 식사 동행도 만난 사람에 포함
-    if(ex){ ex.people=names; ex.schedule=draft.schedule; ex.meals=draft.meals; ex.drinks=draft.drinks; ex.thoughts=draft.thoughts; ex.learning=draft.learning; ex.ts=Date.now(); }
-    else state.entries.push({id:id(), date:draft.date, people:names, schedule:draft.schedule, meals:draft.meals, drinks:draft.drinks, thoughts:draft.thoughts, learning:draft.learning, ts:Date.now()});
+    if(ex){ ex.people=names; ex.schedule=draft.schedule; ex.mark=draft.mark; ex.meals=draft.meals; ex.drinks=draft.drinks; ex.thoughts=draft.thoughts; ex.learning=draft.learning; ex.ts=Date.now(); }
+    else state.entries.push({id:id(), date:draft.date, people:names, schedule:draft.schedule, mark:draft.mark, meals:draft.meals, drinks:draft.drinks, thoughts:draft.thoughts, learning:draft.learning, ts:Date.now()});
     save();
     flash("저장했어요 ✦");
     resetDraft();
     refresh(); rebuild();
   }
-  function resetDraft(){ draft={date:todayStr(), people:[], schedule:"", meals:emptyMeals(), drinks:emptyDrinks(), thoughts:"", learning:""}; loadDraft(); }
+  function resetDraft(){ draft={date:todayStr(), people:[], schedule:"", mark:false, meals:emptyMeals(), drinks:emptyDrinks(), thoughts:"", learning:""}; loadDraft(); }
   $("#saveBtn").onclick=saveEntry;
   $("#saveBtn2").onclick=saveEntry;
   $("#date").addEventListener("change",function(){ loadPhotoForDate(this.value||todayStr()); });
-  $("#clearBtn").onclick=function(){ resetDraft(); flash(""); };
+  $("#clearBtn").onclick=function(){
+    var d=$("#date").value||todayStr(), ex=existingFor(d);
+    if(ex){ askConfirm({ title:"기록 삭제", message:d.slice(5).replace("-",".")+" 기록을 삭제할까요?", okText:"삭제", danger:true, onOk:function(){ delEntry(ex); resetDraft(); flash("삭제했어요."); } }); }
+    else { resetDraft(); flash(""); }
+  };
   function flash(m){ $("#msg").textContent=m; if(m) setTimeout(function(){ if($("#msg").textContent===m)$("#msg").textContent=""; },2600); }
 
   function scrollToComposer(){ var c=document.querySelector(".composer-wide"); if(c){ c.scrollIntoView({behavior:reduce?"auto":"smooth", block:"start"}); var f=document.getElementById("schedule"); } }
   function editEntry(e){
-    draft={ date:e.date, people:e.people.map(function(n){return {name:n, rel:relOf(n)};}), schedule:e.schedule||"", meals:e.meals?JSON.parse(JSON.stringify(e.meals)):emptyMeals(), drinks:e.drinks?JSON.parse(JSON.stringify(e.drinks)):emptyDrinks(), thoughts:e.thoughts, learning:e.learning };
+    draft={ date:e.date, people:e.people.map(function(n){return {name:n, rel:relOf(n)};}), schedule:e.schedule||"", mark:!!e.mark, meals:e.meals?JSON.parse(JSON.stringify(e.meals)):emptyMeals(), drinks:e.drinks?JSON.parse(JSON.stringify(e.drinks)):emptyDrinks(), thoughts:e.thoughts, learning:e.learning };
     loadDraft(); scrollToComposer();
   }
   function delEntry(e){
@@ -1497,7 +1505,7 @@
     for(var b=0;b<startDow;b++) html+='<div class="cv-cell blank"></div>';
     for(var d=1;d<=daysIn;d++){
       var ds=y+"-"+pad(mo+1)+"-"+pad(d), e=byDate[ds];
-      var cls='cv-cell'+(e?' has':'')+(ds===today?' today':'');
+      var cls='cv-cell'+(e?' has':'')+(e&&e.mark?' mark':'')+(ds===today?' today':'');
       var dot='';
       if(e && e.drinks && drinkTotal(e.drinks)>0){ var lv=drinkLevel(e.drinks); dot='<span class="cv-dot" style="background:'+(lv===1?'#4FBE86':lv===3?'#E24B41':'#ECC24A')+'"></span>'; }
       var sched = (e && e.schedule) ? '<div class="cv-sched">'+esc(e.schedule)+'</div>' : '';
@@ -1518,7 +1526,7 @@
   function openDay(ds){
     var e=state.entries.filter(function(x){return x.date===ds;})[0];
     if(e){ editEntry(e); }
-    else { draft={date:ds, people:[], schedule:"", meals:emptyMeals(), drinks:emptyDrinks(), thoughts:"", learning:""}; loadDraft(); scrollToComposer(); }
+    else { draft={date:ds, people:[], schedule:"", mark:false, meals:emptyMeals(), drinks:emptyDrinks(), thoughts:"", learning:""}; loadDraft(); scrollToComposer(); }
   }
   $("#cvGrid").addEventListener("click",function(ev){ var b=ev.target.closest(".cv-cell"); if(!b||b.classList.contains("blank"))return; openDay(b.getAttribute("data-date")); });
   $("#cvPrev").onclick=function(){ calMonth=shiftMonth(calMonth,-1); renderCalendar(); syncTimelineHeight(); };
@@ -1554,7 +1562,7 @@
   // ---------- calendar (.ics) import ----------
   function reflectEvent(ev){
     var ex=existingFor(ev.date);
-    if(ex){ editEntry(ex); } else { draft={date:ev.date, people:[], schedule:ev.title||"", meals:emptyMeals(), drinks:emptyDrinks(), thoughts:"", learning:""}; }
+    if(ex){ editEntry(ex); } else { draft={date:ev.date, people:[], schedule:ev.title||"", mark:false, meals:emptyMeals(), drinks:emptyDrinks(), thoughts:"", learning:""}; }
     (ev.attendees||[]).forEach(function(nm){ if(!draft.people.some(function(p){return p.name===nm;})) draft.people.push({name:nm, rel:relOf(nm)}); });
     loadDraft(); flash("‘"+ev.title+"’ 일정을 기록으로 옮겨왔어요"); scrollToComposer();
   }
