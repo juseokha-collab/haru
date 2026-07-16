@@ -158,6 +158,7 @@
     border:1px solid rgba(150,166,210,.22); background:rgba(255,255,255,.04); padding:4px 9px; border-radius:20px; cursor:pointer; transition:.15s; user-select:none}
   .chip .dot{width:8px; height:8px; border-radius:50%}
   .dot.sq{border-radius:2px}
+  .chip .golf-ico{font-size:11px; line-height:1}
   .chip[aria-pressed="false"]{opacity:.4}
   .chip:hover{border-color:rgba(150,166,210,.5)}
 
@@ -654,7 +655,7 @@
   var state = load();
   state.golf = state.golf || {};
   var draft = { date: todayStr(), people: [], schedule:"", mark:false, meals:emptyMeals(), drinks:emptyDrinks(), thoughts:"", learning:"" };
-  var hiddenRels = {}, hidePlaces=true, drinkPeriod="month", view="graph", recapMonth="", minMeet=2, calMonth="", searchQ="";
+  var hiddenRels = {}, hideRest=true, hideGolf=true, drinkPeriod="month", view="graph", recapMonth="", minMeet=2, calMonth="", searchQ="";
 
   function load(){
     try{ var s=JSON.parse(localStorage.getItem(KEY)); if(s&&s.entries) return s; }catch(e){}
@@ -853,7 +854,7 @@
 
     alpha=1;
     var emp=$("#emptySky");
-    var visPlaces = hidePlaces? 0 : pnames.length;
+    var visPlaces = (hideRest && hideGolf)? 0 : pnames.length;
     if(names.length||visPlaces){ emp.style.display="none"; }
     else { emp.style.display="flex";
       emp.firstElementChild.innerHTML = searchQ
@@ -864,7 +865,7 @@
     wake();
   }
 
-  function visible(node){ if(node.type==="place") return !hidePlaces; return node.me || !hiddenRels[node.rel]; }
+  function visible(node){ if(node.type==="place") return node.golf? !hideGolf : !hideRest; return node.me || !hiddenRels[node.rel]; }
 
   function tick(){
     var damping=0.86, k=alpha;
@@ -940,13 +941,15 @@
         if(isPlace){ roundRect(n.x-n.r, n.y-n.r, n.r*2, n.r*2, Math.max(3,n.r*0.35)); ctx.fill(); ctx.stroke(); }
         else { ctx.beginPath(); ctx.arc(n.x,n.y,n.r,0,6.29); ctx.fill(); ctx.stroke(); }
       }
-      // label
-      var showLabel = isPlace || n.r>13 || focus===n || neigh[n.name] || nodes.length<=8;
+      // label (사람은 모두 표시 · 2회만 만난 사람은 절반 크기)
+      var showLabel = isPlace || n.type==="person" || focus===n || neigh[n.name];
       if(showLabel && !dim){
-        ctx.font=(isPlace?"600 11px ":"600 12px ")+BODY_FONT;
+        var small = (n.type==="person" && n.meet<=2);
+        var fpx = isPlace?11 : (small?6:12);
+        ctx.font="600 "+fpx+"px "+BODY_FONT;
         ctx.textAlign="center"; ctx.textBaseline="top";
-        ctx.fillStyle= isPlace? "rgba(184,190,206,"+a+")" : "rgba(231,234,244,"+a+")";
-        ctx.fillText((isGolf?"":(isPlace?"🍴 ":""))+n.name, n.x, n.y+n.r+4);
+        ctx.fillStyle= isPlace? "rgba(184,190,206,"+a+")" : "rgba(231,234,244,"+(small?a*0.8:a)+")";
+        ctx.fillText((isGolf?"":(isPlace?"🍴 ":""))+n.name, n.x, n.y+n.r+(small?2:4));
       }
     });
 
@@ -1252,10 +1255,14 @@
       c.onclick=function(){ hiddenRels[r]=!hiddenRels[r]; c.setAttribute("aria-pressed",hiddenRels[r]?"false":"true"); alpha=Math.max(alpha,0.4); wake(); };
       l.appendChild(c);
     });
-    var pc=document.createElement("span"); pc.className="chip place-chip"; pc.setAttribute("aria-pressed", hidePlaces?"false":"true");
-    pc.innerHTML='<span class="dot sq" style="background:'+PLACE_COLOR+'"></span>식당·장소';
-    pc.onclick=function(){ hidePlaces=!hidePlaces; pc.setAttribute("aria-pressed",hidePlaces?"false":"true"); alpha=Math.max(alpha,0.4); wake(); };
-    l.appendChild(pc);
+    var rc=document.createElement("span"); rc.className="chip place-chip"; rc.setAttribute("aria-pressed", hideRest?"false":"true");
+    rc.innerHTML='<span class="dot sq" style="background:'+PLACE_COLOR+'"></span>식당';
+    rc.onclick=function(){ hideRest=!hideRest; rc.setAttribute("aria-pressed",hideRest?"false":"true"); alpha=Math.max(alpha,0.4); wake(); };
+    l.appendChild(rc);
+    var gc=document.createElement("span"); gc.className="chip place-chip"; gc.setAttribute("aria-pressed", hideGolf?"false":"true");
+    gc.innerHTML='<span class="golf-ico">⛳</span>골프';
+    gc.onclick=function(){ hideGolf=!hideGolf; gc.setAttribute("aria-pressed",hideGolf?"false":"true"); alpha=Math.max(alpha,0.4); wake(); };
+    l.appendChild(gc);
   }
 
   function renderStats(){
