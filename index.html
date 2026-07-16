@@ -188,8 +188,14 @@
   .st b{font-size:20px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; color:var(--ink)}
   .st i{font-style:normal; font-size:11.5px; font-weight:600; color:var(--ink-3)}
   .stat-row .sep{color:var(--ink-3); font-size:13px; opacity:.6}
-  #s-top{font-size:11.5px; font-weight:600; color:var(--ink-3); line-height:1.55}
-  .stat-row .st-top{flex:1 1 100%; min-width:120px; margin-top:1px}
+  #s-top{font-size:11.5px; font-weight:600; color:var(--ink-3); line-height:1.5}
+  .st-top{min-width:0}
+  @media (max-width:640px){
+    .stat-row{gap:5px 8px}
+    .stat-row .st b{font-size:16px}
+    .stat-row .st i{font-size:10px}
+    #s-top{font-size:10px}
+  }
 
   /* tabs on the dark sky header */
   .seg.on-sky{background:rgba(255,255,255,.09); border-color:rgba(150,166,210,.32)}
@@ -450,6 +456,7 @@
         <span class="st"><b id="s-days">0</b><i>days</i></span>
         <span class="sep">/</span>
         <span class="st"><b id="s-week">0</b><i>in 7days</i></span>
+        <span class="sep">/</span>
         <span class="st st-top"><b id="s-top">–</b></span>
       </div>
     </section>
@@ -627,6 +634,7 @@
   // 음주량 레벨: 0=안마심, 1=초록(1병 미만), 2=붉은색(~1병), 3=진한 붉은색(2병+/맥주 3병+)
   function drinkLevel(d){ if(!d) return 0; var score=(+d.beer||0)+(+d.soju||0)*1.5+(+d.makgeolli||0)+(+d.etc||0); if(score<=0) return 0; if(score<1) return 1; if(score<3) return 2; return 3; }
   var NODE_CAP=40;
+  var BODY_FONT='"Pretendard Variable",Pretendard,-apple-system,"Malgun Gothic",system-ui,sans-serif';
   var reduce = matchMedia("(prefers-reduced-motion:reduce)").matches;
 
   // ---------- state ----------
@@ -776,7 +784,6 @@
       names=allNames.filter(function(n){ return g.meetings[n]>=minMeet; });
       if(names.length>NODE_CAP){ names.sort(function(a,b){ return g.meetings[b]-g.meetings[a]; }); names=names.slice(0,NODE_CAP); }
     }
-    var pnames=Object.keys(g.places||{});
     var prev={}; nodes.forEach(function(n){ prev[(n.type==="place"?"§":"")+n.name]=n; });
     nodes=[]; nodeIndex={}; placeIndex={};
 
@@ -796,6 +803,10 @@
       node.phase=node.phase!=null?node.phase:Math.random()*6.28;
       nodes.push(node); nodeIndex[n]=node;
     });
+
+    // 표시된 '사람'과 연결된 장소만 (나와의 링크는 만들지 않음 → 개수·속도 절감)
+    var showPlace={}; Object.keys(g.pplace||{}).forEach(function(k){ var ab=k.split(g.S1); if(nodeIndex[ab[1]]) showPlace[ab[0]]=1; });
+    var pnames=Object.keys(g.places||{}).filter(function(pl){ return showPlace[pl]; });
 
     var maxV=1; pnames.forEach(function(pl){ maxV=Math.max(maxV,g.places[pl].visits); });
     pnames.forEach(function(pl,i){
@@ -817,12 +828,10 @@
       if(nodeIndex[ab[0]]&&nodeIndex[ab[1]]) links.push({a:nodeIndex[ab[0]], b:nodeIndex[ab[1]], w:g.pairs[k], me:false});
     });
 
-    var linkedPlace={};
     Object.keys(g.pplace||{}).forEach(function(k){
       var ab=k.split(g.S1), pl=ab[0], pn=ab[1];
-      if(placeIndex[pl]&&nodeIndex[pn]){ links.push({a:placeIndex[pl], b:nodeIndex[pn], w:g.pplace[k], me:false, place:true}); linkedPlace[pl]=1; }
+      if(placeIndex[pl]&&nodeIndex[pn]) links.push({a:placeIndex[pl], b:nodeIndex[pn], w:g.pplace[k], me:false, place:true});
     });
-    pnames.forEach(function(pl){ if(!linkedPlace[pl]&&placeIndex[pl]) links.push({a:me, b:placeIndex[pl], w:1, me:false, place:true}); });
 
     alpha=1;
     var emp=$("#emptySky");
@@ -911,7 +920,7 @@
       // label
       var showLabel = isPlace || n.r>13 || focus===n || neigh[n.name] || nodes.length<=8;
       if(showLabel && !dim){
-        ctx.font=(isPlace?"600 11px ":"600 12px ")+getComputedStyle(document.body).fontFamily;
+        ctx.font=(isPlace?"600 11px ":"600 12px ")+BODY_FONT;
         ctx.textAlign="center"; ctx.textBaseline="top";
         ctx.fillStyle= isPlace? "rgba(184,190,206,"+a+")" : "rgba(231,234,244,"+a+")";
         ctx.fillText((isPlace?"🍴 ":"")+n.name, n.x, n.y+n.r+4);
@@ -924,7 +933,7 @@
     ctx.fillStyle=mg; ctx.beginPath(); ctx.arc(me.x,me.y,34,0,6.29); ctx.fill();
     ctx.beginPath(); ctx.arc(me.x,me.y,12,0,6.29); ctx.fillStyle="#FBEFC9"; ctx.fill();
     ctx.lineWidth=2; ctx.strokeStyle="#E7B24C"; ctx.stroke();
-    ctx.font="700 12px "+getComputedStyle(document.body).fontFamily;
+    ctx.font="700 12px "+BODY_FONT;
     ctx.textAlign="center"; ctx.textBaseline="top"; ctx.fillStyle="#FBEFC9";
     ctx.fillText("나", me.x, me.y+16);
   }
