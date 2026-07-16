@@ -100,7 +100,10 @@
   .cgroup{min-width:0}
 
   /* 기록 달력 */
-  .cv-nav{display:flex; align-items:center; gap:8px}
+  .calcard .card-h{gap:10px}
+  .calcard .card-h h2{min-width:0; display:flex; align-items:baseline; gap:6px; overflow:hidden}
+  .cal-top{font-size:11.5px; font-weight:600; color:var(--ink-3); letter-spacing:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0}
+  .cv-nav{display:flex; align-items:center; gap:8px; flex:none}
   .cv-nav button{width:27px; height:27px; border-radius:8px; border:1px solid var(--border); background:var(--surface-2); color:var(--ink); cursor:pointer; font-size:14px}
   .cv-nav button:hover{border-color:var(--accent); color:var(--accent-ink)}
   .cv-nav b{font-variant-numeric:tabular-nums; font-size:13.5px; min-width:96px; text-align:center}
@@ -185,8 +188,7 @@
   .st b{font-size:20px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; color:var(--ink)}
   .st i{font-style:normal; font-size:11.5px; font-weight:600; color:var(--ink-3)}
   .stat-row .sep{color:var(--ink-3); font-size:13px; opacity:.6}
-  #s-top{font-size:20px; font-weight:800; letter-spacing:-.02em; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-  #s-top .s-more{font-size:11.5px; font-weight:600; color:var(--ink-3); margin-left:3px}
+  #s-top{font-size:11.5px; font-weight:600; color:var(--ink-3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 
   /* tabs on the dark sky header */
   .seg.on-sky{background:rgba(255,255,255,.09); border-color:rgba(150,166,210,.32)}
@@ -279,17 +281,19 @@
   .dwd{font-size:10.5px; color:var(--ink-3); line-height:1}
   .dwdot{width:9px; height:9px; border-radius:50%; background:transparent}
   .dwdot.lv1{background:#4FBE86}
-  .dwdot.lv2{background:#E4574C}
-  .dwdot.lv3{background:#A81E15}
-  /* 음주 카드 컴팩트(세로 축소) */
-  .drink-card .card-h{padding:9px 16px 3px}
-  .drink-card .drink-stats{padding:0 16px 12px}
-  .drink-card .dk-top{margin:4px 0 7px}
-  .drink-card .dk-stat{font-size:14px}
-  .drink-card .dk-stat b{font-size:19px}
-  .drink-card .dk-row{margin:3px 0}
+  .dwdot.lv2{background:#ECC24A}
+  .dwdot.lv3{background:#E24B41}
+  /* 음주 카드 컴팩트 + 헤더(마신날 스트립 좌 / 기간 토글 우·축소) */
+  .drink-card .card-h.dk-head{padding:8px 14px; align-items:center}
+  .dk-head .dk-week{margin-left:0; align-items:flex-end; gap:6px}
+  .dk-wklabel{font-size:9.5px; color:var(--ink-3); align-self:center; margin-right:3px; white-space:nowrap}
+  .drink-card .seg{padding:2px}
+  .drink-card .seg button{font-size:10px; padding:2px 6px}
+  .drink-card .drink-stats{padding:6px 16px 12px}
+  .drink-card .dk-row{margin:4px 0}
   .drink-card .dk-bar{height:7px}
   .drink-card .dw{gap:4px}
+  .drink-card .dwd{font-size:10px}
   .drink-card .dwdot{width:8px; height:8px}
   .dk-row{display:flex; align-items:center; gap:9px; margin:7px 0}
   .dk-row .nm{width:42px; font-size:12px; color:var(--ink-2); flex:none}
@@ -455,7 +459,7 @@
     <!-- ===== 기록 달력 ===== -->
     <section class="card calcard">
       <div class="card-h">
-        <h2>📅</h2>
+        <h2>📅 <span class="cal-top" id="calTop"></span></h2>
         <div class="cv-nav">
           <button type="button" id="cvPrev" aria-label="이전 달">‹</button>
           <b id="cvLbl"></b>
@@ -469,8 +473,8 @@
     <!-- ===== Sidebar ===== -->
     <div class="side">
       <section class="card drink-card">
-        <div class="card-h">
-          <h2 class="dk-title"></h2>
+        <div class="card-h dk-head">
+          <div class="dk-week" id="dkWeek"></div>
           <div class="seg" id="drinkSeg">
             <button type="button" data-p="week">1주</button><button type="button" data-p="month" class="on">1달</button><button type="button" data-p="year">1년</button><button type="button" data-p="all">전체</button>
           </div>
@@ -625,6 +629,7 @@
   function drinkTotal(d){ if(!d) return 0; var s=0; DRINKS.forEach(function(x){ s+=(+d[x.key]||0); }); return s; }
   // 음주량 레벨: 0=안마심, 1=초록(1병 미만), 2=붉은색(~1병), 3=진한 붉은색(2병+/맥주 3병+)
   function drinkLevel(d){ if(!d) return 0; var score=(+d.beer||0)+(+d.soju||0)*1.5+(+d.makgeolli||0)+(+d.etc||0); if(score<=0) return 0; if(score<1) return 1; if(score<3) return 2; return 3; }
+  var NODE_CAP=40;
   var reduce = matchMedia("(prefers-reduced-motion:reduce)").matches;
 
   // ---------- state ----------
@@ -772,6 +777,7 @@
       names=allNames.filter(function(n){ return keep[n]; });
     } else {
       names=allNames.filter(function(n){ return g.meetings[n]>=minMeet; });
+      if(names.length>NODE_CAP){ names.sort(function(a,b){ return g.meetings[b]-g.meetings[a]; }); names=names.slice(0,NODE_CAP); }
     }
     var pnames=Object.keys(g.places||{});
     var prev={}; nodes.forEach(function(n){ prev[(n.type==="place"?"§":"")+n.name]=n; });
@@ -1126,22 +1132,17 @@
   function periodCut(p){ if(p==="all") return "0000-00-00"; var days=p==="week"?6:p==="month"?29:364; return fmt(new Date(Date.now()-days*864e5)); }
   function renderDrinkStats(){
     var el=$("#drinkStats"); if(!el) return;
-    var cut=periodCut(drinkPeriod), totals=emptyDrinks(), days={}, total=0;
-    state.entries.forEach(function(e){
-      if(e.date<cut || !e.drinks) return;
-      var s=drinkTotal(e.drinks); if(s>0) days[e.date]=1;
-      DRINKS.forEach(function(x){ totals[x.key]+=(+e.drinks[x.key]||0); });
-      total+=s;
-    });
+    var cut=periodCut(drinkPeriod), totals=emptyDrinks(), total=0;
+    state.entries.forEach(function(e){ if(e.date<cut || !e.drinks) return; DRINKS.forEach(function(x){ totals[x.key]+=(+e.drinks[x.key]||0); }); total+=drinkTotal(e.drinks); });
     var maxv=1; DRINKS.forEach(function(x){ maxv=Math.max(maxv,totals[x.key]); });
-    // 지난 7일 스트립 (어제까지 · 마신 날만 점, 음주량에 따라 색)
+    // 지난 7일 스트립 (어제까지 · 마신 날만 점, 음주량에 따라 초록/노랑/빨강)
     var lvMap={}; state.entries.forEach(function(e){ if(e.drinks){ var lv=drinkLevel(e.drinks); if(lv>0) lvMap[e.date]=lv; } });
     var strip='';
     for(var wi=7; wi>=1; wi--){ var dd=new Date(); dd.setDate(dd.getDate()-wi); var ds=fmt(dd), lv=lvMap[ds]||0;
       strip+='<div class="dw"><span class="dwd">'+DOW[dd.getDay()]+'</span><span class="dwdot lv'+lv+'"></span></div>'; }
-    var html='<div class="dk-top"><div class="dk-nums"><span class="dk-stat" title="총 병 수">🍻 <b>'+total+'</b></span><span class="dk-stat" title="마신 날">📆 <b>'+Object.keys(days).length+'</b></span></div>'
-      +'<div class="dk-week" title="어제까지 최근 7일 · 초록<1병, 붉은색~1병, 진한 붉은색 2병+">'+strip+'</div></div>';
-    if(total===0) html+='<div class="dk-empty">이 기간엔 음주 기록이 없어요.</div>';
+    var wk=$("#dkWeek"); if(wk) wk.innerHTML='<span class="dk-wklabel">마신 날</span>'+strip;
+    var html='';
+    if(total===0) html='<div class="dk-empty">이 기간엔 음주 기록이 없어요.</div>';
     else DRINKS.forEach(function(x){
       var v=totals[x.key], w=Math.round(v/maxv*100);
       html+='<div class="dk-row" title="'+x.ko+'"><span class="nm">'+x.label+'</span><span class="dk-bar"><i style="width:'+w+'%;background:'+x.color+'"></i></span><span class="val">'+v+'</span></div>';
@@ -1217,12 +1218,8 @@
     state.entries.forEach(function(e){ if(e.date>=cut){ e.people.forEach(function(n){wk[n]=1;}); mealPeople(e.meals).forEach(function(n){wk[n]=1;}); } });
     (state.events||[]).forEach(function(ev){ if(ev.date>=cut)(ev.attendees||[]).forEach(function(n){wk[n]=1;}); });
     $("#s-week").textContent=Object.keys(wk).length;
-    var sorted=people.sort(function(a,b){return g.meetings[b]-g.meetings[a];});
-    var top3=sorted.slice(0,3);
-    if(top3.length){
-      var rest=top3.slice(1);
-      $("#s-top").innerHTML=esc(top3[0])+(rest.length?' <small class="s-more">'+rest.map(esc).join(" · ")+'</small>':'');
-    } else $("#s-top").textContent="–";
+    var top5=people.sort(function(a,b){return g.meetings[b]-g.meetings[a];}).slice(0,5);
+    $("#s-top").innerHTML = top5.length? top5.map(esc).join(" · ") : "–";
   }
 
   // search
@@ -1449,6 +1446,9 @@
     if(!calMonth) calMonth=monthStr(new Date());
     var p=calMonth.split("-"), y=+p[0], mo=+p[1]-1;
     $("#cvLbl").textContent=y+"년 "+(mo+1)+"월";
+    var mpp={}; state.entries.forEach(function(e){ if(e.date.slice(0,7)!==calMonth) return; e.people.forEach(function(n){ mpp[n]=(mpp[n]||0)+1; }); mealPeople(e.meals).forEach(function(n){ mpp[n]=(mpp[n]||0)+1; }); });
+    var mtop=Object.keys(mpp).sort(function(a,b){return mpp[b]-mpp[a];}).slice(0,5);
+    var ct=$("#calTop"); if(ct) ct.innerHTML = mtop.length? mtop.map(esc).join(" · ") : "";
     var byDate={}; state.entries.forEach(function(e){ byDate[e.date]=e; });
     var startDow=new Date(y,mo,1).getDay(), daysIn=new Date(y,mo+1,0).getDate(), today=todayStr();
     var html='';
@@ -1458,7 +1458,7 @@
       var ds=y+"-"+pad(mo+1)+"-"+pad(d), e=byDate[ds];
       var cls='cv-cell'+(e?' has':'')+(ds===today?' today':'');
       var dot='';
-      if(e && e.drinks && drinkTotal(e.drinks)>0){ var lv=drinkLevel(e.drinks); dot='<span class="cv-dot" style="background:'+(lv===1?'#4FBE86':lv===3?'#A81E15':'#E4574C')+'"></span>'; }
+      if(e && e.drinks && drinkTotal(e.drinks)>0){ var lv=drinkLevel(e.drinks); dot='<span class="cv-dot" style="background:'+(lv===1?'#4FBE86':lv===3?'#E24B41':'#ECC24A')+'"></span>'; }
       var ppl='';
       if(e && e.people && e.people.length){
         var names=e.people.slice(0,2).map(esc).join(" ");
