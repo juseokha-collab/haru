@@ -96,10 +96,12 @@
   .composer-wide .save-row{padding-top:8px}
   @media (min-width:761px){
     .cfields{display:grid; grid-template-columns:1.05fr 1fr 1fr; gap:0 26px; align-items:start}
-    /* 1열을 가장 높은 열(미팅=2열) 바닥선까지 늘려 사진 미리보기가 남는 공간을 채움 → 1·2열 끝선 일치 */
-    .cfields>.cgroup:first-child{align-self:stretch; display:flex; flex-direction:column}
+    /* 3열 모두 가장 높은 열 바닥선까지 늘려 끝선 일치:
+       1열=사진 미리보기가, 3열=고민/학습 textarea가 남는 공간을 채움 */
+    .cfields>.cgroup{align-self:stretch; display:flex; flex-direction:column}
     .cfields>.cgroup:first-child .photo-field{flex:1; display:flex; flex-direction:column; min-height:0}
     .cfields>.cgroup:first-child .photo-preview{flex:1 1 auto; min-height:150px; aspect-ratio:auto}
+    .cfields>.cgroup:last-child textarea{flex:1 1 0; min-height:70px}
   }
   .cgroup{min-width:0}
 
@@ -393,11 +395,10 @@
   .photo-preview{width:100%; aspect-ratio:4/3; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; overflow:hidden; display:flex; align-items:center; justify-content:center}
   .photo-preview img{width:100%; height:100%; object-fit:cover; display:block}
   .photo-empty{font-size:12px; color:var(--ink-3)}
-  .photo-head{display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin:12px 0 6px}
-  .photo-head>label{display:flex; align-items:center; height:20px; line-height:20px; font-size:12.5px; font-weight:600; color:var(--ink-2); letter-spacing:.01em; margin:0; flex:none}
-  .photo-actions{display:flex; align-items:center; gap:6px; flex:none}
-  .photo-actions .btn{cursor:pointer; height:20px; line-height:20px; box-sizing:border-box; padding:0 10px; font-size:12px; font-weight:400; color:var(--ink-3); background:transparent; gap:0}
-  .photo-actions .btn:hover{color:var(--accent-ink); border-color:var(--accent)}
+  .photo-head{display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:12px 0 6px}
+  .photo-head .ph-title{margin-right:auto; font-size:12.5px; font-weight:600; color:var(--ink-2); letter-spacing:.01em; line-height:22px}
+  .photo-head .ph-btn{cursor:pointer; height:22px; box-sizing:border-box; padding:0 10px; font-size:12px; font-weight:400; color:var(--ink-3); background:transparent; justify-content:center}
+  .photo-head .ph-btn:hover{color:var(--accent-ink); border-color:var(--accent)}
   .photo-msg{display:block; font-size:11.5px; color:var(--accent-ink); margin-top:6px}
   #photoCaption{margin-top:8px}
   .tl-photo{width:100%; max-height:170px; object-fit:cover; border-radius:10px; margin-top:8px; display:block; background:var(--surface-2)}
@@ -425,11 +426,13 @@
   .linkbtn{border:0; background:none; color:var(--accent-ink); font:inherit; font-size:inherit; text-decoration:underline; cursor:pointer; padding:0}
   .relmodal{max-width:420px}
   .rel-list{margin-top:12px; max-height:52vh; overflow:auto; display:flex; flex-direction:column; gap:6px}
-  .rel-row{display:flex; align-items:center; gap:8px; justify-content:space-between; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:7px 10px}
-  .rel-row .rn{font-size:13.5px; font-weight:700; color:var(--ink); display:flex; align-items:center; gap:7px; min-width:0}
+  .rel-row{display:flex; align-items:center; gap:8px; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:7px 10px}
+  .rel-row .rn{flex:1; font-size:13.5px; font-weight:700; color:var(--ink); display:flex; align-items:center; gap:7px; min-width:0}
   .rel-row .rn .nm{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-  .rel-row select{font-family:inherit; font-size:12.5px; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:5px 7px; outline:0; cursor:pointer}
+  .rel-row select{flex:none; font-family:inherit; font-size:12.5px; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:5px 7px; outline:0; cursor:pointer}
   .rel-row select:focus{border-color:var(--accent)}
+  .rel-del{flex:none; width:26px; height:26px; border:1px solid var(--border); background:var(--surface); border-radius:8px; color:var(--ink-3); font-size:17px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0}
+  .rel-del:hover{border-color:var(--c-fam); color:var(--c-fam)}
   .rel-empty{font-size:12.5px; color:var(--ink-2); padding:14px 4px; text-align:center}
   .modal-actions{display:flex; justify-content:flex-end; gap:8px; margin-top:18px}
   .modal-actions .btn{padding:9px 16px}
@@ -568,12 +571,10 @@
         <div class="chips" id="pchips"></div>
 
         <div class="photo-head">
-          <label>오늘의 사진</label>
-          <div class="photo-actions">
-            <label class="btn mini-btn" for="photoInput">추가/변경</label>
-            <input type="file" id="photoInput" accept="image/*" style="display:none">
-            <button type="button" class="btn ghost mini-btn" id="photoRemove" hidden>제거</button>
-          </div>
+          <span class="ph-title">오늘의 사진</span>
+          <label class="btn ph-btn" for="photoInput">추가/변경</label>
+          <button type="button" class="btn ph-btn" id="photoRemove" hidden>제거</button>
+          <input type="file" id="photoInput" accept="image/*" style="display:none">
         </div>
         <div class="photo-field">
           <div class="photo-preview" id="photoPreview"><span class="photo-empty">사진 없음</span></div>
@@ -1380,12 +1381,24 @@
         var sel=document.createElement("select");
         REL_ORDER.forEach(function(k){ var o=document.createElement("option"); o.value=k; o.textContent=REL[k].name; if(k===cur)o.selected=true; sel.appendChild(o); });
         sel.onchange=function(){ if(state.people[n]){ state.people[n].rel=sel.value; save(); rebuild(); refresh(); build(); } };
-        row.appendChild(sel);
+        var del=document.createElement("button"); del.className="rel-del"; del.setAttribute("aria-label","삭제"); del.title="모든 기록에서 삭제"; del.textContent="×";
+        del.onclick=function(){ askConfirm({ title:"인맥 삭제", message:"‘"+n+"’ 님을 모든 기록에서 삭제할까요?\n되돌릴 수 없어요.", okText:"삭제", danger:true, onOk:function(){ deletePerson(n); build(); } }); };
+        row.appendChild(sel); row.appendChild(del);
         list.appendChild(row);
       });
     }
     build();
     back.hidden=false;
+  }
+  function deletePerson(name){
+    if(state.people) delete state.people[name];
+    state.entries.forEach(function(e){
+      if(e.people) e.people=e.people.filter(function(x){return x!==name;});
+      if(e.meals) MEALS.forEach(function(m){ var mm=e.meals[m.key]; if(mm&&mm.people) mm.people=mm.people.filter(function(x){return x!==name;}); });
+      if(e.bizmeet&&e.bizmeet.people) e.bizmeet.people=e.bizmeet.people.filter(function(x){return x!==name;});
+    });
+    (state.events||[]).forEach(function(ev){ if(ev.attendees) ev.attendees=ev.attendees.filter(function(x){return x!==name;}); });
+    save(); rebuild(); refresh();
   }
   (function(){
     var back=$("#relModalBack");
