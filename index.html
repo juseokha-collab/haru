@@ -572,8 +572,8 @@
 
         <div class="photo-head">
           <span class="ph-title">오늘의 사진</span>
-          <label class="btn ph-btn" for="photoInput">추가/변경</label>
-          <button type="button" class="btn ph-btn" id="photoRemove" hidden>제거</button>
+          <span class="btn ph-btn" id="photoAdd" role="button" tabindex="0">추가/변경</span>
+          <span class="btn ph-btn" id="photoRemove" role="button" tabindex="0" hidden>제거</span>
           <input type="file" id="photoInput" accept="image/*" style="display:none">
         </div>
         <div class="photo-field">
@@ -1509,6 +1509,7 @@
       setTimeout(function(){ if($("#photoMsg").textContent.indexOf("저장됨")===0) $("#photoMsg").textContent=""; },2600);
     });
   });
+  $("#photoAdd").onclick=function(){ $("#photoInput").click(); };
   $("#photoRemove").onclick=function(){ var date=$("#date").value||todayStr(); removePhoto(date); $("#photoPreview").innerHTML='<span class="photo-empty">사진 없음</span>'; this.hidden=true; $("#photoCaption").value=""; $("#photoMsg").textContent=""; };
   $("#photoCaption").addEventListener("change",function(){
     var date=$("#date").value||todayStr(); if(!photoDates[date]) return;
