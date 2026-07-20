@@ -1110,12 +1110,18 @@
     if(e.meals) MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m&&m.place===place) (m.people||[]).forEach(function(n){ if(out.indexOf(n)<0) out.push(n); }); });
     return out;
   }
+  // 장소 관련 기록의 라벨: 그 날 주요일정이 아니라 '그 장소' 기준으로 표시(먹은 것 있으면 함께)
+  function placeSummary(e, place){
+    var foods=[];
+    if(e.meals) MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m&&m.place===place && m.food && foods.indexOf(m.food)<0) foods.push(m.food); });
+    return foods.length ? place+" · "+foods.join(" · ") : place;
+  }
   function renderRelatedRecs(node){
     var isPlace=node.type==="place", rows=[];
     (isPlace?entriesForPlace(node.name):entriesForPerson(node.name)).forEach(function(e){
-      var extra="";
+      var extra="", label=isPlace? placeSummary(e, node.name) : recSummary(e);
       if(isPlace){ var comp=placeCompanions(e, node.name); if(comp.length) extra=' <span class="rc-with">('+esc(comp.join(", "))+')</span>'; }
-      rows.push({date:e.date, html:'<button class="rec" data-id="'+e.id+'"><span class="rd">'+e.date.slice(5).replace("-",".")+'</span><span class="rt">'+esc(recSummary(e))+extra+'</span></button>'});
+      rows.push({date:e.date, html:'<button class="rec" data-id="'+e.id+'"><span class="rd">'+e.date.slice(5).replace("-",".")+'</span><span class="rt">'+esc(label)+extra+'</span></button>'});
     });
     if(!isPlace) (state.events||[]).forEach(function(ev){ if((ev.attendees||[]).indexOf(node.name)>=0) rows.push({date:ev.date, html:'<button class="rec" data-ev="'+ev.id+'"><span class="rd">'+ev.date.slice(5).replace("-",".")+'</span><span class="rt">📅 '+esc(ev.title)+'</span></button>'}); });
     if(!rows.length) return '<div class="rel-h">관련 기록</div><div class="rel-none">아직 없어요</div>';
