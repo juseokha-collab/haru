@@ -151,6 +151,7 @@
   .sky-title{color:var(--sky-ink); display:flex; flex-direction:column; gap:1px}
   .sky-title h2{margin:0; font-size:15px; font-weight:700; color:var(--sky-ink)}
   .sky-title .k{font-family:var(--font-serif); font-style:italic; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--sky-ink-2)}
+  #skyDate{font-size:16.5px; letter-spacing:.05em}
   .sky-tools{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
   .search{display:flex; align-items:center; gap:7px; background:rgba(255,255,255,.09); border:1px solid rgba(150,166,210,.32);
     border-radius:9px; padding:6px 10px}
@@ -198,6 +199,7 @@
   .detail .rec:hover{background:rgba(255,255,255,.08)}
   .detail .rec .rd{flex:none; font-size:11px; font-variant-numeric:tabular-nums; color:var(--sky-ink-2); width:36px}
   .detail .rec .rt{font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .detail .rec .rc-with{font-size:10.5px; color:var(--sky-ink-2); font-weight:400}
 
   .stat-row{display:flex; align-items:baseline; flex-wrap:wrap; gap:6px 12px; border-top:1px solid var(--sky-line); padding:13px 16px; background:var(--surface)}
   .st{display:inline-flex; align-items:baseline; gap:5px; min-width:0}
@@ -896,8 +898,15 @@
 
     // 표시된 '사람'과 연결된 장소만 (나와의 링크는 만들지 않음 → 개수·속도 절감)
     var showPlace={}; Object.keys(g.pplace||{}).forEach(function(k){ var ab=k.split(g.S1); if(nodeIndex[ab[1]]) showPlace[ab[0]]=1; });
-    var pnames=Object.keys(g.places||{}).filter(function(pl){ return showPlace[pl]; });
-    if(pnames.length>PLACE_CAP){ pnames.sort(function(a,b){ return g.places[b].visits-g.places[a].visits; }); pnames=pnames.slice(0,PLACE_CAP); }
+    var isGolfPl=function(pl){ return !!(state.golf && state.golf[pl]); };
+    // 골프장은 동반자 연결이 없어도 항상 표시, 그 외 장소는 표시된 사람과 연결된 것만
+    var pnames=Object.keys(g.places||{}).filter(function(pl){ return showPlace[pl] || isGolfPl(pl); });
+    if(pnames.length>PLACE_CAP){
+      var golfP=pnames.filter(isGolfPl), otherP=pnames.filter(function(pl){ return !isGolfPl(pl); });
+      otherP.sort(function(a,b){ return g.places[b].visits-g.places[a].visits; });
+      otherP=otherP.slice(0, Math.max(0, PLACE_CAP-golfP.length));
+      pnames=golfP.concat(otherP);
+    }
 
     var maxV=1; pnames.forEach(function(pl){ maxV=Math.max(maxV,g.places[pl].visits); });
     pnames.forEach(function(pl,i){
@@ -1096,10 +1105,17 @@
     var note=[e.thoughts,e.learning].filter(Boolean).join(" · ");
     return note||"기록";
   }
+  function placeCompanions(e, place){
+    var out=[];
+    if(e.meals) MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m&&m.place===place) (m.people||[]).forEach(function(n){ if(out.indexOf(n)<0) out.push(n); }); });
+    return out;
+  }
   function renderRelatedRecs(node){
     var isPlace=node.type==="place", rows=[];
     (isPlace?entriesForPlace(node.name):entriesForPerson(node.name)).forEach(function(e){
-      rows.push({date:e.date, html:'<button class="rec" data-id="'+e.id+'"><span class="rd">'+e.date.slice(5).replace("-",".")+'</span><span class="rt">'+esc(recSummary(e))+'</span></button>'});
+      var extra="";
+      if(isPlace){ var comp=placeCompanions(e, node.name); if(comp.length) extra=' <span class="rc-with">('+esc(comp.join(", "))+')</span>'; }
+      rows.push({date:e.date, html:'<button class="rec" data-id="'+e.id+'"><span class="rd">'+e.date.slice(5).replace("-",".")+'</span><span class="rt">'+esc(recSummary(e))+extra+'</span></button>'});
     });
     if(!isPlace) (state.events||[]).forEach(function(ev){ if((ev.attendees||[]).indexOf(node.name)>=0) rows.push({date:ev.date, html:'<button class="rec" data-ev="'+ev.id+'"><span class="rd">'+ev.date.slice(5).replace("-",".")+'</span><span class="rt">📅 '+esc(ev.title)+'</span></button>'}); });
     if(!rows.length) return '<div class="rel-h">관련 기록</div><div class="rel-none">아직 없어요</div>';
