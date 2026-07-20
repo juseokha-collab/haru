@@ -785,10 +785,10 @@
 
   // ---------- derived graph model ----------
   function buildGraph(){
-    var meetings={}, last={}, pairs={};
+    var meetings={}, last={}, pairs={}, S1=String.fromCharCode(1);
     var _recs=[];
     state.entries.forEach(function(e){
-      _recs.push({date:e.date, people:e.people});
+      _recs.push({date:e.date, people:e.people, noPair:true});   // 만난사람 리스트: 카운트만, 연관선 X
       if(e.meals) MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m&&m.people&&m.people.length) _recs.push({date:e.date, people:m.people}); });
     });
     (state.events||[]).forEach(function(ev){ if(ev.attendees&&ev.attendees.length) _recs.push({date:ev.date, people:ev.attendees}); });
@@ -800,7 +800,7 @@
         if(!dateSeen[dk]){ dateSeen[dk]=1; meetings[n]=(meetings[n]||0)+1; }
         if(!last[n]||e.date>last[n]) last[n]=e.date;
       });
-      for(var i=0;i<ppl.length;i++)for(var j=i+1;j<ppl.length;j++){
+      if(!e.noPair) for(var i=0;i<ppl.length;i++)for(var j=i+1;j<ppl.length;j++){
         var k=[ppl[i],ppl[j]].sort().join("");
         pairs[k]=(pairs[k]||0)+1;
       }
