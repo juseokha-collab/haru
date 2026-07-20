@@ -282,6 +282,9 @@
   .meal input::placeholder{color:var(--ink-3)}
   .meal input:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft)}
   .meal input[type=checkbox]{width:13px; height:13px; flex:none; padding:0; box-shadow:none}
+  .meal input[type=time]{font-family:inherit; font-size:12.5px; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:6px 9px; outline:0; width:100%; transition:.15s}
+  .meal input[type=time]:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft)}
+  .biz-meal .meal-h.row>span{color:var(--accent-ink)}
 
   .drink-grid{display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:7px}
   .drink-grid label{display:flex; align-items:center; justify-content:space-between; gap:6px; font-size:12.5px; color:var(--ink-2); background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:4px 4px 4px 11px}
@@ -570,7 +573,7 @@
       </div>
 
       <div class="cgroup">
-        <label>식사</label>
+        <label>미팅</label>
         <div class="meals">
           <div class="meal">
             <div class="meal-h row"><span>🌅 아침</span><label class="same-chk sm"><input type="checkbox" class="meal-same" data-meal="breakfast"> 동일</label></div>
@@ -591,6 +594,11 @@
             <div class="meal-h row"><span>✨ Special</span><label class="same-chk sm"><input type="checkbox" class="meal-same" data-meal="special"> 동일</label></div>
             <div class="meal-grid"><span class="place-wrap"><input type="text" id="m-special-place" placeholder="어디서 · 저녁 이후 만남" autocomplete="off"><input type="checkbox" class="golf-chk" data-meal="special" title="골프장이면 체크 → 성좌에 ⛳"></span><input type="text" id="m-special-food" placeholder="무엇을" autocomplete="off"></div>
             <input type="text" id="m-special-people" placeholder="누구와 · 쉼표로 구분" autocomplete="off">
+          </div>
+          <div class="meal biz-meal">
+            <div class="meal-h row"><span>💼 업무미팅</span><label class="same-chk sm"><input type="checkbox" class="meal-same" data-meal="__biz"> 동일</label></div>
+            <div class="meal-grid"><input type="text" id="bm-name" placeholder="업무미팅명" autocomplete="off"><input type="time" id="bm-time" title="미팅 시간"></div>
+            <input type="text" id="bm-people" placeholder="누구와 · 쉼표로 구분" autocomplete="off">
           </div>
         </div>
       </div>
@@ -688,6 +696,8 @@
   function emptyMeals(){ var m={}; MEALS.forEach(function(x){ m[x.key]={place:"",food:"",people:[]}; }); return m; }
   function mealHasContent(m){ return !!m && MEALS.some(function(x){ var v=m[x.key]||{}; return v.place||v.food||(v.people&&v.people.length); }); }
   function emptyExercise(){ return {activity:"", minutes:0, weight:""}; }
+  function emptyBiz(){ return {name:"", time:"", people:[]}; }
+  function bizHasContent(b){ return !!b && (b.name || b.time || (b.people&&b.people.length)); }
   var EX_MIN={0:"",30:"30분",60:"1시간",90:"1시간 30분",120:"2시간",150:"2시간 30분",180:"3시간",210:"3시간 30분",240:"4시간",300:"5시간+"};
   function exHasContent(x){ return !!x && (x.activity || +x.minutes>0 || (x.weight!=="" && x.weight!=null)); }
   var PLACE_COLOR="#8C93A6";
@@ -703,7 +713,7 @@
   // ---------- state ----------
   var state = load();
   state.golf = state.golf || {};
-  var draft = { date: todayStr(), people: [], schedule:"", mark:false, meals:emptyMeals(), drinks:emptyDrinks(), exercise:emptyExercise(), thoughts:"", learning:"" };
+  var draft = { date: todayStr(), people: [], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), drinks:emptyDrinks(), exercise:emptyExercise(), thoughts:"", learning:"" };
   var hiddenRels = {fam:true}, hideRest=true, hideGolf=true, drinkPeriod="month", view="graph", recapMonth="", minMeet=2, calMonth="", searchQ="";
 
   function load(){
@@ -790,6 +800,7 @@
     state.entries.forEach(function(e){
       _recs.push({date:e.date, people:e.people, noPair:true});   // 만난사람 리스트: 카운트만, 연관선 X
       if(e.meals) MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m&&m.people&&m.people.length) _recs.push({date:e.date, people:m.people}); });
+      if(e.bizmeet && e.bizmeet.people && e.bizmeet.people.length) _recs.push({date:e.date, people:e.bizmeet.people});   // 업무미팅 동행: 연관선 O
     });
     (state.events||[]).forEach(function(ev){ if(ev.attendees&&ev.attendees.length) _recs.push({date:ev.date, people:ev.attendees}); });
     var dateSeen={};
@@ -1142,6 +1153,8 @@
   function parseNames(s){ return s? s.split(/[,，]/).map(function(x){return x.trim();}).filter(Boolean):[]; }
   function readMeals(){ var m={}; MEALS.forEach(function(x){ m[x.key]={place:mval("m-"+x.key+"-place"), food:mval("m-"+x.key+"-food"), people:parseNames(mval("m-"+x.key+"-people"))}; }); return m; }
   function loadMeals(meals){ MEALS.forEach(function(x){ var v=(meals&&meals[x.key])||{}; var p=document.getElementById("m-"+x.key+"-place"), f=document.getElementById("m-"+x.key+"-food"), w=document.getElementById("m-"+x.key+"-people"); if(p)p.value=v.place||""; if(f)f.value=v.food||""; if(w)w.value=(v.people||[]).join(", "); var chk=document.querySelector('.golf-chk[data-meal="'+x.key+'"]'); if(chk) chk.checked=!!(state.golf && v.place && state.golf[v.place]); }); }
+  function readBiz(){ return { name:mval("bm-name"), time:mval("bm-time"), people:parseNames(mval("bm-people")) }; }
+  function loadBiz(b){ b=b||{}; var nm=document.getElementById("bm-name"), tm=document.getElementById("bm-time"), pp=document.getElementById("bm-people"); if(nm)nm.value=b.name||""; if(tm)tm.value=b.time||""; if(pp)pp.value=(b.people||[]).join(", "); }
   function readExercise(){ var mn=document.getElementById("ex-minutes"); return { activity:mval("ex-activity"), minutes:mn?(+mn.value||0):0, weight:mval("ex-weight") }; }
   function loadExercise(x){ x=x||{}; var a=document.getElementById("ex-activity"), mn=document.getElementById("ex-minutes"), w=document.getElementById("ex-weight"); if(a)a.value=x.activity||""; if(mn)mn.value=String(+x.minutes||0); if(w)w.value=(x.weight===0||x.weight)?x.weight:""; }
   function mealPeople(m){ var out=[]; if(m) MEALS.forEach(function(x){ ((m[x.key]||{}).people||[]).forEach(function(n){ if(out.indexOf(n)<0)out.push(n); }); }); return out; }
@@ -1164,6 +1177,8 @@
       var chk=document.querySelector('.meal-same[data-meal="'+x.key+'"]');
       if(chk&&chk.checked){ var el=document.getElementById("m-"+x.key+"-people"); if(el) el.value=names; }
     });
+    var bchk=document.querySelector('.meal-same[data-meal="__biz"]');
+    if(bchk&&bchk.checked){ var bel=document.getElementById("bm-people"); if(bel) bel.value=names; }
   }
   function addPerson(){
     var nm=$("#pname").value.trim(); if(!nm)return;
@@ -1181,7 +1196,7 @@
     }
   });
 
-  function loadDraft(){ var scs=document.querySelectorAll(".meal-same"); for(var si=0;si<scs.length;si++) scs[si].checked=false; loadPhotoForDate(draft.date); $("#date").value=draft.date; $("#schedule").value=draft.schedule||""; $("#schedMark").checked=!!draft.mark; loadMeals(draft.meals); loadDrinks(draft.drinks); loadExercise(draft.exercise); $("#thoughts").value=draft.thoughts; $("#learning").value=draft.learning; renderDraftChips(); $("#editing").textContent = existingFor(draft.date)?"· 이 날짜 기록 수정 중":""; }
+  function loadDraft(){ var scs=document.querySelectorAll(".meal-same"); for(var si=0;si<scs.length;si++) scs[si].checked=false; loadPhotoForDate(draft.date); $("#date").value=draft.date; $("#schedule").value=draft.schedule||""; $("#schedMark").checked=!!draft.mark; loadMeals(draft.meals); loadBiz(draft.bizmeet); loadDrinks(draft.drinks); loadExercise(draft.exercise); $("#thoughts").value=draft.thoughts; $("#learning").value=draft.learning; renderDraftChips(); $("#editing").textContent = existingFor(draft.date)?"· 이 날짜 기록 수정 중":""; }
   function existingFor(date){ return state.entries.filter(function(e){return e.date===date;})[0]; }
 
   function saveEntry(){
@@ -1191,25 +1206,27 @@
     draft.meals=readMeals();
     state.golf=state.golf||{};
     MEALS.forEach(function(x){ var pl=(draft.meals[x.key]||{}).place; var chk=document.querySelector('.golf-chk[data-meal="'+x.key+'"]'); if(pl){ if(chk&&chk.checked) state.golf[pl]=true; else if(chk) delete state.golf[pl]; } });
+    draft.bizmeet=readBiz();
     draft.drinks=readDrinks();
     draft.exercise=readExercise();
     draft.thoughts=$("#thoughts").value.trim();
     draft.learning=$("#learning").value.trim();
-    if(!draft.people.length && !draft.schedule && !mealHasContent(draft.meals) && drinkTotal(draft.drinks)===0 && !exHasContent(draft.exercise) && !draft.thoughts && !draft.learning){ flash("기록할 내용을 입력해 주세요."); return; }
-    // upsert people global rel (직접 추가한 사람 + 식사 동행)
+    if(!draft.people.length && !draft.schedule && !mealHasContent(draft.meals) && !bizHasContent(draft.bizmeet) && drinkTotal(draft.drinks)===0 && !exHasContent(draft.exercise) && !draft.thoughts && !draft.learning){ flash("기록할 내용을 입력해 주세요."); return; }
+    // upsert people global rel (직접 추가한 사람 + 식사/업무미팅 동행)
     draft.people.forEach(function(p){ state.people[p.name]={rel:p.rel}; });
-    mealPeople(draft.meals).forEach(function(n){ if(!state.people[n]) state.people[n]={rel:"etc"}; });
+    var withAll=mealPeople(draft.meals).concat((draft.bizmeet&&draft.bizmeet.people)||[]);
+    withAll.forEach(function(n){ if(!state.people[n]) state.people[n]={rel:"etc"}; });
     var ex=existingFor(draft.date);
     var names=draft.people.map(function(p){return p.name;});
-    mealPeople(draft.meals).forEach(function(n){ if(names.indexOf(n)<0) names.push(n); }); // 식사 동행도 만난 사람에 포함
-    if(ex){ ex.people=names; ex.schedule=draft.schedule; ex.mark=draft.mark; ex.meals=draft.meals; ex.drinks=draft.drinks; ex.exercise=draft.exercise; ex.thoughts=draft.thoughts; ex.learning=draft.learning; ex.ts=Date.now(); }
-    else state.entries.push({id:id(), date:draft.date, people:names, schedule:draft.schedule, mark:draft.mark, meals:draft.meals, drinks:draft.drinks, exercise:draft.exercise, thoughts:draft.thoughts, learning:draft.learning, ts:Date.now()});
+    withAll.forEach(function(n){ if(names.indexOf(n)<0) names.push(n); }); // 식사·업무미팅 동행도 만난 사람에 포함
+    if(ex){ ex.people=names; ex.schedule=draft.schedule; ex.mark=draft.mark; ex.meals=draft.meals; ex.bizmeet=draft.bizmeet; ex.drinks=draft.drinks; ex.exercise=draft.exercise; ex.thoughts=draft.thoughts; ex.learning=draft.learning; ex.ts=Date.now(); }
+    else state.entries.push({id:id(), date:draft.date, people:names, schedule:draft.schedule, mark:draft.mark, meals:draft.meals, bizmeet:draft.bizmeet, drinks:draft.drinks, exercise:draft.exercise, thoughts:draft.thoughts, learning:draft.learning, ts:Date.now()});
     save();
     flash("저장했어요 ✦");
     resetDraft();
     refresh(); rebuild();
   }
-  function resetDraft(){ draft={date:todayStr(), people:[], schedule:"", mark:false, meals:emptyMeals(), drinks:emptyDrinks(), exercise:emptyExercise(), thoughts:"", learning:""}; loadDraft(); }
+  function resetDraft(){ draft={date:todayStr(), people:[], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), drinks:emptyDrinks(), exercise:emptyExercise(), thoughts:"", learning:""}; loadDraft(); }
   $("#saveBtn").onclick=saveEntry;
   $("#saveBtn2").onclick=saveEntry;
   $("#date").addEventListener("change",function(){ loadPhotoForDate(this.value||todayStr()); });
@@ -1222,7 +1239,7 @@
 
   function scrollToComposer(){ var c=document.querySelector(".composer-wide"); if(c){ c.scrollIntoView({behavior:reduce?"auto":"smooth", block:"start"}); var f=document.getElementById("schedule"); } }
   function editEntry(e){
-    draft={ date:e.date, people:e.people.map(function(n){return {name:n, rel:relOf(n)};}), schedule:e.schedule||"", mark:!!e.mark, meals:e.meals?JSON.parse(JSON.stringify(e.meals)):emptyMeals(), drinks:e.drinks?JSON.parse(JSON.stringify(e.drinks)):emptyDrinks(), exercise:e.exercise?JSON.parse(JSON.stringify(e.exercise)):emptyExercise(), thoughts:e.thoughts, learning:e.learning };
+    draft={ date:e.date, people:e.people.map(function(n){return {name:n, rel:relOf(n)};}), schedule:e.schedule||"", mark:!!e.mark, meals:e.meals?JSON.parse(JSON.stringify(e.meals)):emptyMeals(), bizmeet:e.bizmeet?JSON.parse(JSON.stringify(e.bizmeet)):emptyBiz(), drinks:e.drinks?JSON.parse(JSON.stringify(e.drinks)):emptyDrinks(), exercise:e.exercise?JSON.parse(JSON.stringify(e.exercise)):emptyExercise(), thoughts:e.thoughts, learning:e.learning };
     loadDraft(); scrollToComposer();
   }
   function delEntry(e){
@@ -1234,6 +1251,12 @@
     if(!d || drinkTotal(d)===0) return "";
     var parts=[]; DRINKS.forEach(function(x){ if(+d[x.key]>0) parts.push(esc(x.label)+" "+(+d[x.key])); });
     return '<div class="tl-meal">'+parts.join(" · ")+'</div>';
+  }
+  function bizHtml(b){
+    if(!bizHasContent(b)) return "";
+    var head=[]; if(b.name) head.push(esc(b.name)); if(b.time) head.push(esc(b.time));
+    var who=(b.people&&b.people.length)?' <span class="m-who">('+b.people.map(esc).join(", ")+')</span>':'';
+    return '<div class="tl-meal">💼 '+head.join(" · ")+who+'</div>';
   }
   function exerciseHtml(x){
     if(!exHasContent(x)) return "";
@@ -1293,6 +1316,7 @@
           (e.schedule?'<div class="tl-sched"><span>📌</span>'+esc(e.schedule)+'</div>':'')+
           (ppl?'<div class="tl-people">'+ppl+'</div>':'')+
           mealsHtml(e.meals)+
+          bizHtml(e.bizmeet)+
           drinksHtml(e.drinks)+
           exerciseHtml(e.exercise)+
           (photoDates[e.date]?'<img class="tl-photo" data-date="'+e.date+'" alt="">':'')+
