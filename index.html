@@ -190,7 +190,7 @@
   .detail .stats{display:flex; gap:16px; margin:11px 0 8px}
   .detail .stats b{display:block; font-size:19px; font-weight:800; font-variant-numeric:tabular-nums; color:var(--sky-ink)}
   .detail .stats span{font-size:11px; color:var(--sky-ink-2)}
-  .detail .with{font-size:12px; color:var(--sky-ink-2); line-height:1.7}
+  .detail .with{font-size:12px; color:var(--sky-ink-2); line-height:1.7; max-height:96px; overflow-y:auto}
   .detail .with b{color:var(--sky-ink); font-weight:600}
   .detail .rel-h{font-size:10.5px; font-weight:700; letter-spacing:.05em; color:var(--sky-ink-2); text-transform:uppercase; margin:12px 0 5px}
   .detail .rel-none{font-size:12px; color:var(--sky-ink-2)}
@@ -1141,7 +1141,7 @@
     var g=buildGraph(), S1=g.S1, withNames=[];
     Object.keys(g.pplace||{}).forEach(function(k){ var ab=k.split(S1); if(ab[0]===n.name) withNames.push([ab[1],g.pplace[k]]); });
     withNames.sort(function(a,b){return b[1]-a[1];});
-    var withHtml=withNames.length? withNames.slice(0,6).map(function(x){return "<b>"+esc(x[0])+"</b>";}).join(", ") : "혼자 또는 미기록";
+    var withHtml=withNames.length? withNames.map(function(x){return "<b>"+esc(x[0])+"</b>";}).join(", ") : "혼자 또는 미기록";
     var info=(g.places||{})[n.name]||{visits:n.visits,last:n.last};
     var d=$("#detail");
     d.innerHTML =
@@ -1149,7 +1149,7 @@
       '<div class="rel">식당 · 장소</div></div><button class="x" aria-label="닫기">&times;</button></div>'+
       '<div class="stats"><div><b>'+info.visits+'</b><span>방문</span></div>'+
       '<div><b>'+(info.last?relDays(info.last):"–")+'</b><span>마지막 방문</span></div></div>'+
-      '<div class="with">함께 간 사람 · '+withHtml+'</div>'+
+      '<div class="with">함께 간 사람 ('+withNames.length+'명) · '+withHtml+'</div>'+
       renderRelatedRecs(n);
     d.classList.add("show");
     d.querySelector(".x").onclick=closeDetail;
@@ -1161,7 +1161,7 @@
     var withNames=[];
     Object.keys(g.pairs).forEach(function(k){ var ab=k.split(""); if(ab[0]===n.name)withNames.push([ab[1],g.pairs[k]]); else if(ab[1]===n.name)withNames.push([ab[0],g.pairs[k]]); });
     withNames.sort(function(a,b){return b[1]-a[1];});
-    var withHtml = withNames.length? withNames.slice(0,6).map(function(x){return "<b>"+esc(x[0])+"</b>";}).join(", ") : "아직 없어요";
+    var withHtml = withNames.length? withNames.map(function(x){return "<b>"+esc(x[0])+"</b>";}).join(", ") : "아직 없어요";
     var last=g.last[n.name];
     var d=$("#detail");
     d.innerHTML =
@@ -1169,7 +1169,7 @@
       '<div class="rel">'+REL[n.rel].name+'</div></div><button class="x" aria-label="닫기">&times;</button></div>'+
       '<div class="stats"><div><b>'+n.meet+'</b><span>만난 횟수</span></div>'+
       '<div><b>'+(last?relDays(last):"–")+'</b><span>마지막 만남</span></div></div>'+
-      '<div class="with">함께 만난 사람 · '+withHtml+'</div>'+
+      '<div class="with">함께 만난 사람 ('+withNames.length+'명) · '+withHtml+'</div>'+
       renderRelatedRecs(n);
     d.classList.add("show");
     d.querySelector(".x").onclick=closeDetail;
