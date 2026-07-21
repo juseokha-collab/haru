@@ -1120,10 +1120,20 @@
     if(e.meals) MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m&&m.place===place && m.food && foods.indexOf(m.food)<0) foods.push(m.food); });
     return foods.length ? place+" · "+foods.join(" · ") : place;
   }
+  // 사람 관련 기록의 라벨: 그 사람이 실제 함께한 끼니/업무미팅의 장소 기준(첫 끼니가 아니라)
+  function personSummary(e, name){
+    var parts=[];
+    if(e.meals) MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m && (m.people||[]).indexOf(name)>=0){ var lbl=(m.place||"")+(m.place&&m.food?" · ":"")+(m.food||""); if(lbl && parts.indexOf(lbl)<0) parts.push(lbl); } });
+    if(e.bizmeet && (e.bizmeet.people||[]).indexOf(name)>=0){ var bn=e.bizmeet.name||(e.bizmeet.time?"업무미팅":""); if(bn) parts.push("💼 "+bn); }
+    if(parts.length) return parts.join(" · ");
+    if(e.schedule) return e.schedule;   // 특정 장소 없이 만난사람 리스트에만 있으면 주요일정/메모
+    var note=[e.thoughts,e.learning].filter(Boolean).join(" · ");
+    return note||"기록";
+  }
   function renderRelatedRecs(node){
     var isPlace=node.type==="place", rows=[];
     (isPlace?entriesForPlace(node.name):entriesForPerson(node.name)).forEach(function(e){
-      var extra="", label=isPlace? placeSummary(e, node.name) : recSummary(e);
+      var extra="", label=isPlace? placeSummary(e, node.name) : personSummary(e, node.name);
       if(isPlace){ var comp=placeCompanions(e, node.name); if(comp.length) extra=' <span class="rc-with">('+esc(comp.join(", "))+')</span>'; }
       rows.push({date:e.date, html:'<button class="rec" data-id="'+e.id+'"><span class="rd">'+e.date.slice(5).replace("-",".")+'</span><span class="rt">'+esc(label)+extra+'</span></button>'});
     });
@@ -1376,7 +1386,7 @@
     REL_ORDER.forEach(function(r){
       var c=document.createElement("span"); c.className="chip"; c.setAttribute("aria-pressed", hiddenRels[r]?"false":"true");
       c.innerHTML='<span class="dot" style="background:'+REL[r].color+'"></span>'+REL[r].name;
-      c.onclick=function(){ hiddenRels[r]=!hiddenRels[r]; c.setAttribute("aria-pressed",hiddenRels[r]?"false":"true"); alpha=Math.max(alpha,0.4); wake(); };
+      c.onclick=function(){ hiddenRels[r]=!hiddenRels[r]; c.setAttribute("aria-pressed",hiddenRels[r]?"false":"true"); renderStats(); alpha=Math.max(alpha,0.4); wake(); };
       c.title="더블클릭 → 이 관계 인맥 편집";
       c.ondblclick=function(){ openRelEdit(r); };
       l.appendChild(c);
@@ -1442,8 +1452,13 @@
     state.entries.forEach(function(e){ if(e.date>=cut){ e.people.forEach(function(n){wk[n]=1;}); mealPeople(e.meals).forEach(function(n){wk[n]=1;}); } });
     (state.events||[]).forEach(function(ev){ if(ev.date>=cut)(ev.attendees||[]).forEach(function(n){wk[n]=1;}); });
     $("#s-week").textContent=Object.keys(wk).length;
-    var topN=people.sort(function(a,b){return g.meetings[b]-g.meetings[a];}).slice(0,10);
-    $("#s-top").innerHTML = topN.length? topN.map(esc).join(" · ") : "–";
+    // 성좌에서 '선택(표시)된 관계'만, 관계 순서(가족→친구→직장…)대로 · 같은 관계 내 만난 횟수 desc
+    var topN=people.filter(function(n){ return !hiddenRels[relOf(n)]; }).sort(function(a,b){
+      var ra=REL_ORDER.indexOf(relOf(a)), rb=REL_ORDER.indexOf(relOf(b));
+      if(ra!==rb) return ra-rb;
+      return g.meetings[b]-g.meetings[a];
+    }).slice(0,12);
+    $("#s-top").innerHTML = topN.length? topN.map(function(n){ return '<span style="color:'+REL[relOf(n)].color+'">'+esc(n)+'</span>'; }).join(" · ") : "–";
   }
 
   // search
