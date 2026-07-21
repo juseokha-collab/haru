@@ -1194,10 +1194,7 @@
     var info=(g.places||{})[n.name]||{visits:n.visits,last:n.last};
     var d=$("#detail");
     d.innerHTML =
-      '<div class="dh"><div><div class="nm"><span class="dot sq" style="background:'+PLACE_COLOR+'"></span>'+esc(n.name)+'</div>'+
-      '<div class="rel">식당 · 장소</div></div><button class="x" aria-label="닫기">&times;</button></div>'+
-      '<div class="stats"><div><b>'+info.visits+'</b><span>방문</span></div>'+
-      '<div><b>'+(info.last?relDays(info.last):"–")+'</b><span>마지막 방문</span></div></div>'+
+      '<div class="dh"><div><div class="nm"><span class="dot sq" style="background:'+PLACE_COLOR+'"></span>'+esc(n.name)+' <span class="mc">('+info.visits+')</span></div></div><button class="x" aria-label="닫기">&times;</button></div>'+
       '<div class="with"><div class="wn-list">'+withHtml+'</div></div>'+
       renderRelatedRecs(n);
     d.classList.add("show");
