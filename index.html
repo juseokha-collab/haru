@@ -194,8 +194,9 @@
   .detail .with{font-size:12px; color:var(--sky-ink-2); line-height:1.6; max-height:140px; overflow-y:auto; margin:10px 0 2px}
   .detail .with b{color:var(--sky-ink); font-weight:600}
   .detail .with .with-h{display:block; color:var(--sky-ink-2); margin-bottom:5px}
-  .detail .with .wn{display:block; color:var(--sky-ink); font-weight:600; padding:1.5px 0 1.5px 8px}
-  .detail .with .wn.muted{color:var(--sky-ink-2); font-weight:400; padding-left:0}
+  .detail .with .wn-list{display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:3px 6px}
+  .detail .with .wn{color:var(--sky-ink); font-weight:600; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .detail .with .wn.muted{grid-column:1/-1; color:var(--sky-ink-2); font-weight:400}
   .detail .rel-h{font-size:10.5px; font-weight:700; letter-spacing:.05em; color:var(--sky-ink-2); text-transform:uppercase; margin:12px 0 5px}
   .detail .rel-none{font-size:12px; color:var(--sky-ink-2)}
   .detail .rel-recs{max-height:148px; overflow-y:auto; display:flex; flex-direction:column; gap:1px; margin:0 -6px}
@@ -1167,7 +1168,7 @@
       '<div class="rel">식당 · 장소</div></div><button class="x" aria-label="닫기">&times;</button></div>'+
       '<div class="stats"><div><b>'+info.visits+'</b><span>방문</span></div>'+
       '<div><b>'+(info.last?relDays(info.last):"–")+'</b><span>마지막 방문</span></div></div>'+
-      '<div class="with"><span class="with-h">함께 간 사람 ('+withNames.length+'명)</span>'+withHtml+'</div>'+
+      '<div class="with"><span class="with-h">함께 간 사람 ('+withNames.length+'명)</span><div class="wn-list">'+withHtml+'</div></div>'+
       renderRelatedRecs(n);
     d.classList.add("show");
     d.querySelector(".x").onclick=closeDetail;
@@ -1182,9 +1183,8 @@
     var withHtml = withNames.length? withNames.map(function(x){return '<span class="wn">'+esc(x[0])+'</span>';}).join("") : '<span class="wn muted">아직 없어요</span>';
     var d=$("#detail");
     d.innerHTML =
-      '<div class="dh"><div><div class="nm"><span class="dot" style="background:'+REL[n.rel].color+'"></span>'+esc(n.name)+' <span class="mc">('+n.meet+')</span></div>'+
-      '<div class="rel">'+REL[n.rel].name+'</div></div><button class="x" aria-label="닫기">&times;</button></div>'+
-      '<div class="with"><span class="with-h">함께 만난 사람 ('+withNames.length+'명)</span>'+withHtml+'</div>'+
+      '<div class="dh"><div><div class="nm"><span class="dot" style="background:'+REL[n.rel].color+'"></span>'+esc(n.name)+' <span class="mc">('+n.meet+')</span></div></div><button class="x" aria-label="닫기">&times;</button></div>'+
+      '<div class="with"><span class="with-h">함께 만난 사람 ('+withNames.length+'명)</span><div class="wn-list">'+withHtml+'</div></div>'+
       renderRelatedRecs(n);
     d.classList.add("show");
     d.querySelector(".x").onclick=closeDetail;
@@ -1453,14 +1453,10 @@
     state.entries.forEach(function(e){ if(e.date>=cut){ e.people.forEach(function(n){wk[n]=1;}); mealPeople(e.meals).forEach(function(n){wk[n]=1;}); } });
     (state.events||[]).forEach(function(ev){ if(ev.date>=cut)(ev.attendees||[]).forEach(function(n){wk[n]=1;}); });
     $("#s-week").textContent=Object.keys(wk).length;
-    // 성좌에서 '선택(표시)된 관계'를 관계 순서(가족→친구→직장…)대로, 관계별 상위 인원을 이어 붙임
-    // (한 관계가 목록을 다 채워 다른 선택 관계가 안 나오는 문제 방지)
-    var topN=[];
-    REL_ORDER.forEach(function(r){
-      if(hiddenRels[r]) return;
-      var grp=people.filter(function(n){ return relOf(n)===r; }).sort(function(a,b){ return g.meetings[b]-g.meetings[a]; }).slice(0,10);
-      topN=topN.concat(grp);
-    });
+    // 선택(표시)된 관계 중 만난 횟수 상위 10명 → 표시는 관계 순서(가족→친구→직장…)대로
+    var topN=people.filter(function(n){ return !hiddenRels[relOf(n)]; })
+      .sort(function(a,b){ return g.meetings[b]-g.meetings[a]; }).slice(0,10)
+      .sort(function(a,b){ var ra=REL_ORDER.indexOf(relOf(a)), rb=REL_ORDER.indexOf(relOf(b)); if(ra!==rb) return ra-rb; return g.meetings[b]-g.meetings[a]; });
     $("#s-top").innerHTML = topN.length? topN.map(function(n){ return '<span style="color:'+REL[relOf(n)].color+'">'+esc(n)+'</span>'; }).join(" · ") : "–";
   }
 
