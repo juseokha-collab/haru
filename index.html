@@ -1521,9 +1521,10 @@
     state.entries.forEach(function(e){ if(e.date>=cut){ e.people.forEach(function(n){wk[n]=1;}); mealPeople(e.meals).forEach(function(n){wk[n]=1;}); } });
     (state.events||[]).forEach(function(ev){ if(ev.date>=cut)(ev.attendees||[]).forEach(function(n){wk[n]=1;}); });
     $("#s-week").textContent=Object.keys(wk).length;
-    // 선택(표시)된 관계 중 만난 횟수 상위 10명 · 관계 구분 없이 많이 만난 순서대로
+    // 선택(표시)된 관계 중 만난 횟수 상위 N명 · 관계 구분 없이 많이 만난 순서대로 (모바일 7명, PC 10명)
+    var topLim = (window.innerWidth||1024) <= 700 ? 7 : 10;
     var topN=people.filter(function(n){ return !hiddenRels[relOf(n)]; })
-      .sort(function(a,b){ return g.meetings[b]-g.meetings[a]; }).slice(0,10);
+      .sort(function(a,b){ return g.meetings[b]-g.meetings[a]; }).slice(0,topLim);
     $("#s-top").innerHTML = topN.length? topN.map(function(n){ return '<span style="color:'+REL[relOf(n)].color+'">'+esc(n)+'('+g.meetings[n]+')</span>'; }).join(" ") : "–";
   }
 
@@ -1957,7 +1958,7 @@
   loadPhotoDates().then(function(){ loadDraft(); refresh(); });
   resize(); rebuild();
   var _rzT=null;
-  window.addEventListener("resize",function(){ resize(); wake(); if(_rzT)clearTimeout(_rzT); _rzT=setTimeout(function(){ syncTimelineHeight(); renderWeightChart(); },120); });
+  window.addEventListener("resize",function(){ resize(); wake(); if(_rzT)clearTimeout(_rzT); _rzT=setTimeout(function(){ syncTimelineHeight(); renderWeightChart(); renderStats(); },120); });
   if("ResizeObserver" in window){ new ResizeObserver(function(){ resize(); wake(); }).observe(canvas); }
   window.addEventListener("load", syncTimelineHeight);
   requestAnimationFrame(function(){ syncTimelineHeight(); });
