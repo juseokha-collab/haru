@@ -211,7 +211,7 @@
   .st b{font-size:20px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; color:var(--ink)}
   .st i{font-style:normal; font-size:11.5px; font-weight:600; color:var(--ink-3)}
   .stat-row .sep{color:var(--ink-3); font-size:13px; opacity:.6}
-  #s-top{font-size:11.5px; font-weight:600; color:var(--ink-3); line-height:1.5}
+  #s-top{font-size:11.5px; font-weight:600; color:var(--ink-3); line-height:1.5; padding-left:1ch}
   .st-top{min-width:0}
   @media (max-width:640px){
     .stat-row{gap:5px 8px}
@@ -1453,11 +1453,10 @@
     state.entries.forEach(function(e){ if(e.date>=cut){ e.people.forEach(function(n){wk[n]=1;}); mealPeople(e.meals).forEach(function(n){wk[n]=1;}); } });
     (state.events||[]).forEach(function(ev){ if(ev.date>=cut)(ev.attendees||[]).forEach(function(n){wk[n]=1;}); });
     $("#s-week").textContent=Object.keys(wk).length;
-    // 선택(표시)된 관계 중 만난 횟수 상위 10명 → 표시는 관계 순서(가족→친구→직장…)대로
+    // 선택(표시)된 관계 중 만난 횟수 상위 10명 · 관계 구분 없이 많이 만난 순서대로
     var topN=people.filter(function(n){ return !hiddenRels[relOf(n)]; })
-      .sort(function(a,b){ return g.meetings[b]-g.meetings[a]; }).slice(0,10)
-      .sort(function(a,b){ var ra=REL_ORDER.indexOf(relOf(a)), rb=REL_ORDER.indexOf(relOf(b)); if(ra!==rb) return ra-rb; return g.meetings[b]-g.meetings[a]; });
-    $("#s-top").innerHTML = topN.length? topN.map(function(n){ return '<span style="color:'+REL[relOf(n)].color+'">'+esc(n)+'</span>'; }).join(" · ") : "–";
+      .sort(function(a,b){ return g.meetings[b]-g.meetings[a]; }).slice(0,10);
+    $("#s-top").innerHTML = topN.length? topN.map(function(n){ return '<span style="color:'+REL[relOf(n)].color+'">'+esc(n)+'('+g.meetings[n]+')</span>'; }).join(" ") : "–";
   }
 
   // search
