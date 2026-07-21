@@ -414,8 +414,12 @@
 
   /* Today's Photo */
   .photo-field{margin-top:2px}
-  .photo-preview{width:100%; aspect-ratio:4/3; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; overflow:hidden; display:flex; align-items:center; justify-content:center}
+  .photo-preview{position:relative; width:100%; aspect-ratio:4/3; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; overflow:hidden; display:flex; align-items:center; justify-content:center}
   .photo-preview img{width:100%; height:100%; object-fit:cover; display:block}
+  .photo-preview img.draggable{cursor:grab; touch-action:none; user-select:none; -webkit-user-drag:none}
+  .photo-preview.grabbing img.draggable{cursor:grabbing}
+  .ph-drag-hint{position:absolute; left:50%; bottom:8px; transform:translateX(-50%); background:rgba(0,0,0,.55); color:#fff; font-size:10px; padding:3px 9px; border-radius:20px; pointer-events:none; white-space:nowrap; animation:phHintFade 3s forwards}
+  @keyframes phHintFade{0%,68%{opacity:.9}100%{opacity:0}}
   .photo-empty{font-size:12px; color:var(--ink-3)}
   .photo-head{display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:12px 0 6px}
   .photo-head .ph-title{margin-right:auto; font-size:12.5px; font-weight:600; color:var(--ink-2); letter-spacing:.01em; line-height:22px}
@@ -1576,10 +1580,26 @@
   }
   function refreshPhotoUI(){ renderTimeline(); loadTimelinePhotos(); renderCalendar(); if(view==="photo") renderPhotoGallery(); syncTimelineHeight(); }
   function savePhoto(date, img, caption){
-    var rec={date:date, img:img, caption:caption||"", ts:Date.now()};
+    var rec={date:date, img:img, caption:caption||"", pos:"50% 50%", ts:Date.now()};
     photoDates[date]=true; PhotoDB.set(rec);
     if(window.HARU && window.HARU.cloudPhoto) try{ window.HARU.cloudPhoto.set(date, rec); }catch(e){}
     refreshPhotoUI();
+  }
+  function posOf(rec){ return (rec&&rec.pos)?rec.pos:"50% 50%"; }
+  function parsePos(s){ var m=(s||"").match(/([\d.]+)%\s+([\d.]+)%/); return m?{x:+m[1],y:+m[2]}:{x:50,y:50}; }
+  // 미리보기 사진: 드래그해서 크롭 위치(object-position) 조정 → 저장
+  function renderPhotoPreview(rec){
+    var prev=$("#photoPreview"); if(!prev||!rec||!rec.img) return;
+    var pos=posOf(rec);
+    prev.innerHTML='<img class="draggable" alt="오늘의 사진" draggable="false" src="'+rec.img+'" style="object-position:'+pos+'"><span class="ph-drag-hint">↔ 드래그로 위치 조정</span>';
+    var img=prev.querySelector("img"), xy=parsePos(pos), drag=null;
+    img.addEventListener("pointerdown",function(ev){ drag={sx:ev.clientX,sy:ev.clientY,x:xy.x,y:xy.y,w:prev.clientWidth||1,h:prev.clientHeight||1}; try{img.setPointerCapture(ev.pointerId);}catch(e){} prev.classList.add("grabbing"); ev.preventDefault(); });
+    img.addEventListener("pointermove",function(ev){ if(!drag) return; xy.x=Math.max(0,Math.min(100, drag.x-(ev.clientX-drag.sx)/drag.w*100)); xy.y=Math.max(0,Math.min(100, drag.y-(ev.clientY-drag.sy)/drag.h*100)); img.style.objectPosition=xy.x.toFixed(1)+"% "+xy.y.toFixed(1)+"%"; ev.preventDefault(); });
+    function end(){ if(!drag) return; drag=null; prev.classList.remove("grabbing"); savePhotoPos($("#date").value||todayStr(), xy.x.toFixed(1)+"% "+xy.y.toFixed(1)+"%"); }
+    img.addEventListener("pointerup",end); img.addEventListener("pointercancel",end);
+  }
+  function savePhotoPos(date,pos){
+    PhotoDB.get(date).then(function(rec){ if(!rec) return; rec.pos=pos; rec.ts=Date.now(); PhotoDB.set(rec); if(window.HARU&&window.HARU.cloudPhoto) try{window.HARU.cloudPhoto.set(date,rec);}catch(e){} var t=document.querySelector('img.tl-photo[data-date="'+date+'"]'); if(t) t.style.objectPosition=pos; if(view==="photo") renderPhotoGallery(); });
   }
   function removePhoto(date){
     delete photoDates[date]; PhotoDB.del(date);
@@ -1595,7 +1615,7 @@
     if(!prev) return;
     PhotoDB.get(date).then(function(rec){
       if(pendingPhotoDate!==date) return;
-      if(rec && rec.img){ prev.innerHTML='<img alt="오늘의 사진" src="'+rec.img+'">'; rm.hidden=false; cap.value=rec.caption||""; }
+      if(rec && rec.img){ renderPhotoPreview(rec); rm.hidden=false; cap.value=rec.caption||""; }
       else { prev.innerHTML='<span class="photo-empty">사진 없음</span>'; rm.hidden=true; cap.value=""; }
     });
   }
@@ -1607,7 +1627,7 @@
       if(!dataURI){ $("#photoMsg").textContent="이미지를 읽지 못했어요."; return; }
       var kb=Math.round(dataURI.length/1024*0.75);
       savePhoto(date, dataURI, $("#photoCaption").value.trim());
-      $("#photoPreview").innerHTML='<img alt="오늘의 사진" src="'+dataURI+'">'; $("#photoRemove").hidden=false;
+      renderPhotoPreview({img:dataURI, pos:"50% 50%"}); $("#photoRemove").hidden=false;
       $("#photoMsg").textContent="저장됨 ("+kb+"KB) ✦";
       setTimeout(function(){ if($("#photoMsg").textContent.indexOf("저장됨")===0) $("#photoMsg").textContent=""; },2600);
     });
@@ -1620,7 +1640,7 @@
   });
   function loadTimelinePhotos(){
     var imgs=document.querySelectorAll("img.tl-photo[data-date]:not([data-loaded])");
-    Array.prototype.forEach.call(imgs,function(el){ var d=el.getAttribute("data-date"); el.setAttribute("data-loaded","1"); PhotoDB.get(d).then(function(rec){ if(rec&&rec.img) el.src=rec.img; else { el.remove(); } }); });
+    Array.prototype.forEach.call(imgs,function(el){ var d=el.getAttribute("data-date"); el.setAttribute("data-loaded","1"); PhotoDB.get(d).then(function(rec){ if(rec&&rec.img){ el.src=rec.img; if(rec.pos) el.style.objectPosition=rec.pos; } else { el.remove(); } }); });
   }
   function renderPhotoGallery(){
     var el=$("#photoView"); if(!el) return;
@@ -1628,7 +1648,7 @@
       list.sort(function(a,b){ return a.date<b.date?1:a.date>b.date?-1:0; });
       if(!list.length){ el.innerHTML='<div class="pv-empty">아직 사진이 없어요.<br>오늘 기록의 <b>오늘의 사진</b>에서 하루를 대표하는 한 장을 담아보세요.</div>'; return; }
       var html='<div class="pv-h"><h3>Today\'s Photo</h3><b style="color:var(--sky-ink-2);font-size:12px;font-weight:600">'+list.length+'장</b></div><div class="pv-photos">';
-      list.forEach(function(p){ var wd=DOW[parseD(p.date).getDay()]; html+='<button class="pg-cell" data-date="'+p.date+'"><span class="pg-date">'+p.date.slice(5).replace("-",".")+' ('+wd+')</span><img loading="lazy" src="'+p.img+'" alt="">'+(p.caption?'<span class="pg-cap">'+esc(p.caption)+'</span>':'')+'</button>'; });
+      list.forEach(function(p){ var wd=DOW[parseD(p.date).getDay()]; html+='<button class="pg-cell" data-date="'+p.date+'"><span class="pg-date">'+p.date.slice(5).replace("-",".")+' ('+wd+')</span><img loading="lazy" src="'+p.img+'"'+(p.pos?' style="object-position:'+p.pos+'"':'')+' alt="">'+(p.caption?'<span class="pg-cap">'+esc(p.caption)+'</span>':'')+'</button>'; });
       html+='</div>'; el.innerHTML=html;
       Array.prototype.forEach.call(el.querySelectorAll(".pg-cell"),function(b){ b.onclick=function(){ openDay(b.getAttribute("data-date")); }; });
     });
@@ -2010,14 +2030,14 @@
     // Today's Photo 동기화 (사진 1장 = 문서 1개)
     var photoCol=db.collection("users").doc(user.uid).collection("photos");
     HARU.cloudPhoto={
-      set:function(date,rec){ photoCol.doc(date).set({img:rec.img, caption:rec.caption||"", ts:rec.ts||Date.now()}).catch(function(){}); },
+      set:function(date,rec){ photoCol.doc(date).set({img:rec.img, caption:rec.caption||"", pos:rec.pos||"50% 50%", ts:rec.ts||Date.now()}).catch(function(){}); },
       del:function(date){ photoCol.doc(date).delete().catch(function(){}); }
     };
     (function(){ // 증분 pull: 마지막 동기화 이후 사진만
       var lastPS=+(localStorage.getItem("haru.photoSync")||0);
       photoCol.where("ts",">",lastPS).get().then(function(snap){
         var mx=lastPS;
-        snap.forEach(function(doc){ var v=doc.data(); if(!v||!v.img)return; if((v.ts||0)>mx)mx=v.ts; try{ HARU.importCloudPhoto({date:doc.id, img:v.img, caption:v.caption||"", ts:v.ts||0}); }catch(e){} });
+        snap.forEach(function(doc){ var v=doc.data(); if(!v||!v.img)return; if((v.ts||0)>mx)mx=v.ts; try{ HARU.importCloudPhoto({date:doc.id, img:v.img, caption:v.caption||"", pos:v.pos||"", ts:v.ts||0}); }catch(e){} });
         localStorage.setItem("haru.photoSync", String(mx));
       }).catch(function(e){ console.warn("photo sync", e&&e.message); });
     })();
