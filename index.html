@@ -315,6 +315,15 @@
   .seg button.on{background:var(--surface); color:var(--ink); font-weight:700; box-shadow:0 1px 2px rgba(0,0,0,.1)}
   .seg button:hover:not(.on){color:var(--ink-2)}
   .drink-stats{padding:2px 16px 16px}
+  /* 몸무게 카드 (음주 카드의 약 2/3 크기) */
+  .weight-card .card-h.dk-head{padding:8px 14px; align-items:center}
+  .weight-card .wt-cap{font-size:11.5px; font-weight:700; color:var(--ink-2); letter-spacing:.02em}
+  .weight-card .wt-cap span{color:var(--accent-ink); font-weight:800; margin-left:5px; font-variant-numeric:tabular-nums}
+  .weight-card .seg{padding:2px}
+  .weight-card .seg button{font-size:10px; padding:2px 6px}
+  .weight-chart{padding:4px 14px 12px}
+  .weight-chart svg{width:100%; height:78px; display:block; overflow:visible}
+  .wt-empty{font-size:11px; color:var(--ink-3); padding:16px 2px; text-align:center}
   .dk-top{display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin:8px 0 12px; flex-wrap:wrap}
   .dk-nums{display:flex; gap:16px; align-items:baseline; flex:none}
   .dk-stat{display:inline-flex; align-items:baseline; gap:5px; font-size:15px}
@@ -528,10 +537,20 @@
         <div class="card-h dk-head">
           <div class="dk-week" id="dkWeek"></div>
           <div class="seg" id="drinkSeg">
-            <button type="button" data-p="week">1주</button><button type="button" data-p="month" class="on">1달</button><button type="button" data-p="year">1년</button><button type="button" data-p="all">전체</button>
+            <button type="button" data-p="week" class="on">1주</button><button type="button" data-p="month">1달</button><button type="button" data-p="year">1년</button><button type="button" data-p="all">전체</button>
           </div>
         </div>
         <div class="drink-stats" id="drinkStats"></div>
+      </section>
+
+      <section class="card weight-card">
+        <div class="card-h dk-head">
+          <div class="wt-cap">몸무게 <span id="wtNow"></span></div>
+          <div class="seg" id="weightSeg">
+            <button type="button" data-p="week">1주</button><button type="button" data-p="month" class="on">1달</button><button type="button" data-p="year">1년</button><button type="button" data-p="all">전체</button>
+          </div>
+        </div>
+        <div class="weight-chart" id="weightChart"></div>
       </section>
 
       <section class="card tl-card">
@@ -731,7 +750,7 @@
   var state = load();
   state.golf = state.golf || {};
   var draft = { date: todayStr(), people: [], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), drinks:emptyDrinks(), exercise:emptyExercise(), thoughts:"", learning:"" };
-  var hiddenRels = {fam:true}, hideRest=true, hideGolf=true, drinkPeriod="month", view="graph", recapMonth="", minMeet=2, calMonth="", searchQ="";
+  var hiddenRels = {fam:true}, hideRest=true, hideGolf=true, drinkPeriod="week", weightPeriod="month", view="graph", recapMonth="", minMeet=2, calMonth="", searchQ="";
 
   function load(){
     try{ var s=JSON.parse(localStorage.getItem(KEY)); if(s&&s.entries) return s; }catch(e){}
@@ -1118,6 +1137,13 @@
     if(e.meals) MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m&&m.place===place) (m.people||[]).forEach(function(n){ if(out.indexOf(n)<0) out.push(n); }); });
     return out;
   }
+  // 그 기록에서 이 사람과 '함께 있었던' 사람들(같은 끼니/업무미팅 동석자, 본인 제외)
+  function personCompanions(e, name){
+    var out=[], add=function(arr){ (arr||[]).forEach(function(n){ if(n!==name && out.indexOf(n)<0) out.push(n); }); };
+    if(e.meals) MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m && (m.people||[]).indexOf(name)>=0) add(m.people); });
+    if(e.bizmeet && (e.bizmeet.people||[]).indexOf(name)>=0) add(e.bizmeet.people);
+    return out;
+  }
   // 장소 관련 기록의 라벨: 그 날 주요일정이 아니라 '그 장소' 기준으로 표시(먹은 것 있으면 함께)
   function placeSummary(e, place){
     var foods=[];
@@ -1138,7 +1164,8 @@
     var isPlace=node.type==="place", rows=[];
     (isPlace?entriesForPlace(node.name):entriesForPerson(node.name)).forEach(function(e){
       var extra="", label=isPlace? placeSummary(e, node.name) : personSummary(e, node.name);
-      if(isPlace){ var comp=placeCompanions(e, node.name); if(comp.length) extra=' <span class="rc-with">('+esc(comp.join(", "))+')</span>'; }
+      var comp=isPlace? placeCompanions(e, node.name) : personCompanions(e, node.name);
+      if(comp.length) extra=' <span class="rc-with">('+esc(comp.join(", "))+')</span>';
       rows.push({date:e.date, html:'<button class="rec" data-id="'+e.id+'"><span class="rd">'+e.date.slice(5).replace("-",".")+'</span><span class="rt">'+esc(label)+extra+'</span></button>'});
     });
     if(!isPlace) (state.events||[]).forEach(function(ev){ if((ev.attendees||[]).indexOf(node.name)>=0) rows.push({date:ev.date, html:'<button class="rec" data-ev="'+ev.id+'"><span class="rd">'+ev.date.slice(5).replace("-",".")+'</span><span class="rt">📅 '+esc(ev.title)+'</span></button>'}); });
@@ -1314,6 +1341,34 @@
     return parts.length? '<div class="tl-meal">'+parts.join(" · ")+'</div>' : "";
   }
   function periodCut(p){ if(p==="all") return "0000-00-00"; var days=p==="week"?6:p==="month"?29:364; return fmt(new Date(Date.now()-days*864e5)); }
+  function renderWeightChart(){
+    var el=$("#weightChart"); if(!el) return;
+    var now=$("#wtNow");
+    var cut=periodCut(weightPeriod), pts=[];
+    state.entries.forEach(function(e){ if(e.date<cut) return; var w=e.exercise&&e.exercise.weight; if(w!==""&&w!=null&&!isNaN(+w)&&+w>0) pts.push({date:e.date,w:+w}); });
+    pts.sort(function(a,b){ return a.date<b.date?-1:(a.date>b.date?1:0); });
+    if(!pts.length){ el.innerHTML='<div class="wt-empty">이 기간엔 몸무게 기록이 없어요.</div>'; if(now) now.textContent=""; return; }
+    var lastP=pts[pts.length-1]; if(now) now.textContent=lastP.w+"kg";
+    var ws=pts.map(function(p){return p.w;});
+    var dMin=Math.min.apply(null,ws), dMax=Math.max.apply(null,ws);
+    var lo=dMin, hi=dMax; if(lo===hi){ lo-=1; hi+=1; } else { var mg=(hi-lo)*0.3; lo-=mg; hi+=mg; }
+    var W=Math.max(140, Math.round(el.clientWidth||300)), H=78, padL=6, padR=34, padT=12, padB=16;
+    var d0=parseD(pts[0].date).getTime(), d1=parseD(lastP.date).getTime(), spanD=Math.max(1,d1-d0);
+    function X(p){ return pts.length===1 ? (padL+(W-padR-padL)/2) : padL+(parseD(p.date).getTime()-d0)/spanD*(W-padL-padR); }
+    function Y(w){ return padT+(1-(w-lo)/(hi-lo))*(H-padT-padB); }
+    var col="#6FA8DC";
+    var line=pts.map(function(p){return X(p).toFixed(1)+","+Y(p.w).toFixed(1);}).join(" ");
+    var area=X(pts[0]).toFixed(1)+","+(H-padB)+" "+line+" "+X(lastP).toFixed(1)+","+(H-padB);
+    var dots=pts.map(function(p){return '<circle cx="'+X(p).toFixed(1)+'" cy="'+Y(p.w).toFixed(1)+'" r="2.4" fill="'+col+'"/>';}).join("");
+    var svg='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">'
+      +'<polygon points="'+area+'" fill="'+col+'" opacity="0.10"/>'
+      +'<polyline points="'+line+'" fill="none" stroke="'+col+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'
+      +dots
+      +'<text x="'+(W-padR+4)+'" y="'+Y(dMax).toFixed(1)+'" font-size="9" fill="#9aa3ba" dominant-baseline="middle">'+dMax+'</text>'
+      +(dMin!==dMax? '<text x="'+(W-padR+4)+'" y="'+Y(dMin).toFixed(1)+'" font-size="9" fill="#9aa3ba" dominant-baseline="middle">'+dMin+'</text>' : '')
+      +'</svg>';
+    el.innerHTML=svg;
+  }
   function renderDrinkStats(){
     var el=$("#drinkStats"); if(!el) return;
     var cut=periodCut(drinkPeriod), totals=emptyDrinks(), total=0;
@@ -1569,12 +1624,18 @@
     });
   }
 
-  function refresh(){ renderTimeline(); renderStats(); renderDrinkStats(); renderCalendar(); if(view==="places") renderPlacesView(); if(view==="recap") renderRecapView(); if(view==="photo") renderPhotoGallery(); loadTimelinePhotos(); syncTimelineHeight(); }
+  function refresh(){ renderTimeline(); renderStats(); renderDrinkStats(); renderWeightChart(); renderCalendar(); if(view==="places") renderPlacesView(); if(view==="recap") renderRecapView(); if(view==="photo") renderPhotoGallery(); loadTimelinePhotos(); syncTimelineHeight(); }
   $("#drinkSeg").addEventListener("click",function(e){
     var b=e.target.closest("button"); if(!b)return;
     drinkPeriod=b.getAttribute("data-p");
     var kids=this.children; for(var i=0;i<kids.length;i++) kids[i].classList.toggle("on", kids[i]===b);
     renderDrinkStats();
+  });
+  $("#weightSeg").addEventListener("click",function(e){
+    var b=e.target.closest("button"); if(!b)return;
+    weightPeriod=b.getAttribute("data-p");
+    var kids=this.children; for(var i=0;i<kids.length;i++) kids[i].classList.toggle("on", kids[i]===b);
+    renderWeightChart();
   });
 
   // ---------- views: 성좌 / 장소 / 회고 ----------
@@ -1854,7 +1915,7 @@
   loadPhotoDates().then(function(){ loadDraft(); refresh(); });
   resize(); rebuild();
   var _rzT=null;
-  window.addEventListener("resize",function(){ resize(); wake(); if(_rzT)clearTimeout(_rzT); _rzT=setTimeout(syncTimelineHeight,120); });
+  window.addEventListener("resize",function(){ resize(); wake(); if(_rzT)clearTimeout(_rzT); _rzT=setTimeout(function(){ syncTimelineHeight(); renderWeightChart(); },120); });
   if("ResizeObserver" in window){ new ResizeObserver(function(){ resize(); wake(); }).observe(canvas); }
   window.addEventListener("load", syncTimelineHeight);
   requestAnimationFrame(function(){ syncTimelineHeight(); });
