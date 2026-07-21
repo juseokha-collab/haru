@@ -1754,7 +1754,8 @@
     if(!calMonth) calMonth=monthStr(new Date());
     var p=calMonth.split("-"), y=+p[0], mo=+p[1]-1;
     $("#cvLbl").textContent=y+"년 "+(mo+1)+"월";
-    var mpp={}; state.entries.forEach(function(e){ if(e.date.slice(0,7)!==calMonth) return; e.people.forEach(function(n){ mpp[n]=(mpp[n]||0)+1; }); mealPeople(e.meals).forEach(function(n){ mpp[n]=(mpp[n]||0)+1; }); });
+    // 이번 달 사람별 '만난 날 수'(하루 1회로 집계 · 만난사람+식사 동석자 중복 제거)
+    var mpp={}; state.entries.forEach(function(e){ if(e.date.slice(0,7)!==calMonth) return; var s={}; (e.people||[]).forEach(function(n){ s[n]=1; }); mealPeople(e.meals).forEach(function(n){ s[n]=1; }); Object.keys(s).forEach(function(n){ mpp[n]=(mpp[n]||0)+1; }); });
     var mtop=Object.keys(mpp).filter(function(n){ return relOf(n)!=="fam"; }).sort(function(a,b){return mpp[b]-mpp[a];}).slice(0,5);
     var ct=$("#calTop"); if(ct) ct.innerHTML = mtop.length? mtop.map(function(n){ return esc(n)+'<i class="ct-c">('+mpp[n]+')</i>'; }).join(" · ") : "";
     var byDate={}; state.entries.forEach(function(e){ byDate[e.date]=e; });
