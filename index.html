@@ -591,7 +591,7 @@
         <span class="place-wrap"><input type="text" class="name-in" id="schedule" placeholder="오늘의 주요 일정 · 한 일" autocomplete="off"><input type="checkbox" id="schedMark" class="mark-chk" title="중요 표시 → 달력 색상 강조"></span>
         <label>만난 사람</label>
         <div class="add-person">
-          <input class="name-in" id="pname" placeholder="이름" autocomplete="off">
+          <input class="name-in" id="pname" placeholder="이름 · 쉼표로 여러 명" autocomplete="off">
           <select id="prel">
             <option value="fri">친구</option><option value="fam">가족</option><option value="work">직장</option><option value="mn">SK</option><option value="acq">거래처</option><option value="etc">기타</option>
           </select>
@@ -1256,9 +1256,9 @@
     if(bchk&&bchk.checked){ var bel=document.getElementById("bm-people"); if(bel) bel.value=names; }
   }
   function addPerson(){
-    var nm=$("#pname").value.trim(); if(!nm)return;
+    var names=parseNames($("#pname").value); if(!names.length)return;   // 쉼표로 여러 명 한 번에
     var rel=$("#prel").value;
-    if(!draft.people.some(function(p){return p.name===nm;})) draft.people.push({name:nm, rel:rel});
+    names.forEach(function(nm){ if(!draft.people.some(function(p){return p.name===nm;})) draft.people.push({name:nm, rel:rel}); });
     $("#pname").value=""; $("#pname").focus(); renderDraftChips();
   }
   $("#addP").onclick=addPerson;
