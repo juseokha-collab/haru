@@ -933,10 +933,10 @@
 
     var showPlace={}; Object.keys(g.pplace||{}).forEach(function(k){ var ab=k.split(g.S1); if(nodeIndex[ab[1]]) showPlace[ab[0]]=1; });
     var isGolfPl=function(pl){ return !!(state.golf && state.golf[pl]); };
-    // 골프장은 항상 표시. 식당은 검색 중이면 검색 관련, 아니면 '방문 횟수' 기준(사람 연결과 무관).
-    //   1 = 정확히 1회 방문, 그 외 minMeet회 이상.
+    // 검색 중: 검색된 사람과 연결된 장소 + 이름 일치 장소만 (골프장이라도 무관한 곳은 제외)
+    // 검색 아님: 골프장은 항상 표시, 식당은 '방문 횟수' 기준(1=정확히 1회, 그 외 minMeet회 이상)
     var placeMatch = searchQ
-      ? function(pl){ return isGolfPl(pl) || showPlace[pl] || pl.indexOf(searchQ)>=0; }
+      ? function(pl){ return showPlace[pl] || pl.indexOf(searchQ)>=0; }
       : function(pl){ if(isGolfPl(pl)) return true; var v=g.places[pl].visits; return meetExact ? v===minMeet : v>=minMeet; };
     var pnames=Object.keys(g.places||{}).filter(placeMatch);
     // 기본 뷰(capOn)일 때만 개수 제한, 필터/검색을 누르면 조건에 맞는 전체 표시
