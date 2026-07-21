@@ -130,6 +130,7 @@
   .cv-dot{width:7px; height:7px; border-radius:50%; flex:none}
   .cv-sched{font-size:10px; font-weight:700; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.45; margin-top:2px}
   .cv-ppl{font-size:10px; color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.45}
+  .cv-ppl .cvn-c{font-style:normal; font-size:8.5px; color:var(--ink-3)}
   .cv-place{font-size:9.5px; color:var(--ink-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.4}
   @media (max-width:640px){
     .cv-cell{min-height:52px; padding:4px 5px}
@@ -195,6 +196,7 @@
   .detail .with b{color:var(--sky-ink); font-weight:600}
   .detail .with .wn-list{display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:2px 5px}
   .detail .with .wn{color:var(--sky-ink); font-weight:500; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .detail .with .wn i{font-style:normal; font-size:8.5px; font-weight:400; color:var(--sky-ink-2); margin-left:1.5px; vertical-align:1px}
   .detail .with .wn.muted{grid-column:1/-1; color:var(--sky-ink-2); font-weight:400}
   .detail .rel-h{font-size:10.5px; font-weight:700; letter-spacing:.05em; color:var(--sky-ink-2); text-transform:uppercase; margin:12px 0 5px}
   .detail .rel-none{font-size:12px; color:var(--sky-ink-2)}
@@ -1186,7 +1188,7 @@
     var g=buildGraph(), S1=g.S1, withNames=[];
     Object.keys(g.pplace||{}).forEach(function(k){ var ab=k.split(S1); if(ab[0]===n.name) withNames.push([ab[1],g.pplace[k]]); });
     withNames.sort(function(a,b){return b[1]-a[1];});
-    var withHtml=withNames.length? withNames.map(function(x){return '<span class="wn">'+esc(x[0])+'</span>';}).join("") : '<span class="wn muted">혼자 또는 미기록</span>';
+    var withHtml=withNames.length? withNames.map(function(x){return '<span class="wn">'+esc(x[0])+'<i>'+x[1]+'</i></span>';}).join("") : '<span class="wn muted">혼자 또는 미기록</span>';
     var info=(g.places||{})[n.name]||{visits:n.visits,last:n.last};
     var d=$("#detail");
     d.innerHTML =
@@ -1206,7 +1208,7 @@
     var withNames=[];
     Object.keys(g.pairs).forEach(function(k){ var ab=k.split(""); if(ab[0]===n.name)withNames.push([ab[1],g.pairs[k]]); else if(ab[1]===n.name)withNames.push([ab[0],g.pairs[k]]); });
     withNames.sort(function(a,b){return b[1]-a[1];});
-    var withHtml = withNames.length? withNames.map(function(x){return '<span class="wn">'+esc(x[0])+'</span>';}).join("") : '<span class="wn muted">아직 없어요</span>';
+    var withHtml = withNames.length? withNames.map(function(x){return '<span class="wn">'+esc(x[0])+'<i>'+x[1]+'</i></span>';}).join("") : '<span class="wn muted">아직 없어요</span>';
     var d=$("#detail");
     d.innerHTML =
       '<div class="dh"><div><div class="nm"><span class="dot" style="background:'+REL[n.rel].color+'"></span>'+esc(n.name)+' <span class="mc">('+n.meet+')</span></div></div><button class="x" aria-label="닫기">&times;</button></div>'+
@@ -1745,6 +1747,7 @@
     if(!calMonth) calMonth=monthStr(new Date());
     var p=calMonth.split("-"), y=+p[0], mo=+p[1]-1;
     $("#cvLbl").textContent=y+"년 "+(mo+1)+"월";
+    var gMeet=buildGraph().meetings;
     var mpp={}; state.entries.forEach(function(e){ if(e.date.slice(0,7)!==calMonth) return; e.people.forEach(function(n){ mpp[n]=(mpp[n]||0)+1; }); mealPeople(e.meals).forEach(function(n){ mpp[n]=(mpp[n]||0)+1; }); });
     var mtop=Object.keys(mpp).filter(function(n){ return relOf(n)!=="fam"; }).sort(function(a,b){return mpp[b]-mpp[a];}).slice(0,5);
     var ct=$("#calTop"); if(ct) ct.innerHTML = mtop.length? mtop.map(esc).join(" · ") : "";
@@ -1761,7 +1764,7 @@
       var sched = (e && e.schedule) ? '<div class="cv-sched">'+esc(e.schedule)+'</div>' : '';
       var ppl='';
       if(e && e.people && e.people.length){
-        var names=e.people.slice(0,2).map(esc).join(" ");
+        var names=e.people.slice(0,2).map(function(n){ return esc(n)+'<i class="cvn-c">('+(gMeet[n]||0)+')</i>'; }).join(" ");
         var more=e.people.length>2 ? " +"+(e.people.length-2) : "";
         ppl='<div class="cv-ppl">'+names+more+'</div>';
       }
