@@ -109,6 +109,7 @@
   .calcard .card-h{gap:10px}
   .calcard .card-h h2{min-width:0; display:flex; align-items:baseline; gap:6px; overflow:hidden}
   .cal-top{font-size:11.5px; font-weight:600; color:var(--ink-3); letter-spacing:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0}
+  .cal-top .ct-c{font-style:normal; font-size:9.5px; color:var(--ink-3); font-weight:500; margin-left:1px}
   .cv-nav{display:flex; align-items:center; gap:8px; flex:none}
   .cv-nav button{width:27px; height:27px; border-radius:8px; border:1px solid var(--border); background:var(--surface-2); color:var(--ink); cursor:pointer; font-size:14px}
   .cv-nav button:hover{border-color:var(--accent); color:var(--accent-ink)}
@@ -194,7 +195,7 @@
   .detail .stats span{font-size:11px; color:var(--sky-ink-2)}
   .detail .with{font-size:12px; color:var(--sky-ink-2); line-height:1.6; max-height:140px; overflow-y:auto; margin:10px 0 2px}
   .detail .with b{color:var(--sky-ink); font-weight:600}
-  .detail .with .wn-list{display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:2px 5px}
+  .detail .with .wn-list{display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:2px 6px}
   .detail .with .wn{color:var(--sky-ink); font-weight:500; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .detail .with .wn i{font-style:normal; font-size:8.5px; font-weight:400; color:var(--sky-ink-2); margin-left:1.5px; vertical-align:1px}
   .detail .with .wn.muted{grid-column:1/-1; color:var(--sky-ink-2); font-weight:400}
@@ -429,6 +430,7 @@
 
   /* in-app confirm modal (sandbox blocks native confirm/prompt) */
   .modal-back{position:fixed; inset:0; z-index:100; background:rgba(10,13,22,.55); backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; padding:20px}
+  #modalBack, #tModalBack{z-index:130}   /* 확인/텍스트 모달은 인맥 편집 모달 위로 */
   .modal-back[hidden]{display:none}
   .modal{background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,.4); width:100%; max-width:360px; padding:20px}
   .modal-title{font-size:16px; font-weight:800; letter-spacing:-.01em; margin-bottom:8px}
@@ -547,7 +549,7 @@
 
       <section class="card weight-card">
         <div class="card-h dk-head">
-          <div class="wt-cap">몸무게 <span id="wtNow"></span></div>
+          <div class="dk-week" id="wtWeek" title="지난 7일 운동 · 30분↑ 노랑 / 1시간↑ 초록 / 2시간↑ 빨강"></div>
           <div class="seg" id="weightSeg">
             <button type="button" data-p="week">1주</button><button type="button" data-p="month" class="on">1달</button><button type="button" data-p="year">1년</button><button type="button" data-p="all">전체</button>
           </div>
@@ -1343,18 +1345,23 @@
     return parts.length? '<div class="tl-meal">'+parts.join(" · ")+'</div>' : "";
   }
   function periodCut(p){ if(p==="all") return "0000-00-00"; var days=p==="week"?6:p==="month"?29:364; return fmt(new Date(Date.now()-days*864e5)); }
+  function exLevel(ex){ if(!ex) return 0; var m=+ex.minutes||0; if(m>=120) return 3; if(m>=60) return 1; if(m>=30) return 2; return 0; }
   function renderWeightChart(){
     var el=$("#weightChart"); if(!el) return;
-    var now=$("#wtNow");
+    // 지난 7일 운동 스트립 (30분↑ 노랑=lv2 / 1시간↑ 초록=lv1 / 2시간↑ 빨강=lv3 / 없으면 공란)
+    var exMap={}; state.entries.forEach(function(e){ var lv=exLevel(e.exercise); if(lv>0) exMap[e.date]=lv; });
+    var strip=''; for(var wi=7; wi>=1; wi--){ var dd=new Date(); dd.setDate(dd.getDate()-wi); var ds=fmt(dd), lv=exMap[ds]||0; strip+='<div class="dw"><span class="dwd">'+DOW[dd.getDay()]+'</span><span class="dwdot lv'+lv+'"></span></div>'; }
+    var wk=$("#wtWeek"); if(wk) wk.innerHTML=strip;
+    // 몸무게 선그래프
     var cut=periodCut(weightPeriod), pts=[];
     state.entries.forEach(function(e){ if(e.date<cut) return; var w=e.exercise&&e.exercise.weight; if(w!==""&&w!=null&&!isNaN(+w)&&+w>0) pts.push({date:e.date,w:+w}); });
     pts.sort(function(a,b){ return a.date<b.date?-1:(a.date>b.date?1:0); });
-    if(!pts.length){ el.innerHTML='<div class="wt-empty">이 기간엔 몸무게 기록이 없어요.</div>'; if(now) now.textContent=""; return; }
-    var lastP=pts[pts.length-1]; if(now) now.textContent=lastP.w+"kg";
+    if(!pts.length){ el.innerHTML='<div class="wt-empty">이 기간엔 몸무게 기록이 없어요.</div>'; return; }
+    var lastP=pts[pts.length-1];
     var ws=pts.map(function(p){return p.w;});
     var dMin=Math.min.apply(null,ws), dMax=Math.max.apply(null,ws);
     var lo=dMin, hi=dMax; if(lo===hi){ lo-=1; hi+=1; } else { var mg=(hi-lo)*0.3; lo-=mg; hi+=mg; }
-    var W=Math.max(140, Math.round(el.clientWidth||300)), H=78, padL=6, padR=34, padT=12, padB=16;
+    var W=Math.max(160, Math.round(el.clientWidth||300)), H=78, padL=30, padR=30, padT=12, padB=16;
     var d0=parseD(pts[0].date).getTime(), d1=parseD(lastP.date).getTime(), spanD=Math.max(1,d1-d0);
     function X(p){ return pts.length===1 ? (padL+(W-padR-padL)/2) : padL+(parseD(p.date).getTime()-d0)/spanD*(W-padL-padR); }
     function Y(w){ return padT+(1-(w-lo)/(hi-lo))*(H-padT-padB); }
@@ -1362,12 +1369,12 @@
     var line=pts.map(function(p){return X(p).toFixed(1)+","+Y(p.w).toFixed(1);}).join(" ");
     var area=X(pts[0]).toFixed(1)+","+(H-padB)+" "+line+" "+X(lastP).toFixed(1)+","+(H-padB);
     var dots=pts.map(function(p){return '<circle cx="'+X(p).toFixed(1)+'" cy="'+Y(p.w).toFixed(1)+'" r="2.4" fill="'+col+'"/>';}).join("");
+    function lbl(v,x,anchor){ return '<text x="'+x+'" y="'+Y(v).toFixed(1)+'" font-size="9" fill="#9aa3ba" dominant-baseline="middle" text-anchor="'+anchor+'">'+v+'</text>'; }
+    var labels=lbl(dMax,2,'start')+lbl(dMax,W-2,'end')+(dMin!==dMax?(lbl(dMin,2,'start')+lbl(dMin,W-2,'end')):'');
     var svg='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">'
       +'<polygon points="'+area+'" fill="'+col+'" opacity="0.10"/>'
       +'<polyline points="'+line+'" fill="none" stroke="'+col+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'
-      +dots
-      +'<text x="'+(W-padR+4)+'" y="'+Y(dMax).toFixed(1)+'" font-size="9" fill="#9aa3ba" dominant-baseline="middle">'+dMax+'</text>'
-      +(dMin!==dMax? '<text x="'+(W-padR+4)+'" y="'+Y(dMin).toFixed(1)+'" font-size="9" fill="#9aa3ba" dominant-baseline="middle">'+dMin+'</text>' : '')
+      +dots+labels
       +'</svg>';
     el.innerHTML=svg;
   }
@@ -1747,10 +1754,9 @@
     if(!calMonth) calMonth=monthStr(new Date());
     var p=calMonth.split("-"), y=+p[0], mo=+p[1]-1;
     $("#cvLbl").textContent=y+"년 "+(mo+1)+"월";
-    var gMeet=buildGraph().meetings;
     var mpp={}; state.entries.forEach(function(e){ if(e.date.slice(0,7)!==calMonth) return; e.people.forEach(function(n){ mpp[n]=(mpp[n]||0)+1; }); mealPeople(e.meals).forEach(function(n){ mpp[n]=(mpp[n]||0)+1; }); });
     var mtop=Object.keys(mpp).filter(function(n){ return relOf(n)!=="fam"; }).sort(function(a,b){return mpp[b]-mpp[a];}).slice(0,5);
-    var ct=$("#calTop"); if(ct) ct.innerHTML = mtop.length? mtop.map(esc).join(" · ") : "";
+    var ct=$("#calTop"); if(ct) ct.innerHTML = mtop.length? mtop.map(function(n){ return esc(n)+'<i class="ct-c">('+mpp[n]+')</i>'; }).join(" · ") : "";
     var byDate={}; state.entries.forEach(function(e){ byDate[e.date]=e; });
     var startDow=new Date(y,mo,1).getDay(), daysIn=new Date(y,mo+1,0).getDate(), today=todayStr();
     var html='';
@@ -1764,7 +1770,7 @@
       var sched = (e && e.schedule) ? '<div class="cv-sched">'+esc(e.schedule)+'</div>' : '';
       var ppl='';
       if(e && e.people && e.people.length){
-        var names=e.people.slice(0,2).map(function(n){ return esc(n)+'<i class="cvn-c">('+(gMeet[n]||0)+')</i>'; }).join(" ");
+        var names=e.people.slice(0,2).map(esc).join(" ");
         var more=e.people.length>2 ? " +"+(e.people.length-2) : "";
         ppl='<div class="cv-ppl">'+names+more+'</div>';
       }
