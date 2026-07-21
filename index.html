@@ -490,10 +490,10 @@
         </div>
         <div class="sky-tools">
           <div class="seg on-sky tabs" id="viewTabs">
-            <button type="button" data-v="graph" class="on">성좌</button><button type="button" data-v="places">장소</button><button type="button" data-v="recap">이달의 회고</button><button type="button" data-v="photo">사진</button>
+            <button type="button" data-v="graph" class="on">성좌</button><button type="button" data-v="places">장소</button><button type="button" data-v="recap">Reflection</button><button type="button" data-v="photo">사진</button>
           </div>
-          <div class="seg on-sky" id="minMeetSeg" title="만난/방문 횟수 기준 · 1=1회만, 그 외 N회 이상 (사람·식당 공통)">
-            <button type="button" data-m="1">1</button><button type="button" data-m="2" class="on">2+</button><button type="button" data-m="3">3+</button><button type="button" data-m="5">5+</button><button type="button" data-m="10">10+</button>
+          <div class="seg on-sky" id="minMeetSeg" title="만난/방문 횟수 기준 · 1=1회만, 1+부터는 그 횟수 이상 (사람·식당 공통)">
+            <button type="button" data-m="1" data-mode="exact">1</button><button type="button" data-m="1" data-mode="min">1+</button><button type="button" data-m="2" data-mode="min" class="on">2+</button><button type="button" data-m="3" data-mode="min">3+</button><button type="button" data-m="5" data-mode="min">5+</button><button type="button" data-m="10" data-mode="min">10+</button>
           </div>
           <div class="search" id="searchWrap">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
@@ -593,7 +593,7 @@
         <div class="add-person">
           <input class="name-in" id="pname" placeholder="이름" autocomplete="off">
           <select id="prel">
-            <option value="fri">친구</option><option value="fam">가족</option><option value="work">직장</option><option value="mn">SK</option><option value="acq">지인</option><option value="etc">기타</option>
+            <option value="fri">친구</option><option value="fam">가족</option><option value="work">직장</option><option value="mn">SK</option><option value="acq">거래처</option><option value="etc">기타</option>
           </select>
           <button class="btn" id="addP">추가</button>
         </div>
@@ -728,7 +728,7 @@
     fri:{name:"친구", color:"#5FBFA0"},
     work:{name:"직장", color:"#6FA8DC"},
     mn:{name:"SK", color:"#D96BA6"},
-    acq:{name:"지인", color:"#B394E0"},
+    acq:{name:"거래처", color:"#B394E0"},
     etc:{name:"기타", color:"#E0B24C"}
   };
   var REL_ORDER=["fam","fri","work","mn","acq","etc"];
@@ -754,7 +754,7 @@
   var state = load();
   state.golf = state.golf || {};
   var draft = { date: todayStr(), people: [], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), drinks:emptyDrinks(), exercise:emptyExercise(), thoughts:"", learning:"" };
-  var hiddenRels = {fam:true}, hideRest=true, hideGolf=true, drinkPeriod="week", weightPeriod="month", view="graph", recapMonth="", minMeet=2, calMonth="", searchQ="";
+  var hiddenRels = {fam:true}, hideRest=true, hideGolf=true, drinkPeriod="week", weightPeriod="month", view="graph", recapMonth="", minMeet=2, meetExact=false, calMonth="", searchQ="";
 
   function load(){
     try{ var s=JSON.parse(localStorage.getItem(KEY)); if(s&&s.entries) return s; }catch(e){}
@@ -900,7 +900,7 @@
       Object.keys(g.pplace||{}).forEach(function(k){ var ab=k.split(g.S1), pl=ab[0], pn=ab[1]; if(pl.indexOf(searchQ)>=0) keep[pn]=1; });
       names=allNames.filter(function(n){ return keep[n]; });
     } else {
-      names=allNames.filter(function(n){ return minMeet===1 ? g.meetings[n]===1 : g.meetings[n]>=minMeet; });
+      names=allNames.filter(function(n){ return meetExact ? g.meetings[n]===minMeet : g.meetings[n]>=minMeet; });
       if(capOn && names.length>NODE_CAP){ names.sort(function(a,b){ return g.meetings[b]-g.meetings[a]; }); names=names.slice(0,NODE_CAP); }
     }
     var prev={}; nodes.forEach(function(n){ prev[(n.type==="place"?"§":"")+n.name]=n; });
@@ -929,7 +929,7 @@
     //   1 = 정확히 1회 방문, 그 외 minMeet회 이상.
     var placeMatch = searchQ
       ? function(pl){ return isGolfPl(pl) || showPlace[pl] || pl.indexOf(searchQ)>=0; }
-      : function(pl){ if(isGolfPl(pl)) return true; var v=g.places[pl].visits; return minMeet===1 ? v===1 : v>=minMeet; };
+      : function(pl){ if(isGolfPl(pl)) return true; var v=g.places[pl].visits; return meetExact ? v===minMeet : v>=minMeet; };
     var pnames=Object.keys(g.places||{}).filter(placeMatch);
     // 기본 뷰(capOn)일 때만 개수 제한, 필터/검색을 누르면 조건에 맞는 전체 표시
     if(capOn && !searchQ && pnames.length>PLACE_CAP){
@@ -973,7 +973,7 @@
       emp.firstElementChild.innerHTML = searchQ
         ? ("‘"+esc(searchQ)+"’와(과) 관련된 내용이 없어요.<br>검색어를 지우면 전체가 보여요.")
         : (allNames.length
-          ? ((minMeet===1?"‘1회만’ 만난 사람이":"‘"+minMeet+"회 이상’ 만난 사람이")+" 없어요.<br>위에서 기준(1/2+/3+…)을 바꿔보세요.")
+          ? ((meetExact?"‘"+minMeet+"회만’ 만난 사람이":"‘"+minMeet+"회 이상’ 만난 사람이")+" 없어요.<br>위에서 기준(1/1+/2+…)을 바꿔보세요.")
           : "아직 기록이 없어요.<br>오른쪽에서 오늘 만난 사람을 적어보면<br>여기에 별이 하나씩 떠올라요."); }
     wake();
   }
@@ -1654,7 +1654,7 @@
     $("#legend").style.display = v==="graph"?"":"none";
     $("#searchWrap").style.display = v==="graph"?"":"none";
     $("#minMeetSeg").style.display = v==="graph"?"":"none";
-    var _st=$("#skyTitle"); if(_st) _st.textContent = {graph:"인맥 성좌", places:"자주 가는 곳", recap:"이달의 회고", photo:"Today's Photo"}[v];
+    var _st=$("#skyTitle"); if(_st) _st.textContent = {graph:"인맥 성좌", places:"자주 가는 곳", recap:"Reflection", photo:"Today's Photo"}[v];
     var tabs=$("#viewTabs").children; for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle("on", tabs[i].getAttribute("data-v")===v);
     if(v==="places") renderPlacesView();
     else if(v==="recap") renderRecapView();
@@ -1665,6 +1665,7 @@
   $("#minMeetSeg").addEventListener("click",function(e){
     var b=e.target.closest("button"); if(!b) return;
     minMeet=+b.getAttribute("data-m");
+    meetExact=b.getAttribute("data-mode")==="exact";   // '1'=정확히 1회, '1+'~='이상'
     capOn=false;   // 필터를 직접 누르면 40명 제한 해제 → 해당 조건 전원 표시
     var kids=this.children; for(var i=0;i<kids.length;i++) kids[i].classList.toggle("on", kids[i]===b);
     rebuild();
@@ -1712,7 +1713,7 @@
     });
     function topN(o,n){ return Object.keys(o).map(function(k){return [k,o[k]];}).sort(function(a,b){return b[1]-a[1];}).slice(0,n); }
     var isCur = ms===monthStr(new Date());
-    var html='<div class="pv-h"><h3>월별 회고</h3><div class="navm"><button id="recPrev" aria-label="이전 달">‹</button><b>'+(+ym[0])+'년 '+(+ym[1])+'월</b><button id="recNext" aria-label="다음 달"'+(isCur?' disabled':'')+'>›</button></div></div>';
+    var html='<div class="pv-h"><h3>Reflection</h3><div class="navm"><button id="recPrev" aria-label="이전 달">‹</button><b>'+(+ym[0])+'년 '+(+ym[1])+'월</b><button id="recNext" aria-label="다음 달"'+(isCur?' disabled':'')+'>›</button></div></div>';
     html+='<div class="recap-tiles">'+
       '<div class="rtile"><b>'+Object.keys(days).length+'</b><span>기록한 날</span></div>'+
       '<div class="rtile"><b>'+Object.keys(people).length+'</b><span>함께한 사람</span></div>'+
