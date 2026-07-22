@@ -1330,7 +1330,7 @@
     else state.entries.push({id:id(), date:draft.date, people:names, schedule:draft.schedule, mark:draft.mark, meals:draft.meals, bizmeet:draft.bizmeet, drinks:draft.drinks, exercise:draft.exercise, thoughts:draft.thoughts, learning:draft.learning, ts:Date.now()});
     save();
     flash("저장했어요 ✦");
-    resetDraft();
+    loadDraft();   // 저장 후에도 입력 내용을 비우지 않고 그대로 남김
     refresh(); rebuild();
   }
   function resetDraft(){ draft={date:todayStr(), people:[], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), drinks:emptyDrinks(), exercise:emptyExercise(), thoughts:"", learning:""}; loadDraft(); }
@@ -1345,9 +1345,9 @@
   function flash(m){ $("#msg").textContent=m; if(m) setTimeout(function(){ if($("#msg").textContent===m)$("#msg").textContent=""; },2600); }
 
   function scrollToComposer(){ var c=document.querySelector(".composer-wide"); if(c){ c.scrollIntoView({behavior:reduce?"auto":"smooth", block:"start"}); var f=document.getElementById("schedule"); } }
-  function editEntry(e){
+  function editEntry(e, noScroll){
     draft={ date:e.date, people:e.people.map(function(n){return {name:n, rel:relOf(n)};}), schedule:e.schedule||"", mark:!!e.mark, meals:e.meals?JSON.parse(JSON.stringify(e.meals)):emptyMeals(), bizmeet:e.bizmeet?JSON.parse(JSON.stringify(e.bizmeet)):emptyBiz(), drinks:e.drinks?JSON.parse(JSON.stringify(e.drinks)):emptyDrinks(), exercise:e.exercise?JSON.parse(JSON.stringify(e.exercise)):emptyExercise(), thoughts:e.thoughts, learning:e.learning };
-    loadDraft(); scrollToComposer();
+    loadDraft(); if(!noScroll) scrollToComposer();
   }
   function delEntry(e){
     state.entries=state.entries.filter(function(x){return x.id!==e.id;});
@@ -2029,7 +2029,7 @@
   })();
   renderTodos();
   renderLegend();
-  loadPhotoDates().then(function(){ loadDraft(); refresh(); });
+  loadPhotoDates().then(function(){ var te=existingFor(todayStr()); if(te) editEntry(te, true); else loadDraft(); refresh(); });
   resize(); rebuild();
   var _rzT=null;
   window.addEventListener("resize",function(){ resize(); wake(); if(_rzT)clearTimeout(_rzT); _rzT=setTimeout(function(){ syncTimelineHeight(); renderWeightChart(); renderStats(); },120); });
