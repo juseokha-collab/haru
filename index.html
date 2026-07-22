@@ -1644,8 +1644,8 @@
       else { prev.innerHTML='<span class="photo-empty">사진 없음</span>'; rm.hidden=true; cap.value=""; }
     });
   }
-  $("#photoInput").addEventListener("change",function(){
-    var f=this.files[0]; this.value=""; if(!f) return;
+  function ingestPhotoFile(f, srcLabel){
+    if(!f) return;
     var date=$("#date").value||todayStr();
     $("#photoMsg").textContent="처리 중…";
     compressImage(f, 1000, 0.7).then(function(dataURI){
@@ -1653,11 +1653,21 @@
       var kb=Math.round(dataURI.length/1024*0.75);
       savePhoto(date, dataURI, $("#photoCaption").value.trim());
       renderPhotoPreview({img:dataURI, pos:"50% 50%"}); $("#photoRemove").hidden=false;
-      $("#photoMsg").textContent="저장됨 ("+kb+"KB) ✦";
-      setTimeout(function(){ if($("#photoMsg").textContent.indexOf("저장됨")===0) $("#photoMsg").textContent=""; },2600);
+      var msg=(srcLabel||"저장됨")+" ("+kb+"KB) ✦"; $("#photoMsg").textContent=msg;
+      setTimeout(function(){ if($("#photoMsg").textContent===msg) $("#photoMsg").textContent=""; },2600);
     });
-  });
+  }
+  $("#photoInput").addEventListener("change",function(){ var f=this.files[0]; this.value=""; ingestPhotoFile(f,"저장됨"); });
   $("#photoAdd").onclick=function(){ $("#photoInput").click(); };
+  // PC: 스크린샷 등 이미지를 Ctrl+V 로 바로 붙여넣기 → 오늘의 사진에 저장
+  document.addEventListener("paste",function(ev){
+    if(!ev.clipboardData) return;
+    var items=ev.clipboardData.items||[], f=null;
+    for(var i=0;i<items.length;i++){ if(items[i].type && items[i].type.indexOf("image")===0){ f=items[i].getAsFile(); break; } }
+    if(!f) return;   // 텍스트 붙여넣기 등은 그대로 통과
+    ev.preventDefault();
+    ingestPhotoFile(f, "붙여넣기 저장됨");
+  });
   $("#photoRemove").onclick=function(){ var date=$("#date").value||todayStr(); removePhoto(date); $("#photoPreview").innerHTML='<span class="photo-empty">사진 없음</span>'; this.hidden=true; $("#photoCaption").value=""; $("#photoMsg").textContent=""; };
   $("#photoCaption").addEventListener("change",function(){
     var date=$("#date").value||todayStr(); if(!photoDates[date]) return;
