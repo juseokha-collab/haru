@@ -157,15 +157,15 @@
 
   /* ---- Constellation panel ---- */
   .sky-card{overflow:hidden; position:relative; background:radial-gradient(130% 100% at 50% 0%, var(--sky-1), var(--sky-0) 62%)}
-  .sky-head{position:relative; z-index:3; padding:14px 16px 12px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap}
-  .sky-title{color:var(--sky-ink); display:flex; flex-direction:column; gap:1px}
-  .sky-title h2{margin:0; font-size:15px; font-weight:700; color:var(--sky-ink)}
-  .sky-title .k{font-family:var(--font-serif); font-style:italic; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--sky-ink-2)}
-  #skyDate{font-size:16.5px; letter-spacing:.05em}
-  .sky-tools{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+  .sky-head{position:relative; z-index:3; padding:12px 16px 10px; display:flex; flex-direction:column; gap:8px}
+  .sky-row{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+  .sky-row.a{justify-content:space-between}
+  .sky-row.b{justify-content:flex-start; gap:10px}
+  #skyDate{font-family:var(--font-serif); font-style:italic; font-size:16.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--sky-ink-2); white-space:nowrap; flex:none}
+  .sky-row.a .search{flex:1 1 140px; min-width:0}
   .search{display:flex; align-items:center; gap:7px; background:rgba(255,255,255,.09); border:1px solid rgba(150,166,210,.32);
     border-radius:9px; padding:6px 10px}
-  .search input{background:transparent; border:0; outline:0; color:var(--sky-ink); font-family:inherit; font-size:13px; width:130px}
+  .search input{background:transparent; border:0; outline:0; color:var(--sky-ink); font-family:inherit; font-size:13px; width:100%; min-width:0}
   .search input::placeholder{color:#AEB6CF}
   .search svg{color:#AEB6CF}
   .search svg{opacity:.7}
@@ -501,7 +501,6 @@
   <header class="top">
     <div class="brand">
       <span class="eyebrow">Daily&nbsp;Constellation</span>
-      <h1>하루 <small>오늘을 기록하고, 사람을 잇다</small></h1>
     </div>
     <div class="top-right">
       <div class="auth" id="authArea" hidden></div>
@@ -517,19 +516,19 @@
     <!-- ===== Constellation ===== -->
     <section class="card sky-card" aria-label="인맥 성좌">
       <div class="sky-head">
-        <div class="sky-title">
+        <div class="sky-row a">
           <span class="k" id="skyDate"></span>
-        </div>
-        <div class="sky-tools">
-          <div class="seg on-sky tabs" id="viewTabs">
-            <button type="button" data-v="graph" class="on">성좌</button><button type="button" data-v="places">장소</button><button type="button" data-v="recap">Reflection</button><button type="button" data-v="photo">사진</button>
-          </div>
-          <div class="seg on-sky" id="minMeetSeg" title="만난/방문 횟수 기준 · 1=1회만, 1+부터는 그 횟수 이상 (사람·식당 공통)">
-            <button type="button" data-m="1" data-mode="exact">1</button><button type="button" data-m="1" data-mode="min">1+</button><button type="button" data-m="2" data-mode="min" class="on">2+</button><button type="button" data-m="3" data-mode="min">3+</button><button type="button" data-m="5" data-mode="min">5+</button><button type="button" data-m="10" data-mode="min">10+</button>
-          </div>
           <div class="search" id="searchWrap">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
             <input id="search" placeholder="사람·장소 찾기" autocomplete="off">
+          </div>
+        </div>
+        <div class="sky-row b">
+          <div class="seg on-sky tabs" id="viewTabs">
+            <button type="button" data-v="graph" class="on">성좌</button><button type="button" data-v="places">장소</button><button type="button" data-v="recap">회고</button><button type="button" data-v="photo">사진</button>
+          </div>
+          <div class="seg on-sky" id="minMeetSeg" title="만난/방문 횟수 이상만 표시 (사람·식당 공통)">
+            <button type="button" data-m="1" data-mode="min">1+</button><button type="button" data-m="2" data-mode="min" class="on">2+</button><button type="button" data-m="3" data-mode="min">3+</button><button type="button" data-m="5" data-mode="min">5+</button>
           </div>
         </div>
       </div>
@@ -1013,7 +1012,7 @@
       emp.firstElementChild.innerHTML = searchQ
         ? ("‘"+esc(searchQ)+"’와(과) 관련된 내용이 없어요.<br>검색어를 지우면 전체가 보여요.")
         : (allNames.length
-          ? ((meetExact?"‘"+minMeet+"회만’ 만난 사람이":"‘"+minMeet+"회 이상’ 만난 사람이")+" 없어요.<br>위에서 기준(1/1+/2+…)을 바꿔보세요.")
+          ? ((meetExact?"‘"+minMeet+"회만’ 만난 사람이":"‘"+minMeet+"회 이상’ 만난 사람이")+" 없어요.<br>위에서 기준(1+/2+/3+…)을 낮춰보세요.")
           : "아직 기록이 없어요.<br>오른쪽에서 오늘 만난 사람을 적어보면<br>여기에 별이 하나씩 떠올라요."); }
     wake();
   }
@@ -1045,7 +1044,7 @@
     // gravity to center + integrate
     nodes.forEach(function(n){
       if(n===dragging) return;
-      n.vx+=(W/2-n.x)*0.0050*k; n.vy+=(H/2-n.y)*0.0050*k;
+      n.vx+=(W/2-n.x)*0.0065*k; n.vy+=(H/2-n.y)*0.0065*k;
       n.vx*=damping; n.vy*=damping;
       n.x+=n.vx; n.y+=n.vy;
       var mx=n.r+20, mt=n.r+16, mb=n.r+30; n.x=Math.max(mx,Math.min(W-mx,n.x)); n.y=Math.max(mt,Math.min(H-mb,n.y));
@@ -1734,7 +1733,7 @@
     $("#legend").style.display = v==="graph"?"":"none";
     $("#searchWrap").style.display = v==="graph"?"":"none";
     $("#minMeetSeg").style.display = v==="graph"?"":"none";
-    var _st=$("#skyTitle"); if(_st) _st.textContent = {graph:"인맥 성좌", places:"자주 가는 곳", recap:"Reflection", photo:"Today's Photo"}[v];
+    var _st=$("#skyTitle"); if(_st) _st.textContent = {graph:"인맥 성좌", places:"자주 가는 곳", recap:"회고", photo:"Today's Photo"}[v];
     var tabs=$("#viewTabs").children; for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle("on", tabs[i].getAttribute("data-v")===v);
     if(v==="places") renderPlacesView();
     else if(v==="recap") renderRecapView();
@@ -1793,7 +1792,7 @@
     });
     function topN(o,n){ return Object.keys(o).map(function(k){return [k,o[k]];}).sort(function(a,b){return b[1]-a[1];}).slice(0,n); }
     var isCur = ms===monthStr(new Date());
-    var html='<div class="pv-h"><h3>Reflection</h3><div class="navm"><button id="recPrev" aria-label="이전 달">‹</button><b>'+(+ym[0])+'년 '+(+ym[1])+'월</b><button id="recNext" aria-label="다음 달"'+(isCur?' disabled':'')+'>›</button></div></div>';
+    var html='<div class="pv-h"><h3>회고</h3><div class="navm"><button id="recPrev" aria-label="이전 달">‹</button><b>'+(+ym[0])+'년 '+(+ym[1])+'월</b><button id="recNext" aria-label="다음 달"'+(isCur?' disabled':'')+'>›</button></div></div>';
     html+='<div class="recap-tiles">'+
       '<div class="rtile"><b>'+Object.keys(days).length+'</b><span>기록한 날</span></div>'+
       '<div class="rtile"><b>'+Object.keys(people).length+'</b><span>함께한 사람</span></div>'+
