@@ -953,7 +953,7 @@
     names.forEach(function(n,i){
       var p=prev[n];
       var ang=(i/Math.max(1,names.length))*Math.PI*2;
-      var node = p || { name:n, x:W/2+Math.cos(ang)*160+ (Math.random()*40-20), y:H/2+Math.sin(ang)*140+(Math.random()*40-20), vx:0, vy:0 };
+      var node = p || { name:n, x:W/2+Math.cos(ang)*(W*0.30)+ (Math.random()*40-20), y:H/2+Math.sin(ang)*(H*0.32)+(Math.random()*40-20), vx:0, vy:0 };
       node.type="person";
       node.meet=g.meetings[n];
       node.last=g.last[n];
@@ -1028,7 +1028,7 @@
       for(var j=i+1;j<nodes.length;j++){
         var b=nodes[j]; if(!visible(b))continue;
         var dx=a.x-b.x, dy=a.y-b.y, d2=dx*dx+dy*dy||0.01, d=Math.sqrt(d2);
-        var f=(2600)/d2*k;
+        var f=(4800)/d2*k;
         var fx=dx/d*f, fy=dy/d*f;
         a.vx+=fx; a.vy+=fy; b.vx-=fx; b.vy-=fy;
       }
@@ -1037,21 +1037,21 @@
     links.forEach(function(l){
       if(!visible(l.a)||!visible(l.b))return;
       var dx=l.b.x-l.a.x, dy=l.b.y-l.a.y, d=Math.sqrt(dx*dx+dy*dy)||0.01;
-      var rest=l.me? (95 - Math.min(40,l.w*7)) : 70;
-      var f=(d-rest)*0.02*k*(l.me?1:0.7);
+      var rest=l.me? (140 - Math.min(50,l.w*7)) : 74;
+      var f=(d-rest)*0.02*k*(l.me?0.2:0.95);
       var fx=dx/d*f, fy=dy/d*f;
       l.a.vx+=fx; l.a.vy+=fy; l.b.vx-=fx; l.b.vy-=fy;
     });
     // gravity to center + integrate
     nodes.forEach(function(n){
       if(n===dragging) return;
-      n.vx+=(W/2-n.x)*0.004*k; n.vy+=(H/2-n.y)*0.004*k;
+      n.vx+=(W/2-n.x)*0.0024*k; n.vy+=(H/2-n.y)*0.0024*k;
       n.vx*=damping; n.vy*=damping;
       n.x+=n.vx; n.y+=n.vy;
       var m=26; n.x=Math.max(m,Math.min(W-m,n.x)); n.y=Math.max(m,Math.min(H-m,n.y));
     });
     // me gently to center
-    me.vx+=(W/2-me.x)*0.02*k; me.vy+=(H/2-me.y)*0.02*k;
+    me.vx+=(W/2-me.x)*0.012*k; me.vy+=(H/2-me.y)*0.012*k;
     me.vx*=damping; me.vy*=damping; me.x+=me.vx; me.y+=me.vy;
 
     if(alpha>0.02) alpha*=0.985;
