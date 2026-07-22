@@ -433,9 +433,12 @@
   /* Today's Photo */
   .photo-field{margin-top:2px}
   .photo-preview{position:relative; width:100%; aspect-ratio:4/3; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; overflow:hidden; display:flex; align-items:center; justify-content:center}
-  .photo-preview img{width:100%; height:100%; object-fit:cover; display:block}
+  .photo-preview img{width:100%; height:100%; object-fit:contain; display:block; transform-origin:center center}
   .photo-preview img.draggable{cursor:grab; touch-action:none; user-select:none; -webkit-user-drag:none}
   .photo-preview.grabbing img.draggable{cursor:grabbing}
+  .ph-zoom{position:absolute; right:8px; bottom:8px; display:flex; gap:4px; z-index:2}
+  .ph-zoom button{width:24px; height:24px; border-radius:7px; border:0; background:rgba(0,0,0,.5); color:#fff; font-size:16px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0}
+  .ph-zoom button:hover{background:rgba(0,0,0,.72)}
   .ph-drag-hint{position:absolute; left:50%; bottom:8px; transform:translateX(-50%); background:rgba(0,0,0,.55); color:#fff; font-size:10px; padding:3px 9px; border-radius:20px; pointer-events:none; white-space:nowrap; animation:phHintFade 3s forwards}
   @keyframes phHintFade{0%,68%{opacity:.9}100%{opacity:0}}
   .photo-empty{font-size:12px; color:var(--ink-3)}
@@ -445,12 +448,12 @@
   .photo-head .ph-btn:hover{color:var(--accent-ink); border-color:var(--accent)}
   .photo-msg{display:block; font-size:11.5px; color:var(--accent-ink); margin-top:6px}
   #photoCaption{margin-top:8px}
-  .tl-photo{width:100%; max-height:170px; object-fit:cover; border-radius:10px; margin-top:8px; display:block; background:var(--surface-2)}
+  .tl-photo{width:100%; aspect-ratio:16/10; border-radius:10px; margin-top:8px; overflow:hidden; background:var(--surface-2)}
+  .tl-photo img{width:100%; height:100%; object-fit:contain; display:block; transform-origin:center center}
   .cv-cam{margin-left:auto; font-size:9px; line-height:1}
   .pv-photos{display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px}
   .pg-cell{position:relative; aspect-ratio:1/1; border-radius:12px; overflow:hidden; cursor:pointer; background:var(--sky-1); border:1px solid rgba(150,166,210,.16)}
-  .pg-cell img{width:100%; height:100%; object-fit:cover; display:block; transition:transform .2s}
-  .pg-cell:hover img{transform:scale(1.05)}
+  .pg-cell img{width:100%; height:100%; object-fit:contain; display:block; transform-origin:center center}
   .pg-date{position:absolute; top:6px; left:8px; font-size:11px; font-weight:800; color:#fff; text-shadow:0 1px 3px rgba(0,0,0,.7); font-variant-numeric:tabular-nums; z-index:2}
   .pg-cap{position:absolute; left:0; right:0; bottom:0; padding:16px 8px 6px; background:linear-gradient(0deg, rgba(8,11,20,.9), transparent); color:#fff; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 
@@ -1459,7 +1462,7 @@
           bizHtml(e.bizmeet)+
           drinksHtml(e.drinks)+
           exerciseHtml(e.exercise)+
-          (photoDates[e.date]?'<img class="tl-photo" data-date="'+e.date+'" alt="">':'')+
+          (photoDates[e.date]?'<div class="tl-photo"><img data-date="'+e.date+'" alt=""></div>':'')+
           (note?'<div class="tl-note">'+esc(note)+'</div>':'');
         item.onclick=function(ev){ if(ev.target.classList.contains("tl-del")){ askConfirm({title:"기록 삭제", message:e.date.slice(5).replace("-",".")+" 기록을 삭제할까요?", okText:"삭제", danger:true, onOk:function(){ delEntry(e); }}); return; } editEntry(e); };
       } else {
@@ -1605,26 +1608,35 @@
   }
   function refreshPhotoUI(){ renderTimeline(); loadTimelinePhotos(); renderCalendar(); if(view==="photo") renderPhotoGallery(); syncTimelineHeight(); }
   function savePhoto(date, img, caption){
-    var rec={date:date, img:img, caption:caption||"", pos:"50% 50%", ts:Date.now()};
+    var rec={date:date, img:img, caption:caption||"", zoom:1, ox:0, oy:0, ts:Date.now()};
     photoDates[date]=true; PhotoDB.set(rec);
     if(window.HARU && window.HARU.cloudPhoto) try{ window.HARU.cloudPhoto.set(date, rec); }catch(e){}
     refreshPhotoUI();
   }
-  function posOf(rec){ return (rec&&rec.pos)?rec.pos:"50% 50%"; }
-  function parsePos(s){ var m=(s||"").match(/([\d.]+)%\s+([\d.]+)%/); return m?{x:+m[1],y:+m[2]}:{x:50,y:50}; }
-  // 미리보기 사진: 드래그해서 크롭 위치(object-position) 조정 → 저장
+  // 사진 표시: 기본 fit(전체 보임) · translate(이동)+scale(확대) 변환
+  function photoTf(rec){ var z=(rec&&+rec.zoom)||1, ox=(rec&&+rec.ox)||0, oy=(rec&&+rec.oy)||0; return 'translate('+ox+'%,'+oy+'%) scale('+z+')'; }
+  // 미리보기: 드래그로 이동 + 휠/＋−로 확대·축소
   function renderPhotoPreview(rec){
     var prev=$("#photoPreview"); if(!prev||!rec||!rec.img) return;
-    var pos=posOf(rec);
-    prev.innerHTML='<img class="draggable" alt="오늘의 사진" draggable="false" src="'+rec.img+'" style="object-position:'+pos+'"><span class="ph-drag-hint">↔ 드래그로 위치 조정</span>';
-    var img=prev.querySelector("img"), xy=parsePos(pos), drag=null;
-    img.addEventListener("pointerdown",function(ev){ drag={sx:ev.clientX,sy:ev.clientY,x:xy.x,y:xy.y,w:prev.clientWidth||1,h:prev.clientHeight||1}; try{img.setPointerCapture(ev.pointerId);}catch(e){} prev.classList.add("grabbing"); ev.preventDefault(); });
-    img.addEventListener("pointermove",function(ev){ if(!drag) return; xy.x=Math.max(0,Math.min(100, drag.x-(ev.clientX-drag.sx)/drag.w*100)); xy.y=Math.max(0,Math.min(100, drag.y-(ev.clientY-drag.sy)/drag.h*100)); img.style.objectPosition=xy.x.toFixed(1)+"% "+xy.y.toFixed(1)+"%"; ev.preventDefault(); });
-    function end(){ if(!drag) return; drag=null; prev.classList.remove("grabbing"); savePhotoPos($("#date").value||todayStr(), xy.x.toFixed(1)+"% "+xy.y.toFixed(1)+"%"); }
-    img.addEventListener("pointerup",end); img.addEventListener("pointercancel",end);
+    var st={ zoom:(+rec.zoom)||1, ox:(+rec.ox)||0, oy:(+rec.oy)||0 };
+    prev.innerHTML='<img class="draggable" alt="오늘의 사진" draggable="false" src="'+rec.img+'">'+
+      '<div class="ph-zoom"><button type="button" data-z="out" aria-label="축소">−</button><button type="button" data-z="in" aria-label="확대">＋</button></div>'+
+      '<span class="ph-drag-hint">드래그 이동 · 휠/＋−로 확대·축소</span>';
+    var img=prev.querySelector("img");
+    function clamp(){ st.zoom=Math.max(1,Math.min(4,st.zoom)); var lim=(st.zoom-1)*60+8; st.ox=Math.max(-lim,Math.min(lim,st.ox)); st.oy=Math.max(-lim,Math.min(lim,st.oy)); }
+    function apply(){ img.style.transform=photoTf(st); }
+    function commit(){ clamp(); apply(); savePhotoView($("#date").value||todayStr(), st); }
+    clamp(); apply();
+    var drag=null;
+    img.addEventListener("pointerdown",function(ev){ drag={sx:ev.clientX,sy:ev.clientY,ox:st.ox,oy:st.oy,w:prev.clientWidth||1,h:prev.clientHeight||1}; try{img.setPointerCapture(ev.pointerId);}catch(e){} prev.classList.add("grabbing"); ev.preventDefault(); });
+    img.addEventListener("pointermove",function(ev){ if(!drag) return; st.ox=drag.ox+(ev.clientX-drag.sx)/drag.w*100; st.oy=drag.oy+(ev.clientY-drag.sy)/drag.h*100; clamp(); apply(); ev.preventDefault(); });
+    function endDrag(){ if(!drag) return; drag=null; prev.classList.remove("grabbing"); commit(); }
+    img.addEventListener("pointerup",endDrag); img.addEventListener("pointercancel",endDrag);
+    img.addEventListener("wheel",function(ev){ ev.preventDefault(); st.zoom += (ev.deltaY<0?0.2:-0.2); commit(); },{passive:false});
+    Array.prototype.forEach.call(prev.querySelectorAll(".ph-zoom button"),function(b){ b.onclick=function(ev){ ev.stopPropagation(); st.zoom += (b.getAttribute("data-z")==="in"?0.3:-0.3); commit(); }; });
   }
-  function savePhotoPos(date,pos){
-    PhotoDB.get(date).then(function(rec){ if(!rec) return; rec.pos=pos; rec.ts=Date.now(); PhotoDB.set(rec); if(window.HARU&&window.HARU.cloudPhoto) try{window.HARU.cloudPhoto.set(date,rec);}catch(e){} var t=document.querySelector('img.tl-photo[data-date="'+date+'"]'); if(t) t.style.objectPosition=pos; if(view==="photo") renderPhotoGallery(); });
+  function savePhotoView(date, st){
+    PhotoDB.get(date).then(function(rec){ if(!rec) return; rec.zoom=st.zoom; rec.ox=st.ox; rec.oy=st.oy; rec.ts=Date.now(); PhotoDB.set(rec); if(window.HARU&&window.HARU.cloudPhoto) try{window.HARU.cloudPhoto.set(date,rec);}catch(e){} var t=document.querySelector('.tl-photo img[data-date="'+date+'"]'); if(t) t.style.transform=photoTf(rec); if(view==="photo") renderPhotoGallery(); });
   }
   function removePhoto(date){
     delete photoDates[date]; PhotoDB.del(date);
@@ -1652,7 +1664,7 @@
       if(!dataURI){ $("#photoMsg").textContent="이미지를 읽지 못했어요."; return; }
       var kb=Math.round(dataURI.length/1024*0.75);
       savePhoto(date, dataURI, $("#photoCaption").value.trim());
-      renderPhotoPreview({img:dataURI, pos:"50% 50%"}); $("#photoRemove").hidden=false;
+      renderPhotoPreview({img:dataURI, zoom:1, ox:0, oy:0}); $("#photoRemove").hidden=false;
       var msg=(srcLabel||"저장됨")+" ("+kb+"KB) ✦"; $("#photoMsg").textContent=msg;
       setTimeout(function(){ if($("#photoMsg").textContent===msg) $("#photoMsg").textContent=""; },2600);
     });
@@ -1674,8 +1686,8 @@
     PhotoDB.get(date).then(function(rec){ if(rec){ rec.caption=$("#photoCaption").value.trim(); rec.ts=Date.now(); PhotoDB.set(rec); if(window.HARU&&window.HARU.cloudPhoto) try{window.HARU.cloudPhoto.set(date,rec);}catch(e){} if(view==="photo") renderPhotoGallery(); } });
   });
   function loadTimelinePhotos(){
-    var imgs=document.querySelectorAll("img.tl-photo[data-date]:not([data-loaded])");
-    Array.prototype.forEach.call(imgs,function(el){ var d=el.getAttribute("data-date"); el.setAttribute("data-loaded","1"); PhotoDB.get(d).then(function(rec){ if(rec&&rec.img){ el.src=rec.img; if(rec.pos) el.style.objectPosition=rec.pos; } else { el.remove(); } }); });
+    var imgs=document.querySelectorAll(".tl-photo img[data-date]:not([data-loaded])");
+    Array.prototype.forEach.call(imgs,function(el){ var d=el.getAttribute("data-date"); el.setAttribute("data-loaded","1"); PhotoDB.get(d).then(function(rec){ if(rec&&rec.img){ el.src=rec.img; el.style.transform=photoTf(rec); } else { var w=el.closest(".tl-photo"); if(w) w.remove(); else el.remove(); } }); });
   }
   function renderPhotoGallery(){
     var el=$("#photoView"); if(!el) return;
@@ -1683,7 +1695,7 @@
       list.sort(function(a,b){ return a.date<b.date?1:a.date>b.date?-1:0; });
       if(!list.length){ el.innerHTML='<div class="pv-empty">아직 사진이 없어요.<br>오늘 기록의 <b>오늘의 사진</b>에서 하루를 대표하는 한 장을 담아보세요.</div>'; return; }
       var html='<div class="pv-h"><h3>Today\'s Photo</h3><b style="color:var(--sky-ink-2);font-size:12px;font-weight:600">'+list.length+'장</b></div><div class="pv-photos">';
-      list.forEach(function(p){ var wd=DOW[parseD(p.date).getDay()]; html+='<button class="pg-cell" data-date="'+p.date+'"><span class="pg-date">'+p.date.slice(5).replace("-",".")+' ('+wd+')</span><img loading="lazy" src="'+p.img+'"'+(p.pos?' style="object-position:'+p.pos+'"':'')+' alt="">'+(p.caption?'<span class="pg-cap">'+esc(p.caption)+'</span>':'')+'</button>'; });
+      list.forEach(function(p){ var wd=DOW[parseD(p.date).getDay()]; html+='<button class="pg-cell" data-date="'+p.date+'"><span class="pg-date">'+p.date.slice(5).replace("-",".")+' ('+wd+')</span><img loading="lazy" src="'+p.img+'" style="transform:'+photoTf(p)+'" alt="">'+(p.caption?'<span class="pg-cap">'+esc(p.caption)+'</span>':'')+'</button>'; });
       html+='</div>'; el.innerHTML=html;
       Array.prototype.forEach.call(el.querySelectorAll(".pg-cell"),function(b){ b.onclick=function(){ openDay(b.getAttribute("data-date")); }; });
     });
@@ -2105,14 +2117,14 @@
     // Today's Photo 동기화 (사진 1장 = 문서 1개)
     var photoCol=db.collection("users").doc(user.uid).collection("photos");
     HARU.cloudPhoto={
-      set:function(date,rec){ photoCol.doc(date).set({img:rec.img, caption:rec.caption||"", pos:rec.pos||"50% 50%", ts:rec.ts||Date.now()}).catch(function(){}); },
+      set:function(date,rec){ photoCol.doc(date).set({img:rec.img, caption:rec.caption||"", zoom:(+rec.zoom)||1, ox:(+rec.ox)||0, oy:(+rec.oy)||0, ts:rec.ts||Date.now()}).catch(function(){}); },
       del:function(date){ photoCol.doc(date).delete().catch(function(){}); }
     };
     (function(){ // 증분 pull: 마지막 동기화 이후 사진만
       var lastPS=+(localStorage.getItem("haru.photoSync")||0);
       photoCol.where("ts",">",lastPS).get().then(function(snap){
         var mx=lastPS;
-        snap.forEach(function(doc){ var v=doc.data(); if(!v||!v.img)return; if((v.ts||0)>mx)mx=v.ts; try{ HARU.importCloudPhoto({date:doc.id, img:v.img, caption:v.caption||"", pos:v.pos||"", ts:v.ts||0}); }catch(e){} });
+        snap.forEach(function(doc){ var v=doc.data(); if(!v||!v.img)return; if((v.ts||0)>mx)mx=v.ts; try{ HARU.importCloudPhoto({date:doc.id, img:v.img, caption:v.caption||"", zoom:(+v.zoom)||1, ox:(+v.ox)||0, oy:(+v.oy)||0, ts:v.ts||0}); }catch(e){} });
         localStorage.setItem("haru.photoSync", String(mx));
       }).catch(function(e){ console.warn("photo sync", e&&e.message); });
     })();
