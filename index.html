@@ -334,7 +334,9 @@
   .wt-empty{font-size:11px; color:var(--ink-3); padding:16px 2px; text-align:center}
   /* Things To Do */
   .todo-list{padding:11px 12px 12px; display:flex; flex-direction:column; gap:4px}
-  .todo-row{display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:6px}
+  .todo-row{display:grid; grid-template-columns:auto 1fr auto auto; align-items:center; gap:6px}
+  .todo-row .td-del{width:14px; height:14px; flex:none; border:0; background:none; color:var(--ink-3); font-size:14px; line-height:1; cursor:pointer; padding:0}
+  .todo-row .td-del:hover{color:var(--c-fam)}
   .todo-row .td-chk{width:13px; height:13px; flex:none; accent-color:var(--accent); cursor:pointer; margin:0}
   .todo-row .td-task{font-family:inherit; font-size:12px; color:var(--ink); background:var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:3px 7px; outline:0; min-width:0}
   .todo-row .td-task:focus{border-color:var(--accent)}
@@ -1984,10 +1986,12 @@
       var chk=document.createElement("input"); chk.type="checkbox"; chk.className="td-chk"; chk.checked=!!it.done;
       var task=document.createElement("input"); task.type="text"; task.className="td-task"; task.placeholder="할 일"; task.autocomplete="off"; task.value=it.task||"";
       var due=document.createElement("input"); due.type="date"; due.className="td-due"; due.value=it.due||"";
+      var del=document.createElement("button"); del.type="button"; del.className="td-del"; del.setAttribute("aria-label","삭제"); del.textContent="×";
       chk.onchange=function(r){ return function(){ r.classList.toggle("done", r.querySelector(".td-chk").checked); saveTodos(); }; }(row);
       task.onchange=saveTodos;
       due.onchange=function(){ saveTodos(); renderTodos(); };   // 기한 바뀌면 날짜순 재정렬
-      row.appendChild(chk); row.appendChild(task); row.appendChild(due);
+      del.onclick=function(tk,dz,ck){ return function(){ tk.value=""; dz.value=""; ck.checked=false; saveTodos(); renderTodos(); }; }(task,due,chk);
+      row.appendChild(chk); row.appendChild(task); row.appendChild(due); row.appendChild(del);
       el.appendChild(row);
     }
   }
