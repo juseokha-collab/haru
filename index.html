@@ -776,6 +776,8 @@
   var EX_MIN={0:"",30:"30분",60:"1시간",90:"1시간 30분",120:"2시간",150:"2시간 30분",180:"3시간",210:"3시간 30분",240:"4시간",300:"5시간+"};
   function exHasContent(x){ return !!x && (x.activity || +x.minutes>0 || (x.weight!=="" && x.weight!=null)); }
   var PLACE_COLOR="#8C93A6";
+  // 이름으로 장소 아이콘 지정(예: 당구장 → 🎱). 골프장 다음으로 우선.
+  function placeEmoji(name){ return /허슬러|당구|빌리아드|빌리어드|포켓볼|billiard|pool\s*hall/i.test(name||"") ? "🎱" : ""; }
   var DRINKS=[{key:"beer",label:"🍺",ko:"맥주",color:"#E0B24C"},{key:"soju",label:"🍾",ko:"소주",color:"#6FB49A"},{key:"makgeolli",label:"🥛",ko:"막걸리",color:"#CBB994"},{key:"etc",label:"🍷",ko:"기타",color:"#B394E0"}];
   function emptyDrinks(){ var d={}; DRINKS.forEach(function(x){ d[x.key]=0; }); return d; }
   function drinkTotal(d){ if(!d) return 0; var s=0; DRINKS.forEach(function(x){ s+=(+d[x.key]||0); }); return s; }
@@ -1074,6 +1076,7 @@
       if(!visible(n)) return;
       var isPlace = n.type==="place";
       var isGolf = isPlace && n.golf;
+      var pico = (isPlace && !isGolf) ? placeEmoji(n.name) : "";   // 당구장 등 이름 기반 아이콘
       var tw = reduce?0:Math.sin((now-t0)/900 + n.phase)*0.12;
       var col= isGolf? "#5BAE6E" : (isPlace? PLACE_COLOR : REL[n.rel].color);
       var dim = focus && focus!==n && !neigh[n.name];
@@ -1084,7 +1087,7 @@
       gr.addColorStop(1, hexA(col,0));
       ctx.fillStyle=gr; ctx.beginPath(); ctx.arc(n.x,n.y,n.r*2.4,0,6.29); ctx.fill();
       // core (사람=원, 골프장=⛳, 그 외 장소=둥근 사각)
-      if(isGolf){ ctx.font=Math.round(n.r*2.5)+"px "+BODY_FONT; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.globalAlpha=a; ctx.fillText("⛳", n.x, n.y); ctx.globalAlpha=1; }
+      if(isGolf||pico){ ctx.font=Math.round(n.r*2.5)+"px "+BODY_FONT; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.globalAlpha=a; ctx.fillText(isGolf?"⛳":pico, n.x, n.y); ctx.globalAlpha=1; }
       else {
         ctx.fillStyle=hexA(col, a); ctx.lineWidth=1.5; ctx.strokeStyle=hexA("#0C0F1A",a*0.5);
         if(isPlace){ roundRect(n.x-n.r, n.y-n.r, n.r*2, n.r*2, Math.max(3,n.r*0.35)); ctx.fill(); ctx.stroke(); }
@@ -1098,7 +1101,7 @@
         ctx.font="600 "+fpx+"px "+BODY_FONT;
         ctx.textAlign="center"; ctx.textBaseline="top";
         ctx.fillStyle= isPlace? "rgba(184,190,206,"+a+")" : "rgba(231,234,244,"+(small?a*0.82:a)+")";
-        ctx.fillText((isGolf?"":(isPlace?"🍴 ":""))+n.name, n.x, n.y+n.r+(small?3:4));
+        ctx.fillText(((isGolf||pico)?"":(isPlace?"🍴 ":""))+n.name, n.x, n.y+n.r+(small?3:4));
       }
     });
 
