@@ -354,6 +354,8 @@
   .dk-week{display:flex; gap:7px; align-items:flex-end; margin-left:auto; padding-top:2px}
   .dw{display:flex; flex-direction:column; align-items:center; gap:5px}
   .dwd{font-size:10.5px; color:var(--ink-3); line-height:1}
+  .dwd.sun{color:#D98A8A}
+  .dwd.sat{color:#8AA6D9}
   .dwdot{width:9px; height:9px; border-radius:50%; background:transparent}
   .dwdot.lv1{background:#4FBE86}
   .dwdot.lv2{background:#ECC24A}
@@ -1377,7 +1379,7 @@
     var el=$("#weightChart"); if(!el) return;
     // 지난 7일 운동 스트립 (30분↑ 노랑=lv2 / 1시간↑ 초록=lv1 / 2시간↑ 빨강=lv3 / 없으면 공란)
     var exMap={}; state.entries.forEach(function(e){ var lv=exLevel(e.exercise); if(lv>0) exMap[e.date]=lv; });
-    var strip=''; for(var wi=7; wi>=1; wi--){ var dd=new Date(); dd.setDate(dd.getDate()-wi); var ds=fmt(dd), lv=exMap[ds]||0; strip+='<div class="dw"><span class="dwd">'+DOW[dd.getDay()]+'</span><span class="dwdot lv'+lv+'"></span></div>'; }
+    var strip=''; for(var wi=7; wi>=1; wi--){ var dd=new Date(); dd.setDate(dd.getDate()-wi); var ds=fmt(dd), lv=exMap[ds]||0; strip+='<div class="dw"><span class="dwd'+(dd.getDay()===0?" sun":dd.getDay()===6?" sat":"")+'">'+DOW[dd.getDay()]+'</span><span class="dwdot lv'+lv+'"></span></div>'; }
     var wk=$("#wtWeek"); if(wk) wk.innerHTML=strip;
     // 몸무게 선그래프
     var cut=periodCut(weightPeriod), pts=[];
@@ -1414,7 +1416,7 @@
     var lvMap={}; state.entries.forEach(function(e){ if(e.drinks){ var lv=drinkLevel(e.drinks); if(lv>0) lvMap[e.date]=lv; } });
     var strip='';
     for(var wi=7; wi>=1; wi--){ var dd=new Date(); dd.setDate(dd.getDate()-wi); var ds=fmt(dd), lv=lvMap[ds]||0;
-      strip+='<div class="dw"><span class="dwd">'+DOW[dd.getDay()]+'</span><span class="dwdot lv'+lv+'"></span></div>'; }
+      strip+='<div class="dw"><span class="dwd'+(dd.getDay()===0?" sun":dd.getDay()===6?" sat":"")+'">'+DOW[dd.getDay()]+'</span><span class="dwdot lv'+lv+'"></span></div>'; }
     var wk=$("#dkWeek"); if(wk) wk.innerHTML=strip;
     var html='';
     if(total===0) html='<div class="dk-empty">이 기간엔 음주 기록이 없어요.</div>';
