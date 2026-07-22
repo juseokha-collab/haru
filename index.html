@@ -869,7 +869,7 @@
       if(e.bizmeet && e.bizmeet.people && e.bizmeet.people.length) _recs.push({date:e.date, people:e.bizmeet.people});   // 업무미팅 동행: 연관선 O
     });
     (state.events||[]).forEach(function(ev){ if(ev.attendees&&ev.attendees.length) _recs.push({date:ev.date, people:ev.attendees}); });
-    var dateSeen={};
+    var dateSeen={}, pairSeen={};
     _recs.forEach(function(e){
       var ppl=e.people.filter(function(n){return n;});
       ppl.forEach(function(n){
@@ -879,7 +879,7 @@
       });
       if(!e.noPair) for(var i=0;i<ppl.length;i++)for(var j=i+1;j<ppl.length;j++){
         var k=[ppl[i],ppl[j]].sort().join("");
-        pairs[k]=(pairs[k]||0)+1;
+        var pk=e.date+"|"+k; if(!pairSeen[pk]){ pairSeen[pk]=1; pairs[k]=(pairs[k]||0)+1; }   // 하루 1회로 중복 제거
       }
     });
     // 식당/장소
