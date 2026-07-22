@@ -344,6 +344,7 @@
   .todo-row .td-due{position:absolute; left:0; bottom:0; width:1px; height:1px; opacity:0; pointer-events:none; border:0; padding:0; margin:0}
   .todo-row .td-date{font-family:inherit; font-size:10.5px; color:var(--ink-2); background:var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:3px 4px; cursor:pointer; white-space:nowrap; font-variant-numeric:tabular-nums; width:48px; box-sizing:border-box; text-align:center}
   .todo-row .td-date.empty{color:var(--ink-3)}
+  .todo-row .td-date.soon{color:#E06B6B; font-weight:700; border-color:color-mix(in srgb, #E06B6B 55%, transparent); background:color-mix(in srgb, #E06B6B 13%, transparent)}
   .todo-row .td-date:hover{border-color:var(--accent)}
   .todo-row.done .td-task{text-decoration:line-through; color:var(--ink-3)}
   .dk-top{display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin:8px 0 12px; flex-wrap:wrap}
@@ -1992,6 +1993,7 @@
       var dwrap=document.createElement("span"); dwrap.className="td-datewrap";
       var due=document.createElement("input"); due.type="date"; due.className="td-due"; due.value=it.due||"";
       var dlabel=document.createElement("span"); dlabel.className="td-date"+(it.due?"":" empty"); dlabel.textContent=it.due? it.due.slice(5).replace("-",".") : "기한";
+      if(it.due && !it.done && Math.round((parseD(it.due)-parseD(todayStr()))/864e5)<=10) dlabel.classList.add("soon");   // 기한 10일 이내(지난 것 포함) 강조
       dwrap.appendChild(due); dwrap.appendChild(dlabel);
       chk.onchange=function(r){ return function(){ r.classList.toggle("done", r.querySelector(".td-chk").checked); saveTodos(); }; }(row);
       task.onchange=saveTodos;
