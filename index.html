@@ -150,7 +150,8 @@
   .card{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow)}
   .card-h{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px 12px}
   .card-h h2{margin:0; font-size:15px; font-weight:700; letter-spacing:-.01em; display:flex; align-items:center; gap:8px}
-  .card-h .sub{font-size:12px; color:var(--ink-3)}
+  .card-h .sub{font-size:12px; color:var(--ink-3); font-weight:600}
+  .card-h .sub.saved{color:#3FA35A}
 
   /* ---- Constellation panel ---- */
   .sky-card{overflow:hidden; position:relative; background:radial-gradient(130% 100% at 50% 0%, var(--sky-1), var(--sky-0) 62%)}
@@ -1306,7 +1307,7 @@
     }
   });
 
-  function loadDraft(){ var scs=document.querySelectorAll(".meal-same"); for(var si=0;si<scs.length;si++) scs[si].checked=false; loadPhotoForDate(draft.date); $("#date").value=draft.date; $("#schedule").value=draft.schedule||""; $("#schedMark").checked=!!draft.mark; loadMeals(draft.meals); loadBiz(draft.bizmeet); loadDrinks(draft.drinks); loadExercise(draft.exercise); $("#thoughts").value=draft.thoughts; $("#learning").value=draft.learning; renderDraftChips(); $("#editing").textContent = existingFor(draft.date)?"· 이 날짜 기록 수정 중":""; }
+  function loadDraft(){ var scs=document.querySelectorAll(".meal-same"); for(var si=0;si<scs.length;si++) scs[si].checked=false; loadPhotoForDate(draft.date); $("#date").value=draft.date; $("#schedule").value=draft.schedule||""; $("#schedMark").checked=!!draft.mark; loadMeals(draft.meals); loadBiz(draft.bizmeet); loadDrinks(draft.drinks); loadExercise(draft.exercise); $("#thoughts").value=draft.thoughts; $("#learning").value=draft.learning; renderDraftChips(); var _ed=$("#editing"); _ed.textContent = existingFor(draft.date)?"수정중":""; _ed.className="sub"; }
   function existingFor(date){ return state.entries.filter(function(e){return e.date===date;})[0]; }
 
   function saveEntry(){
@@ -1334,11 +1335,14 @@
     save();
     flash("저장했어요 ✦");
     loadDraft();   // 저장 후에도 입력 내용을 비우지 않고 그대로 남김
+    var _ed=$("#editing"); _ed.textContent="수정완료"; _ed.className="sub saved";
     refresh(); rebuild();
   }
   function resetDraft(){ draft={date:todayStr(), people:[], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), drinks:emptyDrinks(), exercise:emptyExercise(), thoughts:"", learning:""}; loadDraft(); }
   $("#saveBtn").onclick=saveEntry;
   $("#saveBtn2").onclick=saveEntry;
+  // 저장 후 다시 편집하면 '수정완료' → '수정중'으로 되돌림
+  (function(){ var cw=document.querySelector(".composer-wide"); if(!cw) return; var mark=function(){ var ed=$("#editing"); if(existingFor($("#date").value||todayStr())){ ed.textContent="수정중"; ed.className="sub"; } }; cw.addEventListener("input",mark); cw.addEventListener("change",mark); })();
   $("#date").addEventListener("change",function(){ loadPhotoForDate(this.value||todayStr()); });
   $("#clearBtn").onclick=function(){
     var d=$("#date").value||todayStr(), ex=existingFor(d);
