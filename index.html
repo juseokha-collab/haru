@@ -1045,7 +1045,7 @@
     // gravity to center + integrate
     nodes.forEach(function(n){
       if(n===dragging) return;
-      n.vx+=(W/2-n.x)*0.0036*k; n.vy+=(H/2-n.y)*0.0036*k;
+      n.vx+=(W/2-n.x)*0.0050*k; n.vy+=(H/2-n.y)*0.0050*k;
       n.vx*=damping; n.vy*=damping;
       n.x+=n.vx; n.y+=n.vy;
       var mx=n.r+20, mt=n.r+16, mb=n.r+30; n.x=Math.max(mx,Math.min(W-mx,n.x)); n.y=Math.max(mt,Math.min(H-mb,n.y));
