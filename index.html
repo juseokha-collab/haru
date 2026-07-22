@@ -160,12 +160,11 @@
   .sky-head{position:relative; z-index:3; padding:12px 16px 10px; display:flex; flex-direction:column; gap:8px}
   .sky-row{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
   .sky-row.a{justify-content:space-between}
-  .sky-row.b{justify-content:flex-start; gap:10px}
+  .sky-row.b{justify-content:flex-end; gap:8px}
   #skyDate{font-family:var(--font-serif); font-style:italic; font-size:16.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--sky-ink-2); white-space:nowrap; flex:none}
-  .sky-row.a .search{flex:1 1 140px; min-width:0}
   .search{display:flex; align-items:center; gap:7px; background:rgba(255,255,255,.09); border:1px solid rgba(150,166,210,.32);
-    border-radius:9px; padding:6px 10px}
-  .search input{background:transparent; border:0; outline:0; color:var(--sky-ink); font-family:inherit; font-size:13px; width:100%; min-width:0}
+    border-radius:9px; padding:6px 10px; flex:none}
+  .search input{background:transparent; border:0; outline:0; color:var(--sky-ink); font-family:inherit; font-size:13px; width:132px; min-width:0}
   .search input::placeholder{color:#AEB6CF}
   .search svg{color:#AEB6CF}
   .search svg{opacity:.7}
@@ -518,17 +517,17 @@
       <div class="sky-head">
         <div class="sky-row a">
           <span class="k" id="skyDate"></span>
-          <div class="search" id="searchWrap">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-            <input id="search" placeholder="사람·장소 찾기" autocomplete="off">
-          </div>
-        </div>
-        <div class="sky-row b">
           <div class="seg on-sky tabs" id="viewTabs">
             <button type="button" data-v="graph" class="on">성좌</button><button type="button" data-v="places">장소</button><button type="button" data-v="recap">회고</button><button type="button" data-v="photo">사진</button>
           </div>
+        </div>
+        <div class="sky-row b">
           <div class="seg on-sky" id="minMeetSeg" title="만난/방문 횟수 이상만 표시 (사람·식당 공통)">
             <button type="button" data-m="1" data-mode="min">1+</button><button type="button" data-m="2" data-mode="min" class="on">2+</button><button type="button" data-m="3" data-mode="min">3+</button><button type="button" data-m="5" data-mode="min">5+</button>
+          </div>
+          <div class="search" id="searchWrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input id="search" placeholder="사람·장소 찾기" autocomplete="off">
           </div>
         </div>
       </div>
@@ -703,6 +702,7 @@
             <option value="300">5시간+</option>
           </select>
           <label class="wt-wrap" title="몸무게">⚖️<input type="number" min="0" step="0.1" inputmode="decimal" id="ex-weight" placeholder="kg"></label>
+          <label class="wt-wrap" title="허리둘레">📏<input type="number" min="0" step="0.1" inputmode="decimal" id="ex-waist" placeholder="cm"></label>
         </div>
         <label for="thoughts">고민 · 생각</label>
         <textarea id="thoughts" placeholder="오늘 마음에 남은 고민이나 생각…"></textarea>
@@ -771,11 +771,11 @@
   var MEALS=[{key:"breakfast",ico:"🌅",label:"아침"},{key:"lunch",ico:"☀️",label:"점심"},{key:"dinner",ico:"🌙",label:"저녁"},{key:"special",ico:"✨",label:"Special"}];
   function emptyMeals(){ var m={}; MEALS.forEach(function(x){ m[x.key]={place:"",food:"",people:[]}; }); return m; }
   function mealHasContent(m){ return !!m && MEALS.some(function(x){ var v=m[x.key]||{}; return v.place||v.food||(v.people&&v.people.length); }); }
-  function emptyExercise(){ return {activity:"", minutes:0, weight:""}; }
+  function emptyExercise(){ return {activity:"", minutes:0, weight:"", waist:""}; }
   function emptyBiz(){ return {name:"", time:"", people:[]}; }
   function bizHasContent(b){ return !!b && (b.name || b.time || (b.people&&b.people.length)); }
   var EX_MIN={0:"",30:"30분",60:"1시간",90:"1시간 30분",120:"2시간",150:"2시간 30분",180:"3시간",210:"3시간 30분",240:"4시간",300:"5시간+"};
-  function exHasContent(x){ return !!x && (x.activity || +x.minutes>0 || (x.weight!=="" && x.weight!=null)); }
+  function exHasContent(x){ return !!x && (x.activity || +x.minutes>0 || (x.weight!=="" && x.weight!=null) || (x.waist!=="" && x.waist!=null)); }
   var PLACE_COLOR="#8C93A6";
   // 이름으로 장소 아이콘 지정(예: 당구장 → 🎱). 골프장 다음으로 우선.
   function placeEmoji(name){ return /허슬러|당구|빌리아드|빌리어드|포켓볼|billiard|pool\s*hall/i.test(name||"") ? "🎱" : ""; }
@@ -987,7 +987,7 @@
       node.golf=!!(state.golf && state.golf[pl]);
       node.visits=g.places[pl].visits;
       node.last=g.places[pl].last;
-      node.r=6+Math.sqrt(g.places[pl].visits/maxV)*9;
+      node.r= placeEmoji(pl) ? (6+Math.sqrt(g.places[pl].visits/maxV)*6) : (7+Math.sqrt(g.places[pl].visits/maxV)*15);   // 당구장은 완만·식당/골프는 사람처럼 방문횟수로 크게
       node.phase=node.phase!=null?node.phase:Math.random()*6.28;
       nodes.push(node); placeIndex[pl]=node;
     });
@@ -1270,8 +1270,8 @@
   function loadMeals(meals){ MEALS.forEach(function(x){ var v=(meals&&meals[x.key])||{}; var p=document.getElementById("m-"+x.key+"-place"), f=document.getElementById("m-"+x.key+"-food"), w=document.getElementById("m-"+x.key+"-people"); if(p)p.value=v.place||""; if(f)f.value=v.food||""; if(w)w.value=(v.people||[]).join(", "); var chk=document.querySelector('.golf-chk[data-meal="'+x.key+'"]'); if(chk) chk.checked=!!(state.golf && v.place && state.golf[v.place]); }); }
   function readBiz(){ return { name:mval("bm-name"), time:mval("bm-time"), people:parseNames(mval("bm-people")) }; }
   function loadBiz(b){ b=b||{}; var nm=document.getElementById("bm-name"), tm=document.getElementById("bm-time"), pp=document.getElementById("bm-people"); if(nm)nm.value=b.name||""; if(tm)tm.value=b.time||""; if(pp)pp.value=(b.people||[]).join(", "); }
-  function readExercise(){ var mn=document.getElementById("ex-minutes"); return { activity:mval("ex-activity"), minutes:mn?(+mn.value||0):0, weight:mval("ex-weight") }; }
-  function loadExercise(x){ x=x||{}; var a=document.getElementById("ex-activity"), mn=document.getElementById("ex-minutes"), w=document.getElementById("ex-weight"); if(a)a.value=x.activity||""; if(mn)mn.value=String(+x.minutes||0); if(w)w.value=(x.weight===0||x.weight)?x.weight:""; }
+  function readExercise(){ var mn=document.getElementById("ex-minutes"); return { activity:mval("ex-activity"), minutes:mn?(+mn.value||0):0, weight:mval("ex-weight"), waist:mval("ex-waist") }; }
+  function loadExercise(x){ x=x||{}; var a=document.getElementById("ex-activity"), mn=document.getElementById("ex-minutes"), w=document.getElementById("ex-weight"), ws=document.getElementById("ex-waist"); if(a)a.value=x.activity||""; if(mn)mn.value=String(+x.minutes||0); if(w)w.value=(x.weight===0||x.weight)?x.weight:""; if(ws)ws.value=(x.waist===0||x.waist)?x.waist:""; }
   function mealPeople(m){ var out=[]; if(m) MEALS.forEach(function(x){ ((m[x.key]||{}).people||[]).forEach(function(n){ if(out.indexOf(n)<0)out.push(n); }); }); return out; }
   function readDrinks(){ var d={}; DRINKS.forEach(function(x){ var v=parseFloat(mval("d-"+x.key)); d[x.key]=(isNaN(v)||v<0)?0:v; }); return d; }
   function loadDrinks(dr){ DRINKS.forEach(function(x){ var el=document.getElementById("d-"+x.key); if(el){ var v=(dr&&+dr[x.key])||0; el.value=v?v:""; } }); }
@@ -1382,6 +1382,7 @@
     var a=(x.activity||"").trim(), t=EX_MIN[+x.minutes||0]||"";
     if(a||t) parts.push("🏃 "+esc(a)+(t?" "+t:""));
     if(x.weight!=="" && x.weight!=null) parts.push("⚖️ "+esc(String(x.weight))+"kg");
+    if(x.waist!=="" && x.waist!=null) parts.push("📏 "+esc(String(x.waist))+"cm");
     return parts.length? '<div class="tl-meal">'+parts.join(" · ")+'</div>' : "";
   }
   function periodCut(p){ if(p==="all") return "0000-00-00"; var days=p==="week"?6:p==="month"?29:364; return fmt(new Date(Date.now()-days*864e5)); }
@@ -1392,29 +1393,29 @@
     var exMap={}; state.entries.forEach(function(e){ var lv=exLevel(e.exercise); if(lv>0) exMap[e.date]=lv; });
     var strip=''; for(var wi=7; wi>=1; wi--){ var dd=new Date(); dd.setDate(dd.getDate()-wi); var ds=fmt(dd), lv=exMap[ds]||0; strip+='<div class="dw"><span class="dwd'+(dd.getDay()===0?" sun":dd.getDay()===6?" sat":"")+'">'+DOW[dd.getDay()]+'</span><span class="dwdot lv'+lv+'"></span></div>'; }
     var wk=$("#wtWeek"); if(wk) wk.innerHTML=strip;
-    // 몸무게 선그래프
-    var cut=periodCut(weightPeriod), pts=[];
-    state.entries.forEach(function(e){ if(e.date<cut) return; var w=e.exercise&&e.exercise.weight; if(w!==""&&w!=null&&!isNaN(+w)&&+w>0) pts.push({date:e.date,w:+w}); });
-    pts.sort(function(a,b){ return a.date<b.date?-1:(a.date>b.date?1:0); });
-    if(!pts.length){ el.innerHTML='<div class="wt-empty">이 기간엔 몸무게 기록이 없어요.</div>'; return; }
-    var lastP=pts[pts.length-1];
-    var ws=pts.map(function(p){return p.w;});
-    var dMin=Math.min.apply(null,ws), dMax=Math.max.apply(null,ws);
-    var lo=dMin, hi=dMax; if(lo===hi){ lo-=1; hi+=1; } else { var mg=(hi-lo)*0.3; lo-=mg; hi+=mg; }
-    var W=Math.max(160, Math.round(el.clientWidth||300)), H=78, padL=30, padR=30, padT=12, padB=16;
-    var d0=parseD(pts[0].date).getTime(), d1=parseD(lastP.date).getTime(), spanD=Math.max(1,d1-d0);
-    function X(p){ return pts.length===1 ? (padL+(W-padR-padL)/2) : padL+(parseD(p.date).getTime()-d0)/spanD*(W-padL-padR); }
-    function Y(w){ return padT+(1-(w-lo)/(hi-lo))*(H-padT-padB); }
-    var col="#6FA8DC";
-    var line=pts.map(function(p){return X(p).toFixed(1)+","+Y(p.w).toFixed(1);}).join(" ");
-    var area=X(pts[0]).toFixed(1)+","+(H-padB)+" "+line+" "+X(lastP).toFixed(1)+","+(H-padB);
-    var dots=pts.map(function(p){return '<circle cx="'+X(p).toFixed(1)+'" cy="'+Y(p.w).toFixed(1)+'" r="2.4" fill="'+col+'"/>';}).join("");
-    function lbl(v,x,anchor){ return '<text x="'+x+'" y="'+Y(v).toFixed(1)+'" font-size="9" fill="#9aa3ba" dominant-baseline="middle" text-anchor="'+anchor+'">'+v+'</text>'; }
-    var labels=lbl(dMax,2,'start')+lbl(dMax,W-2,'end')+(dMin!==dMax?(lbl(dMin,2,'start')+lbl(dMin,W-2,'end')):'');
+    // 몸무게(좌축·파랑)·허리둘레(우축·주황) 이중축 선그래프
+    var cut=periodCut(weightPeriod), wpts=[], apts=[];
+    state.entries.forEach(function(e){ if(e.date<cut) return; var ex=e.exercise||{};
+      var w=ex.weight; if(w!==""&&w!=null&&!isNaN(+w)&&+w>0) wpts.push({date:e.date,v:+w});
+      var a=ex.waist; if(a!==""&&a!=null&&!isNaN(+a)&&+a>0) apts.push({date:e.date,v:+a}); });
+    function srt(arr){ arr.sort(function(x,y){ return x.date<y.date?-1:(x.date>y.date?1:0); }); }
+    srt(wpts); srt(apts);
+    if(!wpts.length && !apts.length){ el.innerHTML='<div class="wt-empty">이 기간엔 몸무게·허리둘레 기록이 없어요.</div>'; return; }
+    var W=Math.max(160, Math.round(el.clientWidth||300)), H=78, padL=30, padR=30, padT=13, padB=16;
+    var allT=wpts.concat(apts).map(function(p){return parseD(p.date).getTime();});
+    var d0=Math.min.apply(null,allT), d1=Math.max.apply(null,allT), spanD=Math.max(1,d1-d0);
+    function X(p){ return d1===d0 ? (padL+(W-padR-padL)/2) : padL+(parseD(p.date).getTime()-d0)/spanD*(W-padL-padR); }
+    function scale(pts){ if(!pts.length) return null; var vs=pts.map(function(p){return p.v;}); var mn=Math.min.apply(null,vs), mx=Math.max.apply(null,vs), lo=mn, hi=mx; if(lo===hi){lo-=1;hi+=1;}else{var m=(hi-lo)*0.35; lo-=m; hi+=m;} return {lo:lo,hi:hi,mn:mn,mx:mx}; }
+    var ws=scale(wpts), as=scale(apts);
+    function Y(v,sc){ return padT+(1-(v-sc.lo)/(sc.hi-sc.lo))*(H-padT-padB); }
+    function series(pts,sc,color){ if(!pts.length||!sc) return ""; var line=pts.map(function(p){return X(p).toFixed(1)+","+Y(p.v,sc).toFixed(1);}).join(" "); var dots=pts.map(function(p){return '<circle cx="'+X(p).toFixed(1)+'" cy="'+Y(p.v,sc).toFixed(1)+'" r="2.3" fill="'+color+'"/>';}).join(""); return '<polyline points="'+line+'" fill="none" stroke="'+color+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'+dots; }
+    var cW="#6FA8DC", cA="#E0954C";
+    function lbl(v,x,y,anchor,color){ return '<text x="'+x+'" y="'+y.toFixed(1)+'" font-size="8.5" fill="'+color+'" dominant-baseline="middle" text-anchor="'+anchor+'">'+v+'</text>'; }
+    var labels='';
+    if(ws){ labels+='<text x="2" y="7" font-size="7.5" fill="'+cW+'" text-anchor="start">kg</text>'+lbl(ws.mx,2,Y(ws.mx,ws),'start',cW)+(ws.mn!==ws.mx?lbl(ws.mn,2,Y(ws.mn,ws),'start',cW):''); }
+    if(as){ labels+='<text x="'+(W-2)+'" y="7" font-size="7.5" fill="'+cA+'" text-anchor="end">cm</text>'+lbl(as.mx,W-2,Y(as.mx,as),'end',cA)+(as.mn!==as.mx?lbl(as.mn,W-2,Y(as.mn,as),'end',cA):''); }
     var svg='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">'
-      +'<polygon points="'+area+'" fill="'+col+'" opacity="0.10"/>'
-      +'<polyline points="'+line+'" fill="none" stroke="'+col+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'
-      +dots+labels
+      +series(wpts,ws,cW)+series(apts,as,cA)+labels
       +'</svg>';
     el.innerHTML=svg;
   }
