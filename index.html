@@ -1028,7 +1028,7 @@
       for(var j=i+1;j<nodes.length;j++){
         var b=nodes[j]; if(!visible(b))continue;
         var dx=a.x-b.x, dy=a.y-b.y, d2=dx*dx+dy*dy||0.01, d=Math.sqrt(d2);
-        var f=(4800)/d2*k;
+        var f=(4000)/d2*k;
         var fx=dx/d*f, fy=dy/d*f;
         a.vx+=fx; a.vy+=fy; b.vx-=fx; b.vy-=fy;
       }
@@ -1038,17 +1038,17 @@
       if(!visible(l.a)||!visible(l.b))return;
       var dx=l.b.x-l.a.x, dy=l.b.y-l.a.y, d=Math.sqrt(dx*dx+dy*dy)||0.01;
       var rest=l.me? (140 - Math.min(50,l.w*7)) : 74;
-      var f=(d-rest)*0.02*k*(l.me?0.2:0.95);
+      var f=(d-rest)*0.02*k*(l.me?0.2:1.15);
       var fx=dx/d*f, fy=dy/d*f;
       l.a.vx+=fx; l.a.vy+=fy; l.b.vx-=fx; l.b.vy-=fy;
     });
     // gravity to center + integrate
     nodes.forEach(function(n){
       if(n===dragging) return;
-      n.vx+=(W/2-n.x)*0.0024*k; n.vy+=(H/2-n.y)*0.0024*k;
+      n.vx+=(W/2-n.x)*0.0036*k; n.vy+=(H/2-n.y)*0.0036*k;
       n.vx*=damping; n.vy*=damping;
       n.x+=n.vx; n.y+=n.vy;
-      var m=26; n.x=Math.max(m,Math.min(W-m,n.x)); n.y=Math.max(m,Math.min(H-m,n.y));
+      var mx=n.r+20, mt=n.r+16, mb=n.r+30; n.x=Math.max(mx,Math.min(W-mx,n.x)); n.y=Math.max(mt,Math.min(H-mb,n.y));
     });
     // me gently to center
     me.vx+=(W/2-me.x)*0.012*k; me.vy+=(H/2-me.y)*0.012*k;
