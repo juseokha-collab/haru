@@ -135,6 +135,7 @@
   .cv-hol{font-size:9px; font-weight:600; color:#E06B6B; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .cv-dot{width:7px; height:7px; border-radius:50%; flex:none}
   .cv-pico{font-size:11px; line-height:1; flex:none}
+  .cv-pico.cv-ball{width:11px; height:11px; border-radius:50%; display:inline-block; background:radial-gradient(circle at 34% 30%, rgba(255,255,255,.9) 0 1.5px, transparent 2.2px), #D64545; box-shadow:inset -1px -1px 1.5px rgba(0,0,0,.3)}
   .cv-sched{font-size:10px; font-weight:700; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.45; margin-top:2px}
   .cv-ppl{font-size:10px; color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.45}
   .cv-ppl .cvn-c{font-style:normal; font-size:8.5px; color:var(--ink-3)}
@@ -1863,7 +1864,7 @@
         ppl='<div class="cv-ppl">'+names+more+'</div>';
       }
       var place='', pico2='', gseen=false, bseen=false;
-      if(e && e.meals){ var pls=[]; MEALS.forEach(function(x){ var m=e.meals[x.key]; if(!m||!m.place) return; if(pls.indexOf(m.place)<0) pls.push(m.place); if(state.golf&&state.golf[m.place]&&!gseen){ pico2+='<span class="cv-pico">⛳</span>'; gseen=true; } var pe=placeEmoji(m.place); if(pe&&!bseen){ pico2+='<span class="cv-pico">'+pe+'</span>'; bseen=true; } }); if(pls.length) place='<div class="cv-place">🍴 '+esc(pls.join(" · "))+'</div>'; }
+      if(e && e.meals){ var pls=[]; MEALS.forEach(function(x){ var m=e.meals[x.key]; if(!m||!m.place) return; if(pls.indexOf(m.place)<0) pls.push(m.place); if(state.golf&&state.golf[m.place]&&!gseen){ pico2+='<span class="cv-pico">⛳</span>'; gseen=true; } if(placeEmoji(m.place)&&!bseen){ pico2+='<span class="cv-pico cv-ball" title="당구장"></span>'; bseen=true; } }); if(pls.length) place='<div class="cv-place">🍴 '+esc(pls.join(" · "))+'</div>'; }
       var title=e?' title="'+ds.slice(5).replace("-",".")+' · '+esc(calSummary(e))+'"':'';
       var cam=photoDates[ds]?'<span class="cv-cam">📷</span>':'';
       html+='<button class="'+cls+'" data-date="'+ds+'"'+title+'><div class="cv-top"><span class="cv-d">'+d+'</span>'+dot+pico2+cam+'</div>'+holLbl+sched+ppl+place+'</button>';
