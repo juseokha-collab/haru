@@ -1967,9 +1967,17 @@
   };
 
   // ---------- Things To Do ----------
+  // 기한 오름차순 정렬(기한 있는 것 먼저·날짜순, 없는 것은 뒤로)
+  function sortTodos(arr){
+    return arr.slice().sort(function(a,b){
+      var ad=a.due||"", bd=b.due||"";
+      if(ad&&bd) return ad<bd?-1:ad>bd?1:0;
+      if(ad) return -1; if(bd) return 1; return 0;
+    });
+  }
   function renderTodos(){
     var el=$("#todoList"); if(!el) return;
-    el.innerHTML=""; var t=state.todos||[];
+    el.innerHTML=""; var t=sortTodos(state.todos||[]);
     for(var i=0;i<5;i++){
       var it=t[i]||{done:false,task:"",due:""};
       var row=document.createElement("div"); row.className="todo-row"+(it.done?" done":"");
@@ -1977,7 +1985,8 @@
       var task=document.createElement("input"); task.type="text"; task.className="td-task"; task.placeholder="할 일"; task.autocomplete="off"; task.value=it.task||"";
       var due=document.createElement("input"); due.type="date"; due.className="td-due"; due.value=it.due||"";
       chk.onchange=function(r){ return function(){ r.classList.toggle("done", r.querySelector(".td-chk").checked); saveTodos(); }; }(row);
-      task.onchange=saveTodos; due.onchange=saveTodos;
+      task.onchange=saveTodos;
+      due.onchange=function(){ saveTodos(); renderTodos(); };   // 기한 바뀌면 날짜순 재정렬
       row.appendChild(chk); row.appendChild(task); row.appendChild(due);
       el.appendChild(row);
     }
@@ -1985,7 +1994,7 @@
   function saveTodos(){
     var rows=document.querySelectorAll("#todoList .todo-row"), arr=[];
     Array.prototype.forEach.call(rows,function(r){ arr.push({ done:r.querySelector(".td-chk").checked, task:r.querySelector(".td-task").value.trim(), due:r.querySelector(".td-due").value }); });
-    state.todos=arr; save();
+    state.todos=sortTodos(arr); save();
   }
 
   // ---------- boot ----------
