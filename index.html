@@ -783,6 +783,8 @@
   var PLACE_COLOR="#8C93A6";
   // 이름으로 장소 아이콘 지정(예: 당구장 → 🎱). 골프장 다음으로 우선.
   function placeEmoji(name){ return /허슬러|당구|빌리아드|빌리어드|포켓볼|billiard|pool\s*hall/i.test(name||"") ? "🎱" : ""; }
+  // 성좌에 그릴 장소 표시 아이콘: 당구장🎱 · 제물포🏠 · 강화🐶 · 그 외 식당🍚
+  function placeIcon(name){ if(placeEmoji(name)) return placeEmoji(name); if(name==="제물포") return "🏠"; if(name==="강화") return "🐶"; return "🍚"; }
   var DRINKS=[{key:"beer",label:"🍺",ko:"맥주",color:"#E0B24C"},{key:"soju",label:"🍾",ko:"소주",color:"#6FB49A"},{key:"makgeolli",label:"🥛",ko:"막걸리",color:"#CBB994"},{key:"etc",label:"🍷",ko:"기타",color:"#B394E0"}];
   function emptyDrinks(){ var d={}; DRINKS.forEach(function(x){ d[x.key]=0; }); return d; }
   function drinkTotal(d){ if(!d) return 0; var s=0; DRINKS.forEach(function(x){ s+=(+d[x.key]||0); }); return s; }
@@ -1101,7 +1103,7 @@
       if(!visible(n)) return;
       var isPlace = n.type==="place";
       var isGolf = isPlace && n.golf;
-      var pico = (isPlace && !isGolf) ? (placeEmoji(n.name) || "🍽️") : "";   // 당구장🎱 · 그 외 식당은 🍽️
+      var pico = (isPlace && !isGolf) ? placeIcon(n.name) : "";   // 당구장🎱 · 제물포🏠 · 강화🐶 · 식당🍚
       var tw = reduce?0:Math.sin((now-t0)/900 + n.phase)*0.12;
       var col= isGolf? "#5BAE6E" : (isPlace? PLACE_COLOR : REL[n.rel].color);
       var dim = focus && focus!==n && !neigh[n.name];
