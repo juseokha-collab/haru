@@ -70,6 +70,7 @@
   .brand{display:flex; flex-direction:column; gap:2px}
   .weather-now{font-size:12px; font-weight:600; color:var(--ink-2); font-variant-numeric:tabular-nums; line-height:1.35; letter-spacing:-.01em}
   .weather-now:empty{display:none}
+  .weather-now .wx-fc{opacity:.5}
   .eyebrow{font-family:var(--font-serif); font-style:italic; font-size:12.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3)}
   .brand h1{margin:0; font-size:27px; font-weight:800; letter-spacing:-.01em; display:flex; align-items:baseline; gap:10px}
   .brand h1 small{font-size:14px; font-weight:500; color:var(--ink-2); letter-spacing:0}
@@ -2043,14 +2044,15 @@
         var d=res[0], geo=res[1]||{}, cu=d&&d.current;
         if(!cu||cu.temperature_2m==null){ el.textContent=""; return; }
         var city=geo.city||geo.locality||geo.principalSubdivision||"";
-        var out=(city?"📍"+city+" ":"")+wmoIcon(cu.weather_code)+Math.round(cu.temperature_2m)+"°";
+        var head=(city?esc(city)+" ":"")+wmoIcon(cu.weather_code)+Math.round(cu.temperature_2m)+"°";
+        var fc="";
         if(d.hourly&&d.hourly.time){
           var t=d.hourly.time, tm=d.hourly.temperature_2m, cd=d.hourly.weather_code, nowMs=Date.now(), i0=0;
           for(var i=0;i<t.length;i++){ if(new Date(t[i]).getTime()<=nowMs) i0=i; else break; }
-          function seg(off,lb){ var idx=i0+off; return (idx<t.length&&tm[idx]!=null)? " · "+lb+" "+wmoIcon(cd[idx])+Math.round(tm[idx])+"°" : ""; }
-          out+=seg(2,"2h")+seg(4,"4h");
+          function seg(off){ var idx=i0+off; return (idx<t.length&&tm[idx]!=null)? " · "+wmoIcon(cd[idx])+Math.round(tm[idx])+"°" : ""; }
+          fc=seg(2)+seg(4);
         }
-        el.textContent=out;
+        el.innerHTML='<span class="wx-now">'+head+'</span>'+(fc?'<span class="wx-fc">'+fc+'</span>':'');
       }).catch(function(){ el.textContent=""; });
     }
     if(navigator.geolocation){
