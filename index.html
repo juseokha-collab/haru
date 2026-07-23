@@ -996,7 +996,7 @@
       var _vis=g.places[pl].visits;
       if(node.golf){
         var vs=Math.sqrt(_vis/maxGolfV);                 // 0..1
-        node.r=8+vs*20;                                  // 골프장 변별력 크게
+        node.r=Math.min(20, 4+(_vis-1)*2);               // 1회=4, 방문당 +2 (최대 20)
         var _days=node.last? Math.max(0,(parseD(todayStr())-parseD(node.last))/864e5):999;
         node.golfClose=Math.min(1, vs*0.6 + (1-Math.min(1,_days/150))*0.4);   // 자주/최근일수록 1(중심에 가까이)
       } else if(placeEmoji(pl)){
