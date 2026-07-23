@@ -969,13 +969,18 @@
       nodes.push(node); nodeIndex[n]=node;
     });
 
-    var showPlace={}; Object.keys(g.pplace||{}).forEach(function(k){ var ab=k.split(g.S1); if(nodeIndex[ab[1]]) showPlace[ab[0]]=1; });
+    var anyRel = REL_ORDER.some(function(r){ return !hiddenRels[r]; });   // 관계(인맥)가 하나라도 표시 중인가
+    var showPlaceAny={}, showPlaceVis={};
+    Object.keys(g.pplace||{}).forEach(function(k){ var ab=k.split(g.S1), pn=ab[1]; if(nodeIndex[pn]){ showPlaceAny[ab[0]]=1; if(!hiddenRels[relOf(pn)]) showPlaceVis[ab[0]]=1; } });
     var isGolfPl=function(pl){ return !!(state.golf && state.golf[pl]); };
-    // 검색 중: 검색된 사람과 연결된 장소 + 이름 일치 장소만 (골프장이라도 무관한 곳은 제외)
-    // 검색 아님: 골프장은 항상 표시, 식당은 '방문 횟수' 기준(1=정확히 1회, 그 외 minMeet회 이상)
+    // 검색: 검색된 사람과 연결된 장소 + 이름 일치
+    // 인맥(관계) 표시 중: 표시된 사람과 함께 간 장소만 (식당·골프 공통)
+    // 인맥 모두 꺼짐: 방문 횟수 기준(1+/2+…)
     var placeMatch = searchQ
-      ? function(pl){ return showPlace[pl] || pl.indexOf(searchQ)>=0; }
-      : function(pl){ if(isGolfPl(pl)) return true; var v=g.places[pl].visits; return meetExact ? v===minMeet : v>=minMeet; };
+      ? function(pl){ return showPlaceAny[pl] || pl.indexOf(searchQ)>=0; }
+      : anyRel
+        ? function(pl){ return !!showPlaceVis[pl]; }
+        : function(pl){ var v=g.places[pl].visits; return meetExact ? v===minMeet : v>=minMeet; };
     var pnames=Object.keys(g.places||{}).filter(placeMatch);
     // 기본 뷰(capOn)일 때만 개수 제한, 필터/검색을 누르면 조건에 맞는 전체 표시
     if(capOn && !searchQ && pnames.length>PLACE_CAP){
@@ -1516,7 +1521,7 @@
     REL_ORDER.forEach(function(r){
       var c=document.createElement("span"); c.className="chip"; c.setAttribute("aria-pressed", hiddenRels[r]?"false":"true");
       c.innerHTML='<span class="dot" style="background:'+REL[r].color+'"></span>'+REL[r].name;
-      c.onclick=function(){ hiddenRels[r]=!hiddenRels[r]; c.setAttribute("aria-pressed",hiddenRels[r]?"false":"true"); renderStats(); alpha=Math.max(alpha,0.4); wake(); };
+      c.onclick=function(){ hiddenRels[r]=!hiddenRels[r]; c.setAttribute("aria-pressed",hiddenRels[r]?"false":"true"); renderStats(); rebuild(); alpha=Math.max(alpha,0.4); wake(); };
       c.title="더블클릭 → 이 관계 인맥 편집";
       c.ondblclick=function(){ openRelEdit(r); };
       l.appendChild(c);
