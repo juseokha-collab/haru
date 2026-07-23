@@ -996,7 +996,7 @@
       var _vis=g.places[pl].visits;
       if(node.golf){
         var vs=Math.sqrt(_vis/maxGolfV);                 // 0..1
-        node.r=Math.min(20, 4+(_vis-1)*2);               // 1회=4, 방문당 +2 (최대 20)
+        node.r=Math.min(28, 8+(_vis-1)*4);               // 1회=8, 방문당 +4 (최대 28)
         var _days=node.last? Math.max(0,(parseD(todayStr())-parseD(node.last))/864e5):999;
         node.golfClose=Math.min(1, vs*0.6 + (1-Math.min(1,_days/150))*0.4);   // 자주/최근일수록 1(중심에 가까이)
       } else if(placeEmoji(pl)){
@@ -1101,7 +1101,7 @@
       if(!visible(n)) return;
       var isPlace = n.type==="place";
       var isGolf = isPlace && n.golf;
-      var pico = (isPlace && !isGolf) ? placeEmoji(n.name) : "";   // 당구장 등 이름 기반 아이콘
+      var pico = (isPlace && !isGolf) ? (placeEmoji(n.name) || "🍽️") : "";   // 당구장🎱 · 그 외 식당은 🍽️
       var tw = reduce?0:Math.sin((now-t0)/900 + n.phase)*0.12;
       var col= isGolf? "#5BAE6E" : (isPlace? PLACE_COLOR : REL[n.rel].color);
       var dim = focus && focus!==n && !neigh[n.name];
@@ -1113,10 +1113,9 @@
       ctx.fillStyle=gr; ctx.beginPath(); ctx.arc(n.x,n.y,n.r*2.4,0,6.29); ctx.fill();
       // core (사람=원, 골프장=⛳, 그 외 장소=둥근 사각)
       if(isGolf||pico){ ctx.font=Math.round(n.r*2.5)+"px "+BODY_FONT; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.globalAlpha=a; ctx.fillText(isGolf?"⛳":pico, n.x, n.y); ctx.globalAlpha=1; }
-      else {
+      else {   // 사람 = 원
         ctx.fillStyle=hexA(col, a); ctx.lineWidth=1.5; ctx.strokeStyle=hexA("#0C0F1A",a*0.5);
-        if(isPlace){ roundRect(n.x-n.r, n.y-n.r, n.r*2, n.r*2, Math.max(3,n.r*0.35)); ctx.fill(); ctx.stroke(); }
-        else { ctx.beginPath(); ctx.arc(n.x,n.y,n.r,0,6.29); ctx.fill(); ctx.stroke(); }
+        ctx.beginPath(); ctx.arc(n.x,n.y,n.r,0,6.29); ctx.fill(); ctx.stroke();
       }
       // label (사람은 모두 표시 · 2회만 만난 사람은 절반 크기)
       var showLabel = isPlace || n.type==="person" || focus===n || neigh[n.name];
