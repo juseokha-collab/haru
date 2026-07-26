@@ -215,11 +215,11 @@
   .detail.golf-mode .golf-vs{display:block}
   .detail .gv-avg{display:flex; gap:16px; font-size:12.5px; color:var(--sky-ink-2); padding-bottom:7px; margin-bottom:4px; border-bottom:1px solid var(--sky-line)}
   .detail .gv-avg b{color:var(--sky-ink); font-weight:800; font-variant-numeric:tabular-nums}
-  .detail .gv-rows{max-height:180px; overflow-y:auto; display:flex; flex-direction:column; gap:1px}
-  .detail .gv-row{display:flex; align-items:center; gap:7px; font-size:11.5px; color:var(--sky-ink-2); padding:3px 0; white-space:nowrap}
+  .detail .gv-rows{max-height:180px; overflow-y:auto; display:flex; flex-direction:column; gap:1px; padding-right:8px}
+  .detail .gv-row{display:flex; align-items:center; gap:8px; font-size:11.5px; color:var(--sky-ink-2); padding:3px 0; white-space:nowrap}
   .detail .gv-row .gv-date{flex:none; width:34px; font-variant-numeric:tabular-nums}
   .detail .gv-row .gv-place{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; color:var(--sky-ink)}
-  .detail .gv-row .gv-sc{flex:none; font-variant-numeric:tabular-nums}
+  .detail .gv-row .gv-sc{flex:none; width:38px; text-align:right; font-variant-numeric:tabular-nums}
   .detail .gv-row .gv-sc.win{color:#5BAE6E; font-weight:800}
   .detail .with{font-size:12px; color:var(--sky-ink-2); line-height:1.6; max-height:140px; overflow-y:auto; margin:10px 0 2px}
   .detail .with b{color:var(--sky-ink); font-weight:600}
@@ -567,8 +567,11 @@
   .gc-periods{display:flex; gap:4px; flex:none}
   .gc-periods button{font-family:inherit; font-size:11.5px; font-weight:600; color:var(--ink-2); background:var(--surface); border:1px solid var(--border); border-radius:999px; padding:3px 11px; cursor:pointer}
   .gc-periods button.on{background:var(--accent); border-color:var(--accent); color:#fff}
-  .gc-chart{margin-top:2px}
+  .gc-chart{margin-top:2px; position:relative}
   .gc-svg{width:100%; height:auto; display:block}
+  .gc-hit{fill:transparent; cursor:pointer}
+  .gc-tip{position:absolute; transform:translate(-50%,-100%); background:#222733; color:#fff; font-size:11px; font-weight:600; white-space:nowrap; padding:4px 9px; border-radius:7px; box-shadow:0 4px 14px rgba(0,0,0,.25); pointer-events:none; z-index:6}
+  .gc-tip[hidden]{display:none}
   .gc-line{fill:none; stroke:var(--accent); stroke-width:2; stroke-linejoin:round; stroke-linecap:round}
   .gc-area{fill:var(--accent); opacity:.09; stroke:none}
   .gc-dot{fill:var(--surface); stroke:var(--accent); stroke-width:2}
@@ -1416,7 +1419,7 @@
       var ta=rds.reduce(function(s,r){return s+r.th;},0)/rds.length;
       gvHtml='<div class="golf-vs"><div class="gv-avg"><span>나 <b>'+ma.toFixed(1)+'</b></span><span>'+esc(n.name)+' <b>'+ta.toFixed(1)+'</b></span></div><div class="gv-rows">'+
         rds.map(function(r){ var mw=r.mine<r.th, tw=r.th<r.mine;
-          return '<div class="gv-row"><span class="gv-date">'+r.date.slice(5).replace("-",".")+'</span><span class="gv-place">'+esc(r.place)+'</span><span class="gv-sc'+(mw?" win":"")+'">나 '+r.mine+'</span><span class="gv-sc'+(tw?" win":"")+'">'+esc(n.name)+' '+r.th+'</span></div>';
+          return '<div class="gv-row"><span class="gv-date">'+r.date.slice(5).replace("-",".")+'</span><span class="gv-place">'+esc(r.place)+'</span><span class="gv-sc'+(mw?" win":"")+'">'+r.mine+'</span><span class="gv-sc'+(tw?" win":"")+'">'+r.th+'</span></div>';
         }).join("")+'</div></div>';
     }
     var d=$("#detail");
@@ -1827,8 +1830,9 @@
     state.entries.forEach(function(e){
       if(e.golfScore) Object.keys(e.golfScore).forEach(function(k){ if(k!=="나") names[k]=1; });
       if(!inP(e.date)) return;
-      var mv=normHoles(e,"나"); if(mv!=null) myPts.push({date:e.date, score:mv});
-      if(golfCompare){ var cv=normHoles(e,golfCompare); if(cv!=null) cmpPts.push({date:e.date, score:cv}); }
+      var h=e.golfHoles||18;
+      var mv=normHoles(e,"나"); if(mv!=null) myPts.push({date:e.date, score:mv, raw:+e.golfScore["나"], holes:h});
+      if(golfCompare){ var cv=normHoles(e,golfCompare); if(cv!=null) cmpPts.push({date:e.date, score:cv, raw:+e.golfScore[golfCompare], holes:h}); }
     });
     myPts.sort(byAsc); cmpPts.sort(byAsc);
     var cnt=myPts.length, avg=cnt? myPts.reduce(function(s,p){return s+p.score;},0)/cnt : 0;
@@ -1852,21 +1856,28 @@
     [["6m","6개월"],["1y","1년"],["all","전체"]].forEach(function(p){ var b=document.createElement("button"); b.type="button"; b.textContent=p[1]; if(golfChartPeriod===p[0]) b.className="on"; b.onclick=function(){ golfChartPeriod=p[0]; renderAdminGolf(); }; periods.appendChild(b); });
     top.appendChild(stats); top.appendChild(periods);
     wrap.appendChild(top);
-    var chart=document.createElement("div"); chart.className="gc-chart"; chart.innerHTML=golfChartSvg(myPts, avg, golfCompare?cmpPts:[], golfCompare); wrap.appendChild(chart);
+    var chart=document.createElement("div"); chart.className="gc-chart"; chart.innerHTML=golfChartSvg(myPts, avg, golfCompare?cmpPts:[], golfCompare);
+    var tipEl=document.createElement("div"); tipEl.className="gc-tip"; tipEl.hidden=true; chart.appendChild(tipEl);
+    Array.prototype.forEach.call(chart.querySelectorAll("[data-tip]"), function(c){
+      c.addEventListener("mouseenter", function(){ var r=c.getBoundingClientRect(), cr=chart.getBoundingClientRect(); tipEl.textContent=c.getAttribute("data-tip"); tipEl.hidden=false; tipEl.style.left=(r.left+r.width/2-cr.left)+"px"; tipEl.style.top=(r.top-cr.top-8)+"px"; });
+      c.addEventListener("mouseleave", function(){ tipEl.hidden=true; });
+    });
+    wrap.appendChild(chart);
     return wrap;
   }
   function isoDate(d){ return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2); }
-  // 선 그래프 SVG (타수 낮을수록 위 = 좋을수록 위). cmpPts 있으면 비교선 추가
+  // 선 그래프 SVG (타수 큰 값이 위 = 일반 축 방향). cmpPts 있으면 비교선 추가
   function golfChartSvg(myPts, avg, cmpPts, cmpName){
     cmpPts=cmpPts||[];
     var W=560, H=150, pl=30, pr=14, ptop=16, pb=24, iw=W-pl-pr, ih=H-ptop-pb;
     if(!myPts.length && !cmpPts.length) return '<svg viewBox="0 0 '+W+' '+H+'" class="gc-svg"><text x="'+(W/2)+'" y="'+(H/2)+'" text-anchor="middle" class="gc-empty-t">기록이 쌓이면 스코어 등락이 여기에 그려져요</text></svg>';
+    function tip(who,p){ var t=p.date.slice(5).replace("-",".")+" · "+who+" "+(p.raw!=null?p.raw:p.score)+"타"; if(p.holes&&p.holes!==18) t+=" ("+p.holes+"홀·환산 "+p.score+")"; return t; }
     var dset={}; myPts.concat(cmpPts).forEach(function(p){ dset[p.date]=1; });
     var dates=Object.keys(dset).sort(), nd=dates.length, xIdx={}; dates.forEach(function(d,i){ xIdx[d]=i; });
     function xOf(dt){ return nd===1? pl+iw/2 : pl+iw*(xIdx[dt]/(nd-1)); }
     var allV=myPts.concat(cmpPts).map(function(p){return p.score;});
     var mn=Math.min.apply(null,allV)-2, mx=Math.max.apply(null,allV)+2;
-    function yOf(v){ return ptop+ih*((v-mn)/(mx-mn)); } // 값 클수록 아래
+    function yOf(v){ return ptop+ih*((mx-v)/(mx-mn)); } // 값 클수록 위(일반 축)
     function pathOf(pts){ return pts.map(function(p,i){ return (i?"L":"M")+xOf(p.date).toFixed(1)+" "+yOf(p.score).toFixed(1); }).join(" "); }
     var s='<svg viewBox="0 0 '+W+' '+H+'" class="gc-svg">';
     // y축 min/max 라벨
@@ -1890,6 +1901,9 @@
       s+='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+(last?4:3)+'" class="gc-dot'+(last?" last":"")+'"/>';
       if(nd<=14) s+='<text x="'+cx.toFixed(1)+'" y="'+(cy-7).toFixed(1)+'" text-anchor="middle" class="gc-pt">'+p.score+'</text>';
     });
+    // 마우스 호버 영역(투명, 넓게) — 툴팁용
+    cmpPts.forEach(function(p){ s+='<circle cx="'+xOf(p.date).toFixed(1)+'" cy="'+yOf(p.score).toFixed(1)+'" r="9" class="gc-hit" data-tip="'+esc(tip(cmpName||"동반",p))+'"/>'; });
+    myPts.forEach(function(p){ s+='<circle cx="'+xOf(p.date).toFixed(1)+'" cy="'+yOf(p.score).toFixed(1)+'" r="9" class="gc-hit" data-tip="'+esc(tip("나",p))+'"/>'; });
     // x 날짜 라벨: 처음/끝
     s+='<text x="'+xOf(dates[0]).toFixed(1)+'" y="'+(H-7)+'" text-anchor="start" class="gc-axl">'+dates[0].slice(5).replace("-",".")+'</text>';
     if(nd>1) s+='<text x="'+xOf(dates[nd-1]).toFixed(1)+'" y="'+(H-7)+'" text-anchor="end" class="gc-axl">'+dates[nd-1].slice(5).replace("-",".")+'</text>';
