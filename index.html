@@ -1024,7 +1024,7 @@
       } else if(placeEmoji(pl)){
         node.r=8+Math.sqrt(_vis/Math.max(maxRestV,1))*4; node.golfClose=0;    // 당구장 완만
       } else {
-        node.r=7+Math.sqrt(_vis/maxRestV)*15; node.golfClose=0;               // 식당은 사람처럼
+        node.r=5+Math.sqrt(_vis/maxRestV)*10; node.golfClose=0;               // 식당(약 2/3 축소)
       }
       node.phase=node.phase!=null?node.phase:Math.random()*6.28;
       nodes.push(node); placeIndex[pl]=node;
