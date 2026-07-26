@@ -505,7 +505,7 @@
 
   /* 좁은 화면(폰)에선 백업/초기화 버튼 숨김 — 테마·로그인만 유지 */
   @media (max-width:640px){
-    #exportBtn, #importBtn, #resetBtn{ display:none; }
+    #exportBtn, #importBtn, #resetBtn, #golfCsvBtn{ display:none; }
   }
 
   @media (prefers-reduced-motion:reduce){ *{scroll-behavior:auto} .modal-input.shake{animation:none} }
@@ -522,6 +522,8 @@
       <button class="btn ghost" id="exportBtn" title="JSON 백업 파일 내려받기">내보내기</button>
       <button class="btn ghost" id="importBtn" title="백업 파일에서 복원">가져오기</button>
       <input type="file" id="importFile" accept="application/json,.json" style="display:none">
+      <button class="btn ghost" id="golfCsvBtn" title="골프 라운드 CSV 가져오기 (엑셀→CSV UTF-8)">⛳ CSV</button>
+      <input type="file" id="golfCsvFile" accept=".csv,text/csv" style="display:none">
       <button class="btn ghost" id="themeBtn" title="테마 전환">◐ 테마</button>
     </div>
   </header>
@@ -797,7 +799,7 @@
   // 이름으로 장소 아이콘 지정(예: 당구장 → 🎱). 골프장 다음으로 우선.
   function placeEmoji(name){ return /허슬러|당구|빌리아드|빌리어드|포켓볼|billiard|pool\s*hall/i.test(name||"") ? "🎱" : ""; }
   // 성좌에 그릴 장소 표시 아이콘: 당구장🎱 · 제물포🏠 · 강화🐶 · 그 외 식당🍚
-  function placeIcon(name){ if(placeEmoji(name)) return placeEmoji(name); if(name==="제물포") return "🏠"; if(name==="강화") return "🐶"; if(name==="수민헤어") return "✂️"; return "🍚"; }
+  function placeIcon(name){ if(placeEmoji(name)) return placeEmoji(name); if(name==="제물포") return "🏠"; if(name==="강화") return "🐶"; if(name==="수민헤어") return "✂️"; return "🍜"; }
   var DRINKS=[{key:"beer",label:"🍺",ko:"맥주",color:"#E0B24C"},{key:"soju",label:"🍾",ko:"소주",color:"#6FB49A"},{key:"makgeolli",label:"🥛",ko:"막걸리",color:"#CBB994"},{key:"etc",label:"🍷",ko:"기타",color:"#B394E0"}];
   function emptyDrinks(){ var d={}; DRINKS.forEach(function(x){ d[x.key]=0; }); return d; }
   function drinkTotal(d){ if(!d) return 0; var s=0; DRINKS.forEach(function(x){ s+=(+d[x.key]||0); }); return s; }
@@ -2019,6 +2021,58 @@
     });
     return out;
   }
+  // ---------- 골프 라운드 CSV 가져오기 ----------
+  function parseCsv(text){
+    text=(text||""); if(text.charCodeAt(0)===0xFEFF) text=text.slice(1); var rows=[], row=[], f="", q=false;
+    for(var i=0;i<text.length;i++){ var c=text[i];
+      if(q){ if(c==='"'){ if(text[i+1]==='"'){ f+='"'; i++; } else q=false; } else f+=c; }
+      else { if(c==='"') q=true; else if(c===','){ row.push(f); f=""; } else if(c==='\n'){ row.push(f); rows.push(row); row=[]; f=""; } else if(c!=='\r') f+=c; } }
+    if(f!==""||row.length){ row.push(f); rows.push(row); } return rows;
+  }
+  function resolveGolfPlace(name){
+    name=(name||"").replace(/\([^)]*\)/g,"").trim(); if(!name) return "";
+    var gp=Object.keys(state.golf||{}), i;
+    for(i=0;i<gp.length;i++) if(gp[i]===name) return gp[i];
+    for(i=0;i<gp.length;i++) if(gp[i].indexOf(name)===0) return gp[i];
+    return name;
+  }
+  function importGolfCsv(text){
+    var rows=parseCsv(text).filter(function(r){ return r.some(function(c){ return (c||"").trim()!==""; }); });
+    if(rows.length<2){ flash("CSV 데이터가 비어 있어요."); return; }
+    var hd=rows[0].map(function(h){ return (h||"").trim(); }), iD=-1,iP=-1,iM=-1;
+    hd.forEach(function(h,i){ if(iD<0&&/일자|날짜|date/i.test(h)) iD=i; else if(iP<0&&/장소|골프장|place/i.test(h)) iP=i; else if(iM<0&&(/내타수|myscore/i.test(h)||h==="나")) iM=i; });
+    if(iD<0||iP<0){ flash("‘일자’·‘장소’ 열을 찾지 못했어요."); return; }
+    var pcols=[]; hd.forEach(function(h,i){ if(h && i!==iD && i!==iP && i!==iM) pcols.push({i:i,name:h}); });
+    var nowY=new Date().getFullYear(), nowM=new Date().getMonth()+1, added=0;
+    rows.slice(1).forEach(function(r){
+      var draw=(r[iD]||"").trim(); if(!draw) return;
+      var m4=draw.match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/), m2=draw.match(/(\d{1,2})\D+(\d{1,2})/), mo,dd,yr;
+      if(m4){ yr=+m4[1]; mo=+m4[2]; dd=+m4[3]; } else if(m2){ mo=+m2[1]; dd=+m2[2]; yr=mo>nowM?nowY-1:nowY; } else return;
+      if(!mo||!dd||mo>12||dd>31) return;
+      var date=yr+"-"+pad(mo)+"-"+pad(dd), place=resolveGolfPlace(r[iP]||""); if(!place) return;
+      var people=[], gs={}, my=(iM>=0?(r[iM]||"").trim():""); if(my!==""&&!isNaN(+my)) gs["나"]=+my;
+      pcols.forEach(function(pc){ var v=(r[pc.i]||"").trim(); if(v!==""&&!isNaN(+v)){ if(people.indexOf(pc.name)<0) people.push(pc.name); gs[pc.name]=+v; } });
+      state.golf=state.golf||{}; state.golf[place]=true;
+      people.forEach(function(n){ if(!state.people[n]) state.people[n]={rel:"etc"}; });
+      var e=existingFor(date);
+      if(!e){ e={id:id(),date:date,people:[],schedule:"",mark:false,meals:emptyMeals(),bizmeet:emptyBiz(),drinks:emptyDrinks(),exercise:emptyExercise(),golfScore:{},thoughts:"",learning:"",ts:Date.now()}; state.entries.push(e); }
+      if(!e.meals) e.meals=emptyMeals();
+      var slot=null; ["breakfast","lunch","dinner","special"].forEach(function(s){ if(e.meals[s]&&e.meals[s].place===place) slot=s; });
+      if(!slot) slot=["lunch","dinner","breakfast","special"].filter(function(s){ return !(e.meals[s]&&e.meals[s].place); })[0]||"lunch";
+      e.meals[slot]={place:place,food:"",people:people.slice()};
+      e.golfScore=e.golfScore||{}; Object.keys(gs).forEach(function(k){ e.golfScore[k]=gs[k]; });
+      people.forEach(function(n){ if(e.people.indexOf(n)<0) e.people.push(n); });
+      e.ts=Date.now(); added++;
+    });
+    save(); refresh(); rebuild();
+    flash(added+"개 골프 라운드를 가져왔어요 ✦");
+  }
+  if($("#golfCsvBtn")) $("#golfCsvBtn").onclick=function(){ $("#golfCsvFile").click(); };
+  if($("#golfCsvFile")) $("#golfCsvFile").addEventListener("change",function(){
+    var f=this.files[0]; this.value=""; if(!f) return; var rd=new FileReader();
+    rd.onload=function(){ var text=rd.result; askConfirm({ title:"골프 CSV 가져오기", message:"CSV의 골프 라운드를 각 날짜에 기록합니다.\n같은 날짜·장소는 갱신, 새 날짜는 추가돼요.", okText:"가져오기", onOk:function(){ importGolfCsv(text); } }); };
+    rd.readAsText(f,"utf-8");
+  });
   function doImport(text){
     var evs=parseICS(text);
     if(!evs.length){ flash("일정을 찾지 못했어요. .ics 내용을 확인해 주세요."); return; }
