@@ -491,7 +491,7 @@
   .linkbtn{border:0; background:none; color:var(--accent-ink); font:inherit; font-size:inherit; text-decoration:underline; cursor:pointer; padding:0}
   .relmodal{max-width:420px}
   /* 관리자 모드 */
-  .admin-modal{max-width:760px; width:100%; padding:0; overflow:hidden}
+  .admin-modal{max-width:760px; width:100%; padding:0; overflow:hidden; position:relative}
   .admin-head{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:14px 18px 0}
   .admin-tabs{display:inline-flex; background:var(--surface-2); border:1px solid var(--border); border-radius:9px; padding:2px; gap:2px}
   .admin-tabs button{border:0; background:none; font-family:inherit; font-size:13px; color:var(--ink-3); padding:6px 14px; border-radius:7px; cursor:pointer; font-weight:600}
@@ -535,6 +535,32 @@
   .agr-add:hover{border-color:var(--accent); color:var(--accent-ink)}
   .agr-save{margin-left:auto; border:1px solid var(--accent); background:var(--accent); color:#fff; font-family:inherit; font-size:12px; font-weight:700; padding:5px 16px; border-radius:7px; cursor:pointer}
   .agr-save:hover{filter:brightness(1.06)}
+  /* 골프 스코어 차트 */
+  .golf-chart-wrap{background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:10px 12px 6px; margin-bottom:12px}
+  .gc-top{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:2px}
+  .gc-stats{display:flex; align-items:baseline; gap:12px; font-size:12.5px; color:var(--ink-2)}
+  .gc-stats b{font-size:15px; color:var(--ink); font-weight:800}
+  .gc-stats .gc-avg b{color:var(--accent-ink)}
+  .gc-stats .gc-none{color:var(--ink-3)}
+  .gc-periods{display:flex; gap:4px; flex:none}
+  .gc-periods button{font-family:inherit; font-size:11.5px; font-weight:600; color:var(--ink-2); background:var(--surface); border:1px solid var(--border); border-radius:999px; padding:3px 11px; cursor:pointer}
+  .gc-periods button.on{background:var(--accent); border-color:var(--accent); color:#fff}
+  .gc-chart{margin-top:2px}
+  .gc-svg{width:100%; height:auto; display:block}
+  .gc-line{fill:none; stroke:var(--accent); stroke-width:2; stroke-linejoin:round; stroke-linecap:round}
+  .gc-area{fill:var(--accent); opacity:.09; stroke:none}
+  .gc-dot{fill:var(--surface); stroke:var(--accent); stroke-width:2}
+  .gc-dot.last{fill:var(--accent)}
+  .gc-avgline{stroke:var(--ink-3); stroke-width:1; stroke-dasharray:3 3; opacity:.6}
+  .gc-axl{fill:var(--ink-3); font-size:9px; font-family:inherit}
+  .gc-pt{fill:var(--ink-2); font-size:9px; font-weight:700; font-family:inherit}
+  .gc-empty-t{fill:var(--ink-3); font-size:11px; font-family:inherit}
+  .golf-admin-bar{display:flex; align-items:center; gap:10px; margin-bottom:8px}
+  .golf-admin-bar .gab-hint{font-size:11.5px; color:var(--ink-3)}
+  .golf-admin-bar .gab-saveall{margin-left:auto; border:1px solid var(--accent); background:var(--accent); color:#fff; font-family:inherit; font-size:12.5px; font-weight:800; padding:6px 18px; border-radius:8px; cursor:pointer}
+  .golf-admin-bar .gab-saveall:hover{filter:brightness(1.06)}
+  .admin-toast{position:absolute; left:50%; bottom:18px; transform:translate(-50%,10px); background:#1f9d55; color:#fff; font-size:12.5px; font-weight:700; padding:8px 18px; border-radius:999px; box-shadow:0 6px 20px rgba(0,0,0,.22); opacity:0; transition:opacity .24s, transform .24s; pointer-events:none; z-index:5}
+  .admin-toast.show{opacity:1; transform:translate(-50%,0)}
   .rel-list{margin-top:12px; max-height:52vh; overflow:auto; display:flex; flex-direction:column; gap:6px}
   .rel-row{display:flex; align-items:center; gap:8px; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:7px 10px}
   .rel-row .rn{flex:1; font-size:13.5px; font-weight:700; color:var(--ink); display:flex; align-items:center; gap:7px; min-width:0}
@@ -824,12 +850,13 @@
   <div class="modal admin-modal" role="dialog" aria-modal="true">
     <div class="admin-head">
       <div class="admin-tabs" id="adminTabs">
-        <button type="button" class="on" data-at="people">인맥 관리</button><button type="button" data-at="golf">골프 스코어</button>
+        <button type="button" class="on" data-at="golf">골프 스코어</button><button type="button" data-at="people">인맥 관리</button>
       </div>
       <button class="x" id="adminClose" aria-label="닫기">&times;</button>
     </div>
-    <div class="admin-body" id="adminPeople"></div>
-    <div class="admin-body" id="adminGolf" hidden></div>
+    <div class="admin-body" id="adminGolf"></div>
+    <div class="admin-body" id="adminPeople" hidden></div>
+    <div class="admin-toast" id="adminToast" hidden></div>
   </div>
 </div>
 
@@ -1717,10 +1744,74 @@
     });
     rounds.sort(function(a,b){ return a.date<b.date?1:a.date>b.date?-1:0; });
     el.innerHTML="";
-    if(!rounds.length){ el.innerHTML='<div class="adm-empty">골프 기록이 없어요.</div>'; return; }
+    el.appendChild(buildGolfChart());
+    if(!rounds.length){ var em=document.createElement("div"); em.className="adm-empty"; em.textContent="골프 기록이 없어요."; el.appendChild(em); return; }
+    var bar=document.createElement("div"); bar.className="golf-admin-bar";
+    var hint=document.createElement("span"); hint.className="gab-hint"; hint.textContent="라운드별 저장, 또는 오른쪽에서 한 번에 저장";
+    var saveAll=document.createElement("button"); saveAll.type="button"; saveAll.className="gab-saveall"; saveAll.textContent="전체 저장";
+    bar.appendChild(hint); bar.appendChild(saveAll);
+    el.appendChild(bar);
     var listWrap=document.createElement("div"); listWrap.className="adm-golf-list";
-    rounds.forEach(function(r){ listWrap.appendChild(buildGolfRow(r)); });
+    var rows=[];
+    rounds.forEach(function(r){ var row=buildGolfRow(r); rows.push(row); listWrap.appendChild(row); });
     el.appendChild(listWrap);
+    saveAll.onclick=function(){ rows.forEach(function(row){ if(row._apply) row._apply(); }); save(); refresh(); rebuild(); renderAdminGolf(); golfToast("✓ 전체 저장 완료 · "+rows.length+"개 라운드"); };
+  }
+  var golfChartPeriod="1y";
+  function golfToast(msg){ var t=$("#adminToast"); if(!t) return; t.textContent=msg; t.hidden=false; void t.offsetWidth; t.classList.add("show"); clearTimeout(t._tmr); t._tmr=setTimeout(function(){ t.classList.remove("show"); setTimeout(function(){ t.hidden=true; },240); },1900); }
+  // 나의 스코어 등락 선 그래프(기간별) + 좌측 통계 / 우측 기간 버튼
+  function buildGolfChart(){
+    var wrap=document.createElement("div"); wrap.className="golf-chart-wrap";
+    var pts=[];
+    state.entries.forEach(function(e){ if(e.golfScore && e.golfScore["나"]!=null && e.date && /^\d{4}-\d{2}-\d{2}$/.test(e.date)){ var v=+e.golfScore["나"]; if(!isNaN(v)) pts.push({date:e.date, score:v}); } });
+    pts.sort(function(a,b){ return a.date<b.date?-1:1; });
+    var now=new Date(), cutoff=null;
+    if(golfChartPeriod==="6m"){ var d=new Date(now); d.setMonth(d.getMonth()-6); cutoff=isoDate(d); }
+    else if(golfChartPeriod==="1y"){ var d2=new Date(now); d2.setFullYear(d2.getFullYear()-1); cutoff=isoDate(d2); }
+    var fpts=cutoff? pts.filter(function(p){ return p.date>=cutoff; }) : pts;
+    var cnt=fpts.length, avg=cnt? fpts.reduce(function(s,p){return s+p.score;},0)/cnt : 0;
+    var top=document.createElement("div"); top.className="gc-top";
+    var stats=document.createElement("div"); stats.className="gc-stats";
+    stats.innerHTML = cnt? ('<span class="gc-cnt"><b>'+cnt+'</b> 라운드</span><span class="gc-avg">평균 <b>'+avg.toFixed(1)+'</b>타</span>') : '<span class="gc-none">이 기간 기록 없음</span>';
+    var periods=document.createElement("div"); periods.className="gc-periods";
+    [["6m","6개월"],["1y","1년"],["all","전체"]].forEach(function(p){ var b=document.createElement("button"); b.type="button"; b.textContent=p[1]; if(golfChartPeriod===p[0]) b.className="on"; b.onclick=function(){ golfChartPeriod=p[0]; renderAdminGolf(); }; periods.appendChild(b); });
+    top.appendChild(stats); top.appendChild(periods);
+    wrap.appendChild(top);
+    var chart=document.createElement("div"); chart.className="gc-chart"; chart.innerHTML=golfChartSvg(fpts, avg); wrap.appendChild(chart);
+    return wrap;
+  }
+  function isoDate(d){ return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2); }
+  // 선 그래프 SVG (타수 낮을수록 위 = 좋을수록 위)
+  function golfChartSvg(pts, avg){
+    var W=560, H=150, pl=30, pr=14, ptop=16, pb=24, iw=W-pl-pr, ih=H-ptop-pb;
+    if(!pts.length) return '<svg viewBox="0 0 '+W+' '+H+'" class="gc-svg"><text x="'+(W/2)+'" y="'+(H/2)+'" text-anchor="middle" class="gc-empty-t">기록이 쌓이면 스코어 등락이 여기에 그려져요</text></svg>';
+    var vals=pts.map(function(p){return p.score;});
+    var mn=Math.min.apply(null,vals), mx=Math.max.apply(null,vals);
+    if(mx-mn<4){ mn=mn-2; mx=mx+2; } else { mn=mn-2; mx=mx+2; }
+    var n=pts.length;
+    function xOf(i){ return n===1? pl+iw/2 : pl+iw*(i/(n-1)); }
+    function yOf(v){ return ptop+ih*((v-mn)/(mx-mn)); } // 값 클수록 아래 = 낮은 타수(좋음) 위로
+    var line=pts.map(function(p,i){ return (i?"L":"M")+xOf(i).toFixed(1)+" "+yOf(p.score).toFixed(1); }).join(" ");
+    var area=line+" L"+xOf(n-1).toFixed(1)+" "+(ptop+ih)+" L"+xOf(0).toFixed(1)+" "+(ptop+ih)+" Z";
+    var s='<svg viewBox="0 0 '+W+' '+H+'" class="gc-svg">';
+    // avg dashed line
+    var ay=yOf(avg);
+    s+='<line x1="'+pl+'" y1="'+ay.toFixed(1)+'" x2="'+(W-pr)+'" y2="'+ay.toFixed(1)+'" class="gc-avgline"/>';
+    s+='<text x="'+(pl-4)+'" y="'+(ay+3).toFixed(1)+'" text-anchor="end" class="gc-axl">'+avg.toFixed(0)+'</text>';
+    // min/max y labels (best=min at top, worst=max at bottom)
+    s+='<text x="'+(pl-4)+'" y="'+(ptop+3)+'" text-anchor="end" class="gc-axl">'+Math.ceil(mx)+'</text>';
+    s+='<text x="'+(pl-4)+'" y="'+(ptop+ih+3)+'" text-anchor="end" class="gc-axl">'+Math.floor(mn)+'</text>';
+    s+='<path d="'+area+'" class="gc-area"/>';
+    s+='<path d="'+line+'" class="gc-line" vector-effect="non-scaling-stroke"/>';
+    pts.forEach(function(p,i){ var cx=xOf(i), cy=yOf(p.score), last=(i===n-1);
+      s+='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+(last?4:3)+'" class="gc-dot'+(last?" last":"")+'"/>';
+      if(n<=14) s+='<text x="'+cx.toFixed(1)+'" y="'+(cy-7).toFixed(1)+'" text-anchor="middle" class="gc-pt">'+p.score+'</text>';
+    });
+    // x date labels: first & last
+    s+='<text x="'+xOf(0).toFixed(1)+'" y="'+(H-7)+'" text-anchor="start" class="gc-axl">'+pts[0].date.slice(5).replace("-",".")+'</text>';
+    if(n>1) s+='<text x="'+xOf(n-1).toFixed(1)+'" y="'+(H-7)+'" text-anchor="end" class="gc-axl">'+pts[n-1].date.slice(5).replace("-",".")+'</text>';
+    s+='</svg>';
+    return s;
   }
   // 동반자 점수 셀 하나(이름 입력 + 타수 입력 + 삭제). fixed=true면 '나'(이름 고정, 삭제 없음)
   function makeScoreCell(name, val, fixed){
@@ -1751,14 +1842,15 @@
     var addBtn=document.createElement("button"); addBtn.type="button"; addBtn.className="agr-add"; addBtn.textContent="+ 동반자";
     addBtn.onclick=function(){ var c=makeScoreCell("", "", false); sc.appendChild(c); var ni=c.querySelector(".agr-nm-in"); if(ni) ni.focus(); };
     var saveBtn=document.createElement("button"); saveBtn.type="button"; saveBtn.className="agr-save"; saveBtn.textContent="저장";
-    saveBtn.onclick=function(){ commitGolfRound(e, r.place, dIn, pIn, sc); };
+    row._apply=function(){ applyGolfRound(e, r.place, dIn, pIn, sc); };
+    saveBtn.onclick=function(){ row._apply(); save(); refresh(); rebuild(); renderAdminGolf(); golfToast("✓ 저장 완료 · "+e.date); };
     acts.appendChild(addBtn); acts.appendChild(saveBtn);
     row.appendChild(head); row.appendChild(sc); row.appendChild(acts);
-    delR.onclick=function(){ askConfirm({ title:"골프 라운드 삭제", message:e.date+" · "+r.place+" 라운드를 삭제할까요?\n해당 날짜 기록의 골프 내용도 함께 정리돼요.", okText:"삭제", danger:true, onOk:function(){ deleteGolfRound(e, r.place); renderAdminGolf(); } }); };
+    delR.onclick=function(){ askConfirm({ title:"골프 라운드 삭제", message:e.date+" · "+r.place+" 라운드를 삭제할까요?\n해당 날짜 기록의 골프 내용도 함께 정리돼요.", okText:"삭제", danger:true, onOk:function(){ deleteGolfRound(e, r.place); renderAdminGolf(); golfToast("✓ 라운드 삭제됨"); } }); };
     return row;
   }
-  // 편집된 라운드 값을 기록에 반영(날짜·골프장·나·동반자 점수 전부)
-  function commitGolfRound(e, oldPlace, dIn, pIn, sc){
+  // 편집된 라운드 값을 기록에 반영(날짜·골프장·나·동반자 점수 전부) — 저장/렌더는 호출측에서
+  function applyGolfRound(e, oldPlace, dIn, pIn, sc){
     var nd=dIn.value; if(/^\d{4}-\d{2}-\d{2}$/.test(nd)) e.date=nd;
     var newPlace=(pIn.value||"").trim()||oldPlace;
     var gsNew={}, people=[], seen={};
@@ -1781,7 +1873,7 @@
     var np=[]; MEALS.forEach(function(x){ ((e.meals[x.key]||{}).people||[]).forEach(function(n){ if(np.indexOf(n)<0) np.push(n); }); });
     if(e.bizmeet&&e.bizmeet.people) e.bizmeet.people.forEach(function(n){ if(np.indexOf(n)<0) np.push(n); });
     e.people=np;
-    e.ts=Date.now(); save(); refresh(); rebuild(); renderAdminGolf(); flash("저장했어요 ✦");
+    e.ts=Date.now();
   }
   // 골프 라운드 삭제: 그 골프 끼니·스코어 제거 + 사람 목록 재계산, 남은 내용 없으면 기록 자체 삭제
   function deleteGolfRound(e, place){
@@ -1799,14 +1891,15 @@
     flash("삭제했어요.");
   }
   function openAdmin(tab){
+    tab=tab||"golf";
     renderAdminPeople(); renderAdminGolf();
     var tabs=$("#adminTabs").children;
-    for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle("on", tabs[i].getAttribute("data-at")===(tab||"people"));
-    $("#adminPeople").hidden = (tab==="golf");
+    for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle("on", tabs[i].getAttribute("data-at")===tab);
+    $("#adminPeople").hidden = (tab!=="people");
     $("#adminGolf").hidden = (tab!=="golf");
     $("#adminModal").hidden=false;
   }
-  if($("#adminBtn")) $("#adminBtn").onclick=function(){ openAdmin("people"); };
+  if($("#adminBtn")) $("#adminBtn").onclick=function(){ openAdmin("golf"); };
   (function(){
     var back=$("#adminModal"); if(!back) return;
     function close(){ back.hidden=true; }
