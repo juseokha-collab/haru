@@ -511,7 +511,10 @@
   .adm-prow .adm-del:hover{border-color:var(--c-fam); color:var(--c-fam)}
   .adm-golf-list{display:flex; flex-direction:column; gap:8px}
   .adm-golf-row{background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:8px 12px}
-  .agr-head{display:flex; align-items:baseline; gap:10px; margin-bottom:6px}
+  .agr-head{display:flex; align-items:center; gap:10px; margin-bottom:6px}
+  .agr-head .agr-place{flex:1}
+  .agr-del{flex:none; border:1px solid var(--border); background:var(--surface); color:var(--ink-3); font-family:inherit; font-size:11px; font-weight:600; padding:3px 9px; border-radius:6px; cursor:pointer}
+  .agr-del:hover{border-color:var(--c-fam); color:var(--c-fam)}
   .agr-date{font-size:12.5px; font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums}
   .agr-place{font-size:12px; color:var(--ink-2)}
   .agr-scores{display:grid; grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); gap:6px}
@@ -1705,14 +1708,33 @@
       var gs=r.e.golfScore||{};
       var cells='<label class="agr-sc"><span>나</span><input type="number" class="agr-in" data-nm="'+encodeURIComponent("나")+'" value="'+(gs["나"]!=null?gs["나"]:"")+'"></label>'+
         r.ppl.map(function(n){ return '<label class="agr-sc"><span>'+esc(n)+'</span><input type="number" class="agr-in" data-nm="'+encodeURIComponent(n)+'" value="'+(gs[n]!=null?gs[n]:"")+'"></label>'; }).join("");
-      return '<div class="adm-golf-row" data-id="'+r.e.id+'"><div class="agr-head"><span class="agr-date">'+r.date+'</span><span class="agr-place">⛳ '+esc(r.place)+'</span></div><div class="agr-scores">'+cells+'</div></div>';
+      return '<div class="adm-golf-row" data-id="'+r.e.id+'" data-place="'+encodeURIComponent(r.place)+'"><div class="agr-head"><span class="agr-date">'+r.date+'</span><span class="agr-place">⛳ '+esc(r.place)+'</span><button class="agr-del" type="button" title="이 라운드 삭제">삭제</button></div><div class="agr-scores">'+cells+'</div></div>';
     }).join("")+'</div>';
     Array.prototype.forEach.call(el.querySelectorAll(".adm-golf-row"), function(row){
       var eid=row.getAttribute("data-id"), e=state.entries.filter(function(x){ return x.id===eid; })[0]; if(!e) return;
       Array.prototype.forEach.call(row.querySelectorAll(".agr-in"), function(inp){
         inp.onchange=function(){ var nm=decodeURIComponent(inp.getAttribute("data-nm")); e.golfScore=e.golfScore||{}; var v=inp.value.trim(); if(v==="") delete e.golfScore[nm]; else e.golfScore[nm]=+v; e.ts=Date.now(); save(); flash("저장됨 ✦"); };
       });
+      var delBtn=row.querySelector(".agr-del");
+      if(delBtn) delBtn.onclick=function(){ var pl=decodeURIComponent(row.getAttribute("data-place"));
+        askConfirm({ title:"골프 라운드 삭제", message:e.date+" · "+pl+" 라운드를 삭제할까요?\n해당 날짜 기록의 골프 내용도 함께 정리돼요.", okText:"삭제", danger:true, onOk:function(){ deleteGolfRound(e, pl); renderAdminGolf(); } });
+      };
     });
+  }
+  // 골프 라운드 삭제: 그 골프 끼니·스코어 제거 + 사람 목록 재계산, 남은 내용 없으면 기록 자체 삭제
+  function deleteGolfRound(e, place){
+    if(e.meals) MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m && m.place && (m.place===place || (state.golf&&state.golf[m.place]))) e.meals[x.key]={place:"",food:"",people:[]}; });
+    e.golfScore={};
+    var np=[]; if(e.meals) MEALS.forEach(function(x){ ((e.meals[x.key]||{}).people||[]).forEach(function(n){ if(np.indexOf(n)<0) np.push(n); }); });
+    if(e.bizmeet && e.bizmeet.people) e.bizmeet.people.forEach(function(n){ if(np.indexOf(n)<0) np.push(n); });
+    e.people=np;
+    var stillEmpty = !np.length && !e.schedule && !mealHasContent(e.meals) && !bizHasContent(e.bizmeet) && drinkTotal(e.drinks)===0 && !exHasContent(e.exercise) && !e.thoughts && !e.learning && !photoDates[e.date];
+    if(stillEmpty){ state.entries=state.entries.filter(function(x){ return x.id!==e.id; }); }
+    else e.ts=Date.now();
+    save();
+    if(draft && draft.date===e.date) { var te=existingFor(e.date); if(te) editEntry(te,true); else resetDraft(); }
+    refresh(); rebuild();
+    flash("삭제했어요.");
   }
   function openAdmin(tab){
     renderAdminPeople(); renderAdminGolf();
