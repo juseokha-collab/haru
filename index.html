@@ -325,7 +325,7 @@
   .gs-grid{display:grid; grid-template-columns:1fr 1fr; gap:6px}
   .gs-row{display:flex; align-items:center; gap:6px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:3px 4px 3px 9px; margin:0}
   .gs-row .gs-nm{flex:1; min-width:0; font-size:12px; color:var(--ink); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-  .gs-row .gs-in{width:48px; flex:none; text-align:right; font-family:inherit; font-size:13px; color:var(--ink); background:transparent; border:0; border-left:1px solid var(--border); padding:4px 6px; outline:0; -moz-appearance:textfield}
+  .gs-row .gs-in{width:58px; flex:none; text-align:right; font-family:inherit; font-size:13px; color:var(--ink); background:transparent; border:0; border-left:1px solid var(--border); padding:4px 7px; outline:0; -moz-appearance:textfield}
   .gs-row .gs-in:focus{color:var(--accent-ink)}
   .ex-grid{display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:7px}
   .ex-grid>input, .ex-grid select, .ex-grid .wt-wrap{height:36px; box-sizing:border-box; min-width:0}
@@ -1327,7 +1327,7 @@
     var gp=golfPeopleNow(); wrap.innerHTML="";
     if(!gp.length){ wrap.hidden=true; return; }
     wrap.hidden=false;
-    var lab=document.createElement("label"); lab.innerHTML='⛳ 골프 스코어 <span class="lab-hint">타수 · 낮을수록 승</span>'; wrap.appendChild(lab);
+    var lab=document.createElement("label"); lab.textContent='⛳ 골프 스코어'; wrap.appendChild(lab);
     var grid=document.createElement("div"); grid.className="gs-grid";
     var sc=draft.golfScore||{};
     ["나"].concat(gp).forEach(function(n){
