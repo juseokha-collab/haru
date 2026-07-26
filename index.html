@@ -70,7 +70,6 @@
   .brand{display:flex; flex-direction:column; gap:2px}
   .weather-now{font-size:12px; font-weight:600; color:var(--ink-2); font-variant-numeric:tabular-nums; line-height:1.35; letter-spacing:-.01em}
   .weather-now:empty{display:none}
-  .weather-now .wx-fc{opacity:.5}
   .eyebrow{font-family:var(--font-serif); font-style:italic; font-size:12.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3)}
   .brand h1{margin:0; font-size:27px; font-weight:800; letter-spacing:-.01em; display:flex; align-items:baseline; gap:10px}
   .brand h1 small{font-size:14px; font-weight:500; color:var(--ink-2); letter-spacing:0}
@@ -207,6 +206,8 @@
   .detail .stats{display:flex; gap:16px; margin:11px 0 8px}
   .detail .stats b{display:block; font-size:19px; font-weight:800; font-variant-numeric:tabular-nums; color:var(--sky-ink)}
   .detail .stats span{font-size:11px; color:var(--sky-ink-2)}
+  .detail .golf-rec{font-size:12px; color:var(--sky-ink-2); margin:8px 0 2px}
+  .detail .golf-rec b{color:#5BAE6E; font-weight:700}
   .detail .with{font-size:12px; color:var(--sky-ink-2); line-height:1.6; max-height:140px; overflow-y:auto; margin:10px 0 2px}
   .detail .with b{color:var(--sky-ink); font-weight:600}
   .detail .with .wn-list{display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:2px 6px}
@@ -319,6 +320,13 @@
   .drink-grid label{display:flex; align-items:center; justify-content:space-between; gap:6px; font-size:12.5px; color:var(--ink-2); background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:4px 4px 4px 11px}
   .drink-grid input{width:56px; text-align:right; font-family:inherit; font-size:13px; color:var(--ink); background:transparent; border:0; border-left:1px solid var(--border); padding:5px 8px; outline:0; -moz-appearance:textfield}
   .drink-grid input:focus{color:var(--accent-ink)}
+  .golf-score{margin-top:10px}
+  .golf-score>label{display:block; font-size:12.5px; font-weight:600; color:var(--ink-2); margin:0 0 6px; letter-spacing:.01em}
+  .gs-grid{display:grid; grid-template-columns:1fr 1fr; gap:6px}
+  .gs-row{display:flex; align-items:center; gap:6px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:3px 4px 3px 9px; margin:0}
+  .gs-row .gs-nm{flex:1; min-width:0; font-size:12px; color:var(--ink); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .gs-row .gs-in{width:48px; flex:none; text-align:right; font-family:inherit; font-size:13px; color:var(--ink); background:transparent; border:0; border-left:1px solid var(--border); padding:4px 6px; outline:0; -moz-appearance:textfield}
+  .gs-row .gs-in:focus{color:var(--accent-ink)}
   .ex-grid{display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:7px}
   .ex-grid>input, .ex-grid select, .ex-grid .wt-wrap{height:36px; box-sizing:border-box; min-width:0}
   .ex-grid>input, .ex-grid select{font-family:inherit; font-size:13px; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:0 9px; outline:0}
@@ -684,6 +692,7 @@
             <input type="text" id="bm-people" placeholder="누구와 · 쉼표로 구분" autocomplete="off">
           </div>
         </div>
+        <div class="golf-score" id="golfScore" hidden></div>
       </div>
 
       <div class="cgroup">
@@ -803,7 +812,7 @@
   state.golf = state.golf || {};
   Object.keys(state.people||{}).forEach(function(n){ if(state.people[n] && state.people[n].rel==="acq") state.people[n].rel="etc"; });   // 거래처→기타 통합
   state.todos = state.todos || [];
-  var draft = { date: todayStr(), people: [], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), drinks:emptyDrinks(), exercise:emptyExercise(), thoughts:"", learning:"" };
+  var draft = { date: todayStr(), people: [], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), drinks:emptyDrinks(), exercise:emptyExercise(), golfScore:{}, thoughts:"", learning:"" };
   var hiddenRels = {fam:true}, hideRest=true, hideGolf=true, drinkPeriod="week", weightPeriod="month", view="graph", recapMonth="", minMeet=2, meetExact=false, calMonth="", searchQ="";
 
   function load(){
@@ -1285,6 +1294,7 @@
     var d=$("#detail");
     d.innerHTML =
       '<div class="dh"><div><div class="nm"><span class="dot" style="background:'+REL[n.rel].color+'"></span>'+esc(n.name)+' <span class="mc">('+n.meet+')</span></div></div><button class="x" aria-label="닫기">&times;</button></div>'+
+      (function(){ var gr=golfRecordVs(n.name); return gr.n? '<div class="golf-rec">⛳ 나 기준 <b>'+gr.w+'승 '+gr.l+'패</b>'+(gr.d?' '+gr.d+'무':'')+'</div>' : ''; })()+
       '<div class="with"><div class="wn-list">'+withHtml+'</div></div>'+
       renderRelatedRecs(n);
     d.classList.add("show");
@@ -1306,6 +1316,31 @@
   function loadBiz(b){ b=b||{}; var nm=document.getElementById("bm-name"), tm=document.getElementById("bm-time"), pp=document.getElementById("bm-people"); if(nm)nm.value=b.name||""; if(tm)tm.value=b.time||""; if(pp)pp.value=(b.people||[]).join(", "); }
   function readExercise(){ var mn=document.getElementById("ex-minutes"); return { activity:mval("ex-activity"), minutes:mn?(+mn.value||0):0, weight:mval("ex-weight"), waist:mval("ex-waist") }; }
   function loadExercise(x){ x=x||{}; var a=document.getElementById("ex-activity"), mn=document.getElementById("ex-minutes"), w=document.getElementById("ex-weight"), ws=document.getElementById("ex-waist"); if(a)a.value=x.activity||""; if(mn)mn.value=String(+x.minutes||0); if(w)w.value=(x.weight===0||x.weight)?x.weight:""; if(ws)ws.value=(x.waist===0||x.waist)?x.waist:""; }
+  // 골프 스코어: 현재 입력된 골프 끼니의 동반자 + 나 → 타수 입력
+  function golfPeopleNow(){
+    var meals=readMeals(), gp=[]; MEALS.forEach(function(x){ var m=meals[x.key], chk=document.querySelector('.golf-chk[data-meal="'+x.key+'"]'); if(m.place && chk && chk.checked) (m.people||[]).forEach(function(n){ if(n && gp.indexOf(n)<0) gp.push(n); }); }); return gp;
+  }
+  function renderGolfScore(){
+    var wrap=$("#golfScore"); if(!wrap) return;
+    var gp=golfPeopleNow(); wrap.innerHTML="";
+    if(!gp.length){ wrap.hidden=true; return; }
+    wrap.hidden=false;
+    var lab=document.createElement("label"); lab.innerHTML='⛳ 골프 스코어 <span class="lab-hint">타수 · 낮을수록 승</span>'; wrap.appendChild(lab);
+    var grid=document.createElement("div"); grid.className="gs-grid";
+    var sc=draft.golfScore||{};
+    ["나"].concat(gp).forEach(function(n){
+      var row=document.createElement("label"); row.className="gs-row";
+      var nm=document.createElement("span"); nm.className="gs-nm"; nm.textContent=n;
+      var inp=document.createElement("input"); inp.type="number"; inp.className="gs-in"; inp.inputMode="numeric"; inp.placeholder="타수"; if(sc[n]!=null && sc[n]!=="") inp.value=sc[n];
+      inp.onchange=function(){ draft.golfScore=draft.golfScore||{}; var v=inp.value.trim(); if(v==="") delete draft.golfScore[n]; else draft.golfScore[n]=+v; };
+      row.appendChild(nm); row.appendChild(inp); grid.appendChild(row);
+    });
+    wrap.appendChild(grid);
+  }
+  // 나 기준 특정인과의 골프 전적(스코어 낮은 쪽 승)
+  function golfRecordVs(name){
+    var w=0,l=0,d=0; state.entries.forEach(function(e){ var gs=e.golfScore; if(!gs) return; var mine=gs["나"], th=gs[name]; if(mine==null||mine===""||th==null||th==="") return; mine=+mine; th=+th; if(mine<th) w++; else if(mine>th) l++; else d++; }); return {w:w,l:l,d:d,n:w+l+d};
+  }
   function mealPeople(m){ var out=[]; if(m) MEALS.forEach(function(x){ ((m[x.key]||{}).people||[]).forEach(function(n){ if(out.indexOf(n)<0)out.push(n); }); }); return out; }
   function readDrinks(){ var d={}; DRINKS.forEach(function(x){ var v=parseFloat(mval("d-"+x.key)); d[x.key]=(isNaN(v)||v<0)?0:v; }); return d; }
   function loadDrinks(dr){ DRINKS.forEach(function(x){ var el=document.getElementById("d-"+x.key); if(el){ var v=(dr&&+dr[x.key])||0; el.value=v?v:""; } }); }
@@ -1338,14 +1373,15 @@
   $("#addP").onclick=addPerson;
   $("#pname").addEventListener("keydown",function(e){ if(e.key==="Enter"){e.preventDefault(); addPerson();} });
   document.querySelector(".meals").addEventListener("change",function(e){
-    if(e.target.classList.contains("meal-same") && e.target.checked){ applyMealSame(); return; }
-    if(e.target.classList.contains("golf-chk")){
+    if(e.target.classList.contains("meal-same") && e.target.checked){ applyMealSame(); }
+    else if(e.target.classList.contains("golf-chk")){
       var mk=e.target.getAttribute("data-meal"), pl=mval("m-"+mk+"-place");
       if(pl){ state.golf=state.golf||{}; if(e.target.checked) state.golf[pl]=true; else delete state.golf[pl]; save(); rebuild(); }
     }
+    renderGolfScore();
   });
 
-  function loadDraft(){ var scs=document.querySelectorAll(".meal-same"); for(var si=0;si<scs.length;si++) scs[si].checked=false; loadPhotoForDate(draft.date); $("#date").value=draft.date; $("#schedule").value=draft.schedule||""; $("#schedMark").checked=!!draft.mark; loadMeals(draft.meals); loadBiz(draft.bizmeet); loadDrinks(draft.drinks); loadExercise(draft.exercise); $("#thoughts").value=draft.thoughts; $("#learning").value=draft.learning; renderDraftChips(); var _ed=$("#editing"); _ed.textContent = existingFor(draft.date)?"수정중":""; _ed.className="sub"; }
+  function loadDraft(){ var scs=document.querySelectorAll(".meal-same"); for(var si=0;si<scs.length;si++) scs[si].checked=false; loadPhotoForDate(draft.date); $("#date").value=draft.date; $("#schedule").value=draft.schedule||""; $("#schedMark").checked=!!draft.mark; loadMeals(draft.meals); loadBiz(draft.bizmeet); loadDrinks(draft.drinks); loadExercise(draft.exercise); $("#thoughts").value=draft.thoughts; $("#learning").value=draft.learning; renderDraftChips(); renderGolfScore(); var _ed=$("#editing"); _ed.textContent = existingFor(draft.date)?"수정중":""; _ed.className="sub"; }
   function existingFor(date){ return state.entries.filter(function(e){return e.date===date;})[0]; }
 
   function saveEntry(){
@@ -1365,18 +1401,22 @@
     draft.people.forEach(function(p){ state.people[p.name]={rel:p.rel}; });
     var withAll=mealPeople(draft.meals).concat((draft.bizmeet&&draft.bizmeet.people)||[]);
     withAll.forEach(function(n){ if(!state.people[n]) state.people[n]={rel:"etc"}; });
+    // 골프 스코어: 현재 골프 동반자 + 나 것만 남김
+    var gpNow=golfPeopleNow(), gsAllowed={"나":1}; gpNow.forEach(function(n){ gsAllowed[n]=1; });
+    var gScore={}; Object.keys(draft.golfScore||{}).forEach(function(n){ if(gsAllowed[n] && draft.golfScore[n]!=null && draft.golfScore[n]!=="") gScore[n]=+draft.golfScore[n]; });
+    draft.golfScore=gScore;
     var ex=existingFor(draft.date);
     var names=draft.people.map(function(p){return p.name;});
     withAll.forEach(function(n){ if(names.indexOf(n)<0) names.push(n); }); // 식사·업무미팅 동행도 만난 사람에 포함
-    if(ex){ ex.people=names; ex.schedule=draft.schedule; ex.mark=draft.mark; ex.meals=draft.meals; ex.bizmeet=draft.bizmeet; ex.drinks=draft.drinks; ex.exercise=draft.exercise; ex.thoughts=draft.thoughts; ex.learning=draft.learning; ex.ts=Date.now(); }
-    else state.entries.push({id:id(), date:draft.date, people:names, schedule:draft.schedule, mark:draft.mark, meals:draft.meals, bizmeet:draft.bizmeet, drinks:draft.drinks, exercise:draft.exercise, thoughts:draft.thoughts, learning:draft.learning, ts:Date.now()});
+    if(ex){ ex.people=names; ex.schedule=draft.schedule; ex.mark=draft.mark; ex.meals=draft.meals; ex.bizmeet=draft.bizmeet; ex.drinks=draft.drinks; ex.exercise=draft.exercise; ex.golfScore=gScore; ex.thoughts=draft.thoughts; ex.learning=draft.learning; ex.ts=Date.now(); }
+    else state.entries.push({id:id(), date:draft.date, people:names, schedule:draft.schedule, mark:draft.mark, meals:draft.meals, bizmeet:draft.bizmeet, drinks:draft.drinks, exercise:draft.exercise, golfScore:gScore, thoughts:draft.thoughts, learning:draft.learning, ts:Date.now()});
     save();
     flash("저장했어요 ✦");
     loadDraft();   // 저장 후에도 입력 내용을 비우지 않고 그대로 남김
     var _ed=$("#editing"); _ed.textContent="수정완료"; _ed.className="sub saved";
     refresh(); rebuild();
   }
-  function resetDraft(){ draft={date:todayStr(), people:[], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), drinks:emptyDrinks(), exercise:emptyExercise(), thoughts:"", learning:""}; loadDraft(); }
+  function resetDraft(){ draft={date:todayStr(), people:[], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), drinks:emptyDrinks(), exercise:emptyExercise(), golfScore:{}, thoughts:"", learning:""}; loadDraft(); }
   $("#saveBtn").onclick=saveEntry;
   $("#saveBtn2").onclick=saveEntry;
   // 저장 후 다시 편집하면 '수정완료' → '수정중'으로 되돌림
@@ -1391,7 +1431,7 @@
 
   function scrollToComposer(){ var c=document.querySelector(".composer-wide"); if(c){ c.scrollIntoView({behavior:reduce?"auto":"smooth", block:"start"}); var f=document.getElementById("schedule"); } }
   function editEntry(e, noScroll){
-    draft={ date:e.date, people:e.people.map(function(n){return {name:n, rel:relOf(n)};}), schedule:e.schedule||"", mark:!!e.mark, meals:e.meals?JSON.parse(JSON.stringify(e.meals)):emptyMeals(), bizmeet:e.bizmeet?JSON.parse(JSON.stringify(e.bizmeet)):emptyBiz(), drinks:e.drinks?JSON.parse(JSON.stringify(e.drinks)):emptyDrinks(), exercise:e.exercise?JSON.parse(JSON.stringify(e.exercise)):emptyExercise(), thoughts:e.thoughts, learning:e.learning };
+    draft={ date:e.date, people:e.people.map(function(n){return {name:n, rel:relOf(n)};}), schedule:e.schedule||"", mark:!!e.mark, meals:e.meals?JSON.parse(JSON.stringify(e.meals)):emptyMeals(), bizmeet:e.bizmeet?JSON.parse(JSON.stringify(e.bizmeet)):emptyBiz(), drinks:e.drinks?JSON.parse(JSON.stringify(e.drinks)):emptyDrinks(), exercise:e.exercise?JSON.parse(JSON.stringify(e.exercise)):emptyExercise(), golfScore:e.golfScore?JSON.parse(JSON.stringify(e.golfScore)):{}, thoughts:e.thoughts, learning:e.learning };
     loadDraft(); if(!noScroll) scrollToComposer();
   }
   function delEntry(e){
@@ -2050,7 +2090,7 @@
           var t=d.hourly.time, tm=d.hourly.temperature_2m, cd=d.hourly.weather_code, nowMs=Date.now(), i0=0;
           for(var i=0;i<t.length;i++){ if(new Date(t[i]).getTime()<=nowMs) i0=i; else break; }
           function seg(off){ var idx=i0+off; return (idx<t.length&&tm[idx]!=null)? " · "+wmoIcon(cd[idx])+Math.round(tm[idx])+"°" : ""; }
-          fc=seg(2)+seg(4);
+          fc=seg(2)+seg(4)+seg(6);
         }
         el.innerHTML='<span class="wx-now">'+head+'</span>'+(fc?'<span class="wx-fc">'+fc+'</span>':'');
       }).catch(function(){ el.textContent=""; });
