@@ -233,9 +233,10 @@
   .detail .rec{display:flex; align-items:center; gap:9px; width:100%; text-align:left; background:none; border:0; cursor:pointer; color:var(--sky-ink); padding:5px 8px; border-radius:6px; font-family:inherit}
   .detail .rec:hover{background:rgba(255,255,255,.08)}
   .detail .rec .rd{flex:none; font-size:11px; font-variant-numeric:tabular-nums; color:var(--sky-ink-2); width:36px}
-  .detail .rec .rd.rd-y{width:52px}
+  .detail .rec .rd.rd-y{width:auto; min-width:52px; padding:0 3px; white-space:nowrap}
   .detail .rec .rd.win{color:#6FD69A; font-weight:800; background:rgba(91,174,110,.2); border-radius:5px; text-align:center}
   .detail .rec .rc-with .rc-win{color:#6FD69A; font-weight:800}
+  .detail .rec .rc-with .rc-sc{color:var(--sky-ink); font-weight:700}
   .detail .rec .rt{font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .detail .rec .rc-with{font-size:10.5px; color:var(--sky-ink-2); font-weight:400}
 
@@ -1092,7 +1093,13 @@
       Object.keys(g.pplace||{}).forEach(function(k){ var ab=k.split(g.S1), pl=ab[0], pn=ab[1]; if(pl.indexOf(searchQ)>=0) keep[pn]=1; });
       names=allNames.filter(function(n){ return keep[n]; });
     } else {
-      names=allNames.filter(function(n){ return meetExact ? g.meetings[n]===minMeet : g.meetings[n]>=minMeet; });
+      // 장소 유형(골프/식당) 표시 중이면, 그 유형을 나와 '함께 간' 사람만 사람 노드로 (식사만/미팅만 한 사람 제외)
+      var golfOn=!hideGolf, restOn=!hideRest, placeFilterActive=(golfOn||restOn), allowPeople=null;
+      if(placeFilterActive){
+        allowPeople={};
+        Object.keys(g.pplace||{}).forEach(function(k){ var ab=k.split(g.S1), pl=ab[0], pn=ab[1]; var isG=!!(state.golf&&state.golf[pl]); if((isG&&golfOn)||(!isG&&restOn)) allowPeople[pn]=1; });
+      }
+      names=allNames.filter(function(n){ return (meetExact ? g.meetings[n]===minMeet : g.meetings[n]>=minMeet) && (!allowPeople || allowPeople[n]); });
       if(capOn && names.length>NODE_CAP){ names.sort(function(a,b){ return g.meetings[b]-g.meetings[a]; }); names=names.slice(0,NODE_CAP); }
     }
     var prev={}; nodes.forEach(function(n){ prev[(n.type==="place"?"§":"")+n.name]=n; });
@@ -1384,20 +1391,26 @@
     var isPlace=node.type==="place", rows=[];
     var isGolfPlace = isPlace && !!(state.golf && state.golf[node.name]);
     (isPlace?entriesForPlace(node.name):entriesForPerson(node.name)).forEach(function(e){
-      var extra="", rdCls="rd", label=isPlace? placeSummary(e, node.name) : personSummary(e, node.name);
+      var extra="", rdCls="rd", golfMyScore=null, label=isPlace? placeSummary(e, node.name) : personSummary(e, node.name);
       var comp=isPlace? placeCompanions(e, node.name) : personCompanions(e, node.name);
       if(isGolfPlace){
         // 그 라운드의 우승자(최저타). 내가 최저 → 날짜 하이라이트, 남이 최저 → 그 이름 하이라이트
-        var gs=e.golfScore||{}, scored={}, vals=[];
+        // 날짜 옆 (내 타수), 동반자 중 최저타인 사람 이름 옆 (타수)
+        var gs=e.golfScore||{}, scored={}, vals=[], compVals=[];
         if(gs["나"]!=null&&gs["나"]!==""&&!isNaN(+gs["나"])){ scored["나"]=+gs["나"]; vals.push(+gs["나"]); }
-        comp.forEach(function(n){ if(gs[n]!=null&&gs[n]!==""&&!isNaN(+gs[n])){ scored[n]=+gs[n]; vals.push(+gs[n]); } });
-        var minV=vals.length?Math.min.apply(null,vals):null;
+        comp.forEach(function(n){ if(gs[n]!=null&&gs[n]!==""&&!isNaN(+gs[n])){ scored[n]=+gs[n]; vals.push(+gs[n]); compVals.push(+gs[n]); } });
+        var minV=vals.length?Math.min.apply(null,vals):null, compMinV=compVals.length?Math.min.apply(null,compVals):null;
         if(minV!=null && scored["나"]===minV) rdCls="rd win";
-        if(comp.length) extra=' <span class="rc-with">('+comp.map(function(n){ return (minV!=null&&scored[n]===minV)? '<b class="rc-win">'+esc(n)+'</b>' : esc(n); }).join(", ")+')</span>';
+        if(scored["나"]!=null) golfMyScore=scored["나"];
+        if(comp.length) extra=' <span class="rc-with">('+comp.map(function(n){
+          var nm=(minV!=null&&scored[n]===minV)? '<b class="rc-win">'+esc(n)+'</b>' : esc(n);
+          if(scored[n]!=null && compMinV!=null && scored[n]===compMinV) nm+=' <span class="rc-sc">('+scored[n]+')</span>';
+          return nm;
+        }).join(", ")+')</span>';
       } else {
         if(comp.length) extra=' <span class="rc-with">('+esc(comp.join(", "))+')</span>';
       }
-      var dLabel = isGolfPlace ? e.date.slice(2).replace(/-/g,".") : e.date.slice(5).replace("-",".");
+      var dLabel = isGolfPlace ? (e.date.slice(2).replace(/-/g,".")+(golfMyScore!=null?' ('+golfMyScore+')':'')) : e.date.slice(5).replace("-",".");
       if(isGolfPlace) rdCls+=" rd-y";
       rows.push({date:e.date, html:'<button class="rec" data-id="'+e.id+'"><span class="'+rdCls+'">'+dLabel+'</span><span class="rt">'+esc(label)+extra+'</span></button>'});
     });
@@ -1741,11 +1754,11 @@
     });
     var rc=document.createElement("span"); rc.className="chip place-chip"; rc.setAttribute("aria-pressed", hideRest?"false":"true");
     rc.innerHTML='<span class="dot sq" style="background:'+PLACE_COLOR+'"></span>식당';
-    rc.onclick=function(){ hideRest=!hideRest; rc.setAttribute("aria-pressed",hideRest?"false":"true"); alpha=Math.max(alpha,0.4); wake(); };
+    rc.onclick=function(){ hideRest=!hideRest; rc.setAttribute("aria-pressed",hideRest?"false":"true"); rebuild(); alpha=Math.max(alpha,0.4); wake(); };
     l.appendChild(rc);
     var gc=document.createElement("span"); gc.className="chip place-chip"; gc.setAttribute("aria-pressed", hideGolf?"false":"true");
     gc.innerHTML='<span class="golf-ico">⛳</span>골프';
-    gc.onclick=function(){ hideGolf=!hideGolf; gc.setAttribute("aria-pressed",hideGolf?"false":"true"); alpha=Math.max(alpha,0.4); wake(); };
+    gc.onclick=function(){ hideGolf=!hideGolf; gc.setAttribute("aria-pressed",hideGolf?"false":"true"); rebuild(); alpha=Math.max(alpha,0.4); wake(); };
     l.appendChild(gc);
   }
 
