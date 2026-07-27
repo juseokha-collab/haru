@@ -233,6 +233,8 @@
   .detail .rec{display:flex; align-items:center; gap:9px; width:100%; text-align:left; background:none; border:0; cursor:pointer; color:var(--sky-ink); padding:5px 8px; border-radius:6px; font-family:inherit}
   .detail .rec:hover{background:rgba(255,255,255,.08)}
   .detail .rec .rd{flex:none; font-size:11px; font-variant-numeric:tabular-nums; color:var(--sky-ink-2); width:36px}
+  .detail .rec .rd.win{color:#6FD69A; font-weight:800; background:rgba(91,174,110,.2); border-radius:5px; text-align:center}
+  .detail .rec .rc-with .rc-win{color:#6FD69A; font-weight:800}
   .detail .rec .rt{font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .detail .rec .rc-with{font-size:10.5px; color:var(--sky-ink-2); font-weight:400}
 
@@ -578,8 +580,8 @@
   .gc-area{fill:var(--accent); opacity:.09; stroke:none}
   .gc-dot{fill:var(--surface); stroke:var(--accent); stroke-width:2}
   .gc-dot.last, .gc-dot.win{fill:var(--accent)}
-  .gc-yearline{stroke:var(--ink-3); stroke-width:1; stroke-dasharray:2 3; opacity:.32}
-  .gc-yearlbl{fill:var(--ink-3); font-size:8.5px; font-family:inherit}
+  .gc-yearline{stroke:var(--ink-2); stroke-width:1; stroke-dasharray:3 3; opacity:.6}
+  .gc-yearlbl{fill:var(--ink-2); font-size:8.5px; font-family:inherit; opacity:.75}
   .gc-avgline{stroke:var(--ink-3); stroke-width:1; stroke-dasharray:3 3; opacity:.6}
   .gc-axl{fill:var(--ink-3); font-size:9px; font-family:inherit}
   .gc-pt{fill:var(--ink-2); font-size:9px; font-weight:700; font-family:inherit}
@@ -1146,7 +1148,7 @@
       var _vis=g.places[pl].visits;
       if(node.golf){
         var vs=Math.sqrt(_vis/maxGolfV);                 // 0..1
-        node.r=Math.min(28, 8+(_vis-1)*4);               // 1회=8, 방문당 +4 (최대 28)
+        node.r=Math.min(18, 7+Math.sqrt(Math.max(0,_vis-1))*3);   // 1회=7, 방문 늘수록 완만히(√) 증가, 최대 18
         var _days=node.last? Math.max(0,(parseD(todayStr())-parseD(node.last))/864e5):999;
         node.golfClose=Math.min(1, vs*0.6 + (1-Math.min(1,_days/150))*0.4);   // 자주/최근일수록 1(중심에 가까이)
       } else if(placeEmoji(pl)){
@@ -1379,11 +1381,22 @@
   }
   function renderRelatedRecs(node){
     var isPlace=node.type==="place", rows=[];
+    var isGolfPlace = isPlace && !!(state.golf && state.golf[node.name]);
     (isPlace?entriesForPlace(node.name):entriesForPerson(node.name)).forEach(function(e){
-      var extra="", label=isPlace? placeSummary(e, node.name) : personSummary(e, node.name);
+      var extra="", rdCls="rd", label=isPlace? placeSummary(e, node.name) : personSummary(e, node.name);
       var comp=isPlace? placeCompanions(e, node.name) : personCompanions(e, node.name);
-      if(comp.length) extra=' <span class="rc-with">('+esc(comp.join(", "))+')</span>';
-      rows.push({date:e.date, html:'<button class="rec" data-id="'+e.id+'"><span class="rd">'+e.date.slice(5).replace("-",".")+'</span><span class="rt">'+esc(label)+extra+'</span></button>'});
+      if(isGolfPlace){
+        // 그 라운드의 우승자(최저타). 내가 최저 → 날짜 하이라이트, 남이 최저 → 그 이름 하이라이트
+        var gs=e.golfScore||{}, scored={}, vals=[];
+        if(gs["나"]!=null&&gs["나"]!==""&&!isNaN(+gs["나"])){ scored["나"]=+gs["나"]; vals.push(+gs["나"]); }
+        comp.forEach(function(n){ if(gs[n]!=null&&gs[n]!==""&&!isNaN(+gs[n])){ scored[n]=+gs[n]; vals.push(+gs[n]); } });
+        var minV=vals.length?Math.min.apply(null,vals):null;
+        if(minV!=null && scored["나"]===minV) rdCls="rd win";
+        if(comp.length) extra=' <span class="rc-with">('+comp.map(function(n){ return (minV!=null&&scored[n]===minV)? '<b class="rc-win">'+esc(n)+'</b>' : esc(n); }).join(", ")+')</span>';
+      } else {
+        if(comp.length) extra=' <span class="rc-with">('+esc(comp.join(", "))+')</span>';
+      }
+      rows.push({date:e.date, html:'<button class="rec" data-id="'+e.id+'"><span class="'+rdCls+'">'+e.date.slice(5).replace("-",".")+'</span><span class="rt">'+esc(label)+extra+'</span></button>'});
     });
     if(!isPlace) (state.events||[]).forEach(function(ev){ if((ev.attendees||[]).indexOf(node.name)>=0) rows.push({date:ev.date, html:'<button class="rec" data-ev="'+ev.id+'"><span class="rd">'+ev.date.slice(5).replace("-",".")+'</span><span class="rt">📅 '+esc(ev.title)+'</span></button>'}); });
     if(!rows.length) return '<div class="rel-none">관련 기록 없음</div>';
