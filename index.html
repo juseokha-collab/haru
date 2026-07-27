@@ -536,6 +536,8 @@
   .agr-place{font-size:12px; color:var(--ink-2)}
   .agr-scores{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:6px}
   .agr-sc{display:flex; align-items:center; gap:4px; background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:3px 4px 3px 9px}
+  .agr-sc.low{background:rgba(91,174,110,.16); border-color:#5BAE6E}
+  .agr-sc.low .agr-nm-el, .agr-sc.low .agr-in{color:#3f8f56; font-weight:800}
   .agr-sc .agr-nm-el{flex:1; min-width:0; font-size:12px; color:var(--ink-2); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .agr-sc .agr-nm-in{font-family:inherit; background:transparent; border:0; padding:1px 0; outline:0; color:var(--ink); font-weight:600; font-size:12px; width:100%}
   .agr-sc .agr-nm-in:focus{color:var(--accent-ink)}
@@ -575,13 +577,16 @@
   .gc-line{fill:none; stroke:var(--accent); stroke-width:2; stroke-linejoin:round; stroke-linecap:round}
   .gc-area{fill:var(--accent); opacity:.09; stroke:none}
   .gc-dot{fill:var(--surface); stroke:var(--accent); stroke-width:2}
-  .gc-dot.last{fill:var(--accent)}
+  .gc-dot.last, .gc-dot.win{fill:var(--accent)}
+  .gc-yearline{stroke:var(--ink-3); stroke-width:1; stroke-dasharray:2 3; opacity:.32}
+  .gc-yearlbl{fill:var(--ink-3); font-size:8.5px; font-family:inherit}
   .gc-avgline{stroke:var(--ink-3); stroke-width:1; stroke-dasharray:3 3; opacity:.6}
   .gc-axl{fill:var(--ink-3); font-size:9px; font-family:inherit}
   .gc-pt{fill:var(--ink-2); font-size:9px; font-weight:700; font-family:inherit}
   .gc-empty-t{fill:var(--ink-3); font-size:11px; font-family:inherit}
   .gc-line-cmp{fill:none; stroke:var(--c-fri); stroke-width:2; stroke-dasharray:5 3; stroke-linejoin:round; stroke-linecap:round}
   .gc-dot-cmp{fill:var(--surface); stroke:var(--c-fri); stroke-width:2}
+  .gc-dot-cmp.win{fill:var(--c-fri)}
   .gc-pt-cmp{fill:var(--c-fri); font-size:9px; font-weight:700; font-family:inherit}
   .golf-admin-bar{display:flex; align-items:center; gap:10px; margin-bottom:8px; flex-wrap:wrap}
   .golf-admin-bar .gab-new{border:1px solid var(--border); background:var(--surface); color:var(--ink); font-family:inherit; font-size:12.5px; font-weight:700; padding:6px 14px; border-radius:8px; cursor:pointer}
@@ -1903,6 +1908,7 @@
     function tip(who,p){ var t=p.date.slice(5).replace("-",".")+" · "+who+" "+(p.raw!=null?p.raw:p.score)+"타"; if(p.holes&&p.holes!==18) t+=" ("+p.holes+"홀·환산 "+p.score+")"; return t; }
     var dset={}; myPts.concat(cmpPts).forEach(function(p){ dset[p.date]=1; });
     var dates=Object.keys(dset).sort(), nd=dates.length, xIdx={}; dates.forEach(function(d,i){ xIdx[d]=i; });
+    var myMap={}, cmpMap={}; myPts.forEach(function(p){ myMap[p.date]=p.score; }); cmpPts.forEach(function(p){ cmpMap[p.date]=p.score; });
     // 점 간격 고정(스크롤). 1년 그래프의 약 1/2 밀도(간격 2배) 수준 → 한 화면에 절반쯤 보이고 나머지는 스크롤
     var GAP=11, W=Math.max(600, pl+pr+GAP*Math.max(1,nd-1)), iw=W-pl-pr, ih=H-ptop-pb;
     function xOf(dt){ return nd===1? pl+iw/2 : pl+iw*(xIdx[dt]/(nd-1)); }
@@ -1914,6 +1920,12 @@
     // y축 min/max 라벨
     s+='<text x="'+(pl-4)+'" y="'+(ptop+3)+'" text-anchor="end" class="gc-axl">'+Math.ceil(mx)+'</text>';
     s+='<text x="'+(pl-4)+'" y="'+(ptop+ih+3)+'" text-anchor="end" class="gc-axl">'+Math.floor(mn)+'</text>';
+    // 연도 구분 세로 점선
+    var prevY=null;
+    for(var yi=0; yi<dates.length; yi++){ var yy=dates[yi].slice(0,4);
+      if(prevY!==null && yy!==prevY){ var xl=(xOf(dates[yi-1])+xOf(dates[yi]))/2;
+        s+='<line x1="'+xl.toFixed(1)+'" y1="'+ptop+'" x2="'+xl.toFixed(1)+'" y2="'+(ptop+ih)+'" class="gc-yearline"/><text x="'+(xl+3).toFixed(1)+'" y="'+(ptop+9)+'" class="gc-yearlbl">'+yy+'</text>'; }
+      prevY=yy; }
     // 나의 평균 점선
     if(myPts.length){ var ay=yOf(avg); s+='<line x1="'+pl+'" y1="'+ay.toFixed(1)+'" x2="'+(W-pr)+'" y2="'+ay.toFixed(1)+'" class="gc-avgline"/><text x="'+(pl-4)+'" y="'+(ay+3).toFixed(1)+'" text-anchor="end" class="gc-axl">'+avg.toFixed(0)+'</text>'; }
     // 비교선(면 없음)
@@ -1925,11 +1937,11 @@
       s+='<path d="'+line+' L'+lastX.toFixed(1)+' '+(ptop+ih)+' L'+firstX.toFixed(1)+' '+(ptop+ih)+' Z" class="gc-area"/>';
       s+='<path d="'+line+'" class="gc-line" vector-effect="non-scaling-stroke"/>';
     }
-    // 비교 점 + 값(아래쪽)
-    if(cmpPts.length){ cmpPts.forEach(function(p){ var cx=xOf(p.date), cy=yOf(p.score); s+='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="3" class="gc-dot-cmp"/>'; if(nd<=14) s+='<text x="'+cx.toFixed(1)+'" y="'+(cy+12).toFixed(1)+'" text-anchor="middle" class="gc-pt-cmp">'+p.score+'</text>'; }); }
+    // 비교 점 + 값(아래쪽). 그 라운드에서 이긴(타수 낮은) 쪽 점을 채움
+    if(cmpPts.length){ cmpPts.forEach(function(p){ var cx=xOf(p.date), cy=yOf(p.score); var mm=myMap[p.date]; var win=(mm!=null && p.score<=mm); s+='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+(win?4:3)+'" class="gc-dot-cmp'+(win?" win":"")+'"/>'; if(nd<=14) s+='<text x="'+cx.toFixed(1)+'" y="'+(cy+12).toFixed(1)+'" text-anchor="middle" class="gc-pt-cmp">'+p.score+'</text>'; }); }
     // 나의 점 + 값(위쪽)
-    myPts.forEach(function(p,i){ var cx=xOf(p.date), cy=yOf(p.score), last=(i===myPts.length-1);
-      s+='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+(last?4:3)+'" class="gc-dot'+(last?" last":"")+'"/>';
+    myPts.forEach(function(p,i){ var cx=xOf(p.date), cy=yOf(p.score), last=(i===myPts.length-1); var th=cmpMap[p.date]; var win=(th!=null && p.score<=th);
+      s+='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+((last||win)?4:3)+'" class="gc-dot'+(last?" last":"")+(win?" win":"")+'"/>';
       if(nd<=14) s+='<text x="'+cx.toFixed(1)+'" y="'+(cy-7).toFixed(1)+'" text-anchor="middle" class="gc-pt">'+p.score+'</text>';
     });
     // 마우스 호버 영역(투명, 넓게) — 툴팁용
@@ -1942,8 +1954,8 @@
     return s;
   }
   // 동반자 점수 셀 하나(이름 입력 + 타수 입력 + 삭제). fixed=true면 '나'(이름 고정, 삭제 없음)
-  function makeScoreCell(name, val, fixed){
-    var cell=document.createElement("div"); cell.className="agr-sc"+(fixed?" fixed":"");
+  function makeScoreCell(name, val, fixed, isMin){
+    var cell=document.createElement("div"); cell.className="agr-sc"+(fixed?" fixed":"")+(isMin?" low":"");
     var nmEl;
     if(fixed){ nmEl=document.createElement("span"); nmEl.textContent="나"; }
     else { nmEl=document.createElement("input"); nmEl.type="text"; nmEl.className="agr-nm-in"; nmEl.value=name||""; nmEl.placeholder="이름"; nmEl.autocomplete="off"; }
@@ -1966,8 +1978,12 @@
     var delR=document.createElement("button"); delR.type="button"; delR.className="agr-del"; delR.title=isDraft?"이 새 라운드 취소":"이 라운드 삭제"; delR.textContent=isDraft?"취소":"삭제";
     head.appendChild(dIn); head.appendChild(ico); head.appendChild(pIn); head.appendChild(hSel); head.appendChild(delR);
     var sc=document.createElement("div"); sc.className="agr-scores";
-    sc.appendChild(makeScoreCell("나", gs["나"], true));
-    r.ppl.forEach(function(n){ sc.appendChild(makeScoreCell(n, gs[n], false)); });
+    // 최저 타수(이긴 사람) 계산
+    var vals=[]; var addv=function(v){ if(v!=null&&v!==""&&!isNaN(+v)) vals.push(+v); }; addv(gs["나"]); r.ppl.forEach(function(n){ addv(gs[n]); });
+    var minV=vals.length?Math.min.apply(null,vals):null;
+    var isLow=function(v){ return minV!=null && v!=null && v!=="" && +v===minV; };
+    sc.appendChild(makeScoreCell("나", gs["나"], true, isLow(gs["나"])));
+    r.ppl.forEach(function(n){ sc.appendChild(makeScoreCell(n, gs[n], false, isLow(gs[n]))); });
     var acts=document.createElement("div"); acts.className="agr-acts";
     var addBtn=document.createElement("button"); addBtn.type="button"; addBtn.className="agr-add"; addBtn.textContent="+ 동반자";
     addBtn.onclick=function(){ var c=makeScoreCell("", "", false); sc.appendChild(c); var ni=c.querySelector(".agr-nm-in"); if(ni) ni.focus(); };
