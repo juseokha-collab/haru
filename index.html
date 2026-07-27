@@ -233,6 +233,7 @@
   .detail .rec{display:flex; align-items:center; gap:9px; width:100%; text-align:left; background:none; border:0; cursor:pointer; color:var(--sky-ink); padding:5px 8px; border-radius:6px; font-family:inherit}
   .detail .rec:hover{background:rgba(255,255,255,.08)}
   .detail .rec .rd{flex:none; font-size:11px; font-variant-numeric:tabular-nums; color:var(--sky-ink-2); width:36px}
+  .detail .rec .rd.rd-y{width:52px}
   .detail .rec .rd.win{color:#6FD69A; font-weight:800; background:rgba(91,174,110,.2); border-radius:5px; text-align:center}
   .detail .rec .rc-with .rc-win{color:#6FD69A; font-weight:800}
   .detail .rec .rt{font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
@@ -1396,7 +1397,9 @@
       } else {
         if(comp.length) extra=' <span class="rc-with">('+esc(comp.join(", "))+')</span>';
       }
-      rows.push({date:e.date, html:'<button class="rec" data-id="'+e.id+'"><span class="'+rdCls+'">'+e.date.slice(5).replace("-",".")+'</span><span class="rt">'+esc(label)+extra+'</span></button>'});
+      var dLabel = isGolfPlace ? e.date.slice(2).replace(/-/g,".") : e.date.slice(5).replace("-",".");
+      if(isGolfPlace) rdCls+=" rd-y";
+      rows.push({date:e.date, html:'<button class="rec" data-id="'+e.id+'"><span class="'+rdCls+'">'+dLabel+'</span><span class="rt">'+esc(label)+extra+'</span></button>'});
     });
     if(!isPlace) (state.events||[]).forEach(function(ev){ if((ev.attendees||[]).indexOf(node.name)>=0) rows.push({date:ev.date, html:'<button class="rec" data-ev="'+ev.id+'"><span class="rd">'+ev.date.slice(5).replace("-",".")+'</span><span class="rt">📅 '+esc(ev.title)+'</span></button>'}); });
     if(!rows.length) return '<div class="rel-none">관련 기록 없음</div>';
