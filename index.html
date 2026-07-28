@@ -117,7 +117,10 @@
   .cv-nav button{width:27px; height:27px; border-radius:8px; border:1px solid var(--border); background:var(--surface-2); color:var(--ink); cursor:pointer; font-size:14px}
   .cv-nav button.cv-today-btn{width:auto; padding:0 10px; font-size:11.5px; font-weight:700; letter-spacing:.02em; color:var(--ink-2)}
   .cv-nav button:hover{border-color:var(--accent); color:var(--accent-ink)}
-  .cv-nav b{font-variant-numeric:tabular-nums; font-size:13.5px; min-width:96px; text-align:center}
+  .cv-nav b{font-variant-numeric:tabular-nums; font-size:13.5px; min-width:38px; text-align:center}
+  .cv-nav .cv-year{height:27px; box-sizing:border-box; font-family:inherit; font-size:13px; font-weight:700; color:var(--ink); background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:0 4px; outline:0; cursor:pointer; font-variant-numeric:tabular-nums}
+  .cv-nav .cv-year:hover{border-color:var(--accent)}
+  .cv-nav .cv-year:focus{border-color:var(--accent)}
   .cv-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:5px; padding:6px 16px 10px}
   .cv-wd{text-align:center; font-size:11px; color:var(--ink-3); padding:2px 0 4px}
   .cv-wd.sun{color:#D98A8A}
@@ -628,7 +631,7 @@
 
   /* 좁은 화면(폰)에선 백업/초기화 버튼 숨김 — 테마·로그인만 유지 */
   @media (max-width:640px){
-    #exportBtn, #importBtn, #resetBtn, #golfCsvBtn, #adminBtn{ display:none; }
+    #exportBtn, #importBtn, #resetBtn, #golfCsvBtn, #adminBtn, #themeBtn{ display:none; }
   }
 
   @media (prefers-reduced-motion:reduce){ *{scroll-behavior:auto} .modal-input.shake{animation:none} }
@@ -703,6 +706,7 @@
         <div class="cv-nav">
           <button type="button" id="cvToday" class="cv-today-btn" aria-label="오늘이 포함된 달">Today</button>
           <button type="button" id="cvPrev" aria-label="이전 달">‹</button>
+          <select id="cvYear" class="cv-year" aria-label="연도 선택"></select>
           <b id="cvLbl"></b>
           <button type="button" id="cvNext" aria-label="다음 달">›</button>
         </div>
@@ -2411,7 +2415,16 @@
     var grid=$("#cvGrid"); if(!grid) return;
     if(!calMonth) calMonth=monthStr(new Date());
     var p=calMonth.split("-"), y=+p[0], mo=+p[1]-1;
-    $("#cvLbl").textContent=y+"년 "+(mo+1)+"월";
+    $("#cvLbl").textContent=(mo+1)+"월";
+    var ysel=$("#cvYear");
+    if(ysel){
+      var years={}; state.entries.forEach(function(e){ var yy=(e.date||"").slice(0,4); if(/^\d{4}$/.test(yy)) years[yy]=1; });
+      years[String(new Date().getFullYear())]=1; years[String(y)]=1;
+      var list=Object.keys(years).sort();
+      var html=list.map(function(yy){ return '<option value="'+yy+'">'+yy+'년</option>'; }).join("");
+      if(ysel.innerHTML!==html) ysel.innerHTML=html;
+      ysel.value=String(y);
+    }
     // 이번 달 사람별 '만난 날 수'(하루 1회로 집계 · 만난사람+식사 동석자 중복 제거)
     var mpp={}; state.entries.forEach(function(e){ if(e.date.slice(0,7)!==calMonth) return; var s={}; (e.people||[]).forEach(function(n){ s[n]=1; }); mealPeople(e.meals).forEach(function(n){ s[n]=1; }); Object.keys(s).forEach(function(n){ mpp[n]=(mpp[n]||0)+1; }); });
     var mtop=Object.keys(mpp).filter(function(n){ return relOf(n)!=="fam"; }).sort(function(a,b){return mpp[b]-mpp[a];}).slice(0,5);
@@ -2453,6 +2466,7 @@
   $("#cvToday").onclick=function(){ calMonth=monthStr(new Date()); renderCalendar(); syncTimelineHeight(); };
   $("#cvPrev").onclick=function(){ calMonth=shiftMonth(calMonth,-1); renderCalendar(); syncTimelineHeight(); };
   $("#cvNext").onclick=function(){ calMonth=shiftMonth(calMonth,1); renderCalendar(); syncTimelineHeight(); };
+  $("#cvYear").onchange=function(){ var mp=(calMonth||monthStr(new Date())).split("-"); calMonth=this.value+"-"+mp[1]; renderCalendar(); syncTimelineHeight(); };
 
   // ---------- backup: 내보내기 / 가져오기 (텍스트 기반 — 샌드박스에서도 동작) ----------
   function startImport(data){
