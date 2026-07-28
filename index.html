@@ -66,14 +66,15 @@
   .wrap{max-width:1360px; margin:0 auto; padding:20px 22px 40px}
 
   /* ---- Header ---- */
-  header.top{display:flex; align-items:flex-end; justify-content:space-between; gap:20px; padding:6px 2px 18px; flex-wrap:wrap}
-  .brand{display:flex; flex-direction:column; gap:2px}
-  .weather-now{font-size:12px; font-weight:600; color:var(--ink-2); font-variant-numeric:tabular-nums; line-height:1.35; letter-spacing:-.01em}
+  header.top{display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:6px 2px 18px; flex-wrap:nowrap}
+  .top-right{display:flex; flex-direction:column; align-items:flex-end; gap:6px}
+  .top-tools{display:flex; align-items:center; gap:10px}
+  .brand{display:flex; flex-direction:column; gap:2px; min-width:0}
+  .weather-now{display:block; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:12px; font-weight:600; color:var(--ink-2); font-variant-numeric:tabular-nums; line-height:1.35; letter-spacing:-.01em}
   .weather-now:empty{display:none}
   .eyebrow{font-family:var(--font-serif); font-style:italic; font-size:12.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3)}
   .brand h1{margin:0; font-size:27px; font-weight:800; letter-spacing:-.01em; display:flex; align-items:baseline; gap:10px}
   .brand h1 small{font-size:14px; font-weight:500; color:var(--ink-2); letter-spacing:0}
-  .top-right{display:flex; align-items:center; gap:10px}
   .today{font-size:13px; color:var(--ink-2); font-variant-numeric:tabular-nums}
   .btn{font-family:inherit; font-size:13px; border:1px solid var(--border); background:var(--surface); color:var(--ink);
     padding:8px 13px; border-radius:10px; cursor:pointer; transition:.15s; display:inline-flex; align-items:center; gap:7px}
@@ -162,10 +163,15 @@
   .sky-head{position:relative; z-index:3; padding:12px 16px 10px; display:flex; flex-direction:column; gap:8px}
   .sky-row{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
   .sky-row.a{justify-content:space-between}
-  .sky-row.b{justify-content:flex-end; gap:8px}
+  .sky-row.b{justify-content:flex-end; gap:6px; flex-wrap:nowrap}
   #viewTabs, #searchWrap{width:152px; box-sizing:border-box; flex:none}
   #viewTabs button{flex:1; padding-left:0; padding-right:0}
-  .sky-row .seg, .sky-row .search{height:28px; box-sizing:border-box}
+  .sky-row.b #searchWrap{flex:1 1 auto; width:auto; min-width:84px; max-width:200px}
+  .sky-row.b #searchWrap input{width:100%}
+  .sky-year{height:28px; box-sizing:border-box; flex:none; font-family:inherit; font-size:12px; font-weight:600; color:var(--sky-ink); background:rgba(255,255,255,.09); border:1px solid rgba(150,166,210,.32); border-radius:9px; padding:0 4px; outline:0; cursor:pointer}
+  .sky-year:focus{border-color:var(--accent)}
+  .sky-year option{color:#111}
+  .sky-row .seg, .sky-row .search, .sky-row .sky-year{height:28px; box-sizing:border-box}
   .sky-row .search{padding-top:0; padding-bottom:0}
   #skyDate{font-family:var(--font-serif); font-style:italic; font-size:16.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--sky-ink-2); white-space:nowrap; flex:none}
   .search{display:flex; align-items:center; gap:7px; background:rgba(255,255,255,.09); border:1px solid rgba(150,166,210,.32);
@@ -636,13 +642,15 @@
     </div>
     <div class="top-right">
       <div class="auth" id="authArea" hidden></div>
-      <button class="btn ghost" id="exportBtn" title="JSON 백업 파일 내려받기">내보내기</button>
-      <button class="btn ghost" id="importBtn" title="백업 파일에서 복원">가져오기</button>
-      <input type="file" id="importFile" accept="application/json,.json" style="display:none">
-      <button class="btn ghost" id="golfCsvBtn" title="골프 라운드 CSV 가져오기 (엑셀→CSV UTF-8)">⛳ CSV</button>
-      <input type="file" id="golfCsvFile" accept=".csv,text/csv" style="display:none">
-      <button class="btn ghost" id="adminBtn" title="관리자 모드 (PC)">⚙ 관리</button>
-      <button class="btn ghost" id="themeBtn" title="테마 전환">◐ 테마</button>
+      <div class="top-tools">
+        <button class="btn ghost" id="exportBtn" title="JSON 백업 파일 내려받기">내보내기</button>
+        <button class="btn ghost" id="importBtn" title="백업 파일에서 복원">가져오기</button>
+        <input type="file" id="importFile" accept="application/json,.json" style="display:none">
+        <button class="btn ghost" id="golfCsvBtn" title="골프 라운드 CSV 가져오기 (엑셀→CSV UTF-8)">⛳ CSV</button>
+        <input type="file" id="golfCsvFile" accept=".csv,text/csv" style="display:none">
+        <button class="btn ghost" id="adminBtn" title="관리자 모드 (PC)">⚙ 관리</button>
+        <button class="btn ghost" id="themeBtn" title="테마 전환">◐ 테마</button>
+      </div>
     </div>
   </header>
 
@@ -658,6 +666,7 @@
           </div>
         </div>
         <div class="sky-row b">
+          <select class="sky-year" id="graphYearSel" title="연도(만난횟수 기준 기간)"></select>
           <div class="seg on-sky" id="minMeetSeg" title="만난/방문 횟수 이상만 표시 (사람·식당 공통)">
             <button type="button" data-m="1" data-mode="min">1+</button><button type="button" data-m="2" data-mode="min" class="on">2+</button><button type="button" data-m="3" data-mode="min">3+</button><button type="button" data-m="5" data-mode="min">5+</button>
           </div>
@@ -947,7 +956,7 @@
   Object.keys(state.people||{}).forEach(function(n){ if(state.people[n] && state.people[n].rel==="acq") state.people[n].rel="etc"; });   // 거래처→기타 통합
   state.todos = state.todos || [];
   var draft = { date: todayStr(), people: [], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), drinks:emptyDrinks(), exercise:emptyExercise(), golfScore:{}, thoughts:"", learning:"" };
-  var hiddenRels = {fam:true}, hideRest=true, hideGolf=true, drinkPeriod="week", weightPeriod="month", view="graph", recapMonth="", minMeet=2, meetExact=false, calMonth="", searchQ="";
+  var hiddenRels = {fam:true}, hideRest=true, hideGolf=true, drinkPeriod="week", weightPeriod="month", view="graph", recapMonth="", minMeet=2, meetExact=false, calMonth="", searchQ="", graphYear=String(new Date().getFullYear());
 
   function load(){
     try{ var s=JSON.parse(localStorage.getItem(KEY)); if(s&&s.entries) return s; }catch(e){}
@@ -1029,13 +1038,15 @@
   // ---------- derived graph model ----------
   function buildGraph(){
     var meetings={}, last={}, pairs={}, S1=String.fromCharCode(1);
+    var _gy=graphYear, _inY=function(d){ return _gy==="all" || (d||"").slice(0,4)===_gy; };   // 연도 필터(성좌 만난횟수)
     var _recs=[];
     state.entries.forEach(function(e){
+      if(!_inY(e.date)) return;
       _recs.push({date:e.date, people:e.people, noPair:true});   // 만난사람 리스트: 카운트만, 연관선 X
       if(e.meals) MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m&&m.people&&m.people.length) _recs.push({date:e.date, people:m.people}); });
       if(e.bizmeet && e.bizmeet.people && e.bizmeet.people.length) _recs.push({date:e.date, people:e.bizmeet.people});   // 업무미팅 동행: 연관선 O
     });
-    (state.events||[]).forEach(function(ev){ if(ev.attendees&&ev.attendees.length) _recs.push({date:ev.date, people:ev.attendees}); });
+    (state.events||[]).forEach(function(ev){ if(ev.attendees&&ev.attendees.length && _inY(ev.date)) _recs.push({date:ev.date, people:ev.attendees}); });
     var dateSeen={}, pairSeen={};
     _recs.forEach(function(e){
       var ppl=e.people.filter(function(n){return n;});
@@ -1053,7 +1064,7 @@
     var S1=String.fromCharCode(1);
     var places={}, pplace={};
     state.entries.forEach(function(e){
-      if(!e.meals) return;
+      if(!e.meals || !_inY(e.date)) return;
       MEALS.forEach(function(x){
         var m=e.meals[x.key]; if(!m||!m.place) return;
         var pl=m.place;
@@ -2260,7 +2271,7 @@
     });
   }
 
-  function refresh(){ renderTimeline(); renderStats(); renderDrinkStats(); renderWeightChart(); renderCalendar(); if(view==="places") renderPlacesView(); if(view==="recap") renderRecapView(); if(view==="photo") renderPhotoGallery(); loadTimelinePhotos(); syncTimelineHeight(); }
+  function refresh(){ renderGraphYearSel(); renderTimeline(); renderStats(); renderDrinkStats(); renderWeightChart(); renderCalendar(); if(view==="places") renderPlacesView(); if(view==="recap") renderRecapView(); if(view==="photo") renderPhotoGallery(); loadTimelinePhotos(); syncTimelineHeight(); }
   $("#drinkSeg").addEventListener("click",function(e){
     var b=e.target.closest("button"); if(!b)return;
     drinkPeriod=b.getAttribute("data-p");
@@ -2284,6 +2295,7 @@
     $("#legend").style.display = v==="graph"?"":"none";
     $("#searchWrap").style.display = v==="graph"?"":"none";
     $("#minMeetSeg").style.display = v==="graph"?"":"none";
+    var _gy=$("#graphYearSel"); if(_gy) _gy.style.display = v==="graph"?"":"none";
     var _st=$("#skyTitle"); if(_st) _st.textContent = {graph:"인맥 성좌", places:"자주 가는 곳", recap:"회고", photo:"Today's Photo"}[v];
     var tabs=$("#viewTabs").children; for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle("on", tabs[i].getAttribute("data-v")===v);
     if(v==="places") renderPlacesView();
@@ -2300,6 +2312,17 @@
     var kids=this.children; for(var i=0;i<kids.length;i++) kids[i].classList.toggle("on", kids[i]===b);
     rebuild();
   });
+  // 연도 필터(성좌 만난횟수 기준 기간): 전체 + 데이터에 있는 연도, 기본=올해
+  function renderGraphYearSel(){
+    var sel=$("#graphYearSel"); if(!sel) return;
+    var years={}; state.entries.forEach(function(e){ var y=(e.date||"").slice(0,4); if(/^\d{4}$/.test(y)) years[y]=1; });
+    var list=Object.keys(years).sort().reverse();
+    if(graphYear!=="all" && !years[graphYear]) graphYear = list.length? list[0] : "all";
+    var html='<option value="all">전체</option>'+list.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join("");
+    if(sel.innerHTML!==html) sel.innerHTML=html;
+    sel.value=graphYear;
+  }
+  $("#graphYearSel").addEventListener("change",function(){ graphYear=this.value; capOn=false; rebuild(); refresh(); });
 
   function renderPlacesView(){
     var g=buildGraph(), S1=g.S1, el=$("#placesView");
