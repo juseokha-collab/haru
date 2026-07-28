@@ -242,9 +242,9 @@
   .detail .rec{display:flex; align-items:center; gap:9px; width:100%; text-align:left; background:none; border:0; cursor:pointer; color:var(--sky-ink); padding:5px 8px; border-radius:6px; font-family:inherit}
   .detail .rec:hover{background:rgba(255,255,255,.08)}
   .detail .rec .rd{flex:none; font-size:11px; font-variant-numeric:tabular-nums; color:var(--sky-ink-2); width:36px}
-  .detail .rec .rd.rd-y{width:auto; min-width:52px; padding:0 3px; white-space:nowrap}
-  .detail .rec .rd.win{color:#6FD69A; font-weight:800; background:rgba(91,174,110,.2); border-radius:5px; text-align:center}
-  .detail .rec .rc-with .rc-win{color:#6FD69A; font-weight:800}
+  .detail .rec .rd.rd-y{width:88px; padding:0 3px; white-space:nowrap; flex:none}
+  .detail .rec .rd.win{color:#6FD69A; background:rgba(91,174,110,.2); border-radius:5px}
+  .detail .rec .rc-with .rc-win{color:#6FD69A; font-weight:inherit}
   .detail .rec .rc-with .rc-sc{color:var(--sky-ink); font-weight:700}
   .detail .rec .rt{font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .detail .rec .rc-with{font-size:10.5px; color:var(--sky-ink-2); font-weight:400}
@@ -1230,8 +1230,9 @@
     links.forEach(function(l){
       if(!visible(l.a)||!visible(l.b))return;
       var dx=l.b.x-l.a.x, dy=l.b.y-l.a.y, d=Math.sqrt(dx*dx+dy*dy)||0.01;
-      var rest=l.me? (140 - Math.min(50,l.w*7)) : 74;
-      var f=(d-rest)*0.02*k*(l.me?0.2:1.15);
+      // 만난/함께한 빈도가 높을수록 rest(적정거리)를 짧게 + 인력 강화 → 관련 있는 사람이 가까이 모임
+      var rest=l.me? (138 - Math.min(64,l.w*9)) : (78 - Math.min(50,l.w*9));
+      var f=(d-rest)*0.02*k*(l.me?0.28:1.55);
       var fx=dx/d*f, fy=dy/d*f;
       l.a.vx+=fx; l.a.vy+=fy; l.b.vx-=fx; l.b.vy-=fy;
     });
@@ -1409,7 +1410,8 @@
   function renderRelatedRecs(node){
     var isPlace=node.type==="place", rows=[];
     var isGolfPlace = isPlace && !!(state.golf && state.golf[node.name]);
-    (isPlace?entriesForPlace(node.name):entriesForPerson(node.name)).forEach(function(e){
+    var _gy=graphYear, _inY=function(d){ return _gy==="all" || (d||"").slice(0,4)===_gy; };   // 연도 필터(성좌 연도 선택과 연동)
+    (isPlace?entriesForPlace(node.name):entriesForPerson(node.name)).filter(function(e){ return _inY(e.date); }).forEach(function(e){
       var extra="", rdCls="rd", golfMyScore=null, label=isPlace? placeSummary(e, node.name) : personSummary(e, node.name);
       var comp=isPlace? placeCompanions(e, node.name) : personCompanions(e, node.name);
       if(isGolfPlace){
@@ -1423,7 +1425,7 @@
         label="";
         if(comp.length) extra='<span class="rc-with">'+comp.map(function(n){
           var txt=esc(n)+(scored[n]!=null? '('+scored[n]+')' : '');
-          return (minV!=null&&scored[n]===minV)? '<b class="rc-win">'+txt+'</b>' : txt;
+          return (minV!=null&&scored[n]===minV)? '<span class="rc-win">'+txt+'</span>' : txt;
         }).join(", ")+'</span>';
       } else {
         if(comp.length) extra=' <span class="rc-with">('+esc(comp.join(", "))+')</span>';
@@ -1432,7 +1434,7 @@
       if(isGolfPlace) rdCls+=" rd-y";
       rows.push({date:e.date, html:'<button class="rec" data-id="'+e.id+'"><span class="'+rdCls+'">'+dLabel+'</span><span class="rt">'+esc(label)+extra+'</span></button>'});
     });
-    if(!isPlace) (state.events||[]).forEach(function(ev){ if((ev.attendees||[]).indexOf(node.name)>=0) rows.push({date:ev.date, html:'<button class="rec" data-ev="'+ev.id+'"><span class="rd">'+ev.date.slice(5).replace("-",".")+'</span><span class="rt">📅 '+esc(ev.title)+'</span></button>'}); });
+    if(!isPlace) (state.events||[]).forEach(function(ev){ if((ev.attendees||[]).indexOf(node.name)>=0 && _inY(ev.date)) rows.push({date:ev.date, html:'<button class="rec" data-ev="'+ev.id+'"><span class="rd">'+ev.date.slice(5).replace("-",".")+'</span><span class="rt">📅 '+esc(ev.title)+'</span></button>'}); });
     if(!rows.length) return '<div class="rel-none">관련 기록 없음</div>';
     rows.sort(byDateDesc);
     return '<div class="rel-recs">'+rows.map(function(r){return r.html;}).join("")+'</div>';
