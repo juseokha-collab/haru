@@ -1413,19 +1413,18 @@
       var extra="", rdCls="rd", golfMyScore=null, label=isPlace? placeSummary(e, node.name) : personSummary(e, node.name);
       var comp=isPlace? placeCompanions(e, node.name) : personCompanions(e, node.name);
       if(isGolfPlace){
-        // 그 라운드의 우승자(최저타). 내가 최저 → 날짜 하이라이트, 남이 최저 → 그 이름 하이라이트
-        // 날짜 옆 (내 타수), 동반자 중 최저타인 사람 이름 옆 (타수)
-        var gs=e.golfScore||{}, scored={}, vals=[], compVals=[];
+        // 날짜 옆 (내 타수), 동반자는 모두 이름(타수). 그 라운드 최저타(우승자) 하이라이트. 골프장명은 헤더에 있으니 생략
+        var gs=e.golfScore||{}, scored={}, vals=[];
         if(gs["나"]!=null&&gs["나"]!==""&&!isNaN(+gs["나"])){ scored["나"]=+gs["나"]; vals.push(+gs["나"]); }
-        comp.forEach(function(n){ if(gs[n]!=null&&gs[n]!==""&&!isNaN(+gs[n])){ scored[n]=+gs[n]; vals.push(+gs[n]); compVals.push(+gs[n]); } });
-        var minV=vals.length?Math.min.apply(null,vals):null, compMinV=compVals.length?Math.min.apply(null,compVals):null;
+        comp.forEach(function(n){ if(gs[n]!=null&&gs[n]!==""&&!isNaN(+gs[n])){ scored[n]=+gs[n]; vals.push(+gs[n]); } });
+        var minV=vals.length?Math.min.apply(null,vals):null;
         if(minV!=null && scored["나"]===minV) rdCls="rd win";
         if(scored["나"]!=null) golfMyScore=scored["나"];
-        if(comp.length) extra=' <span class="rc-with">('+comp.map(function(n){
-          var nm=(minV!=null&&scored[n]===minV)? '<b class="rc-win">'+esc(n)+'</b>' : esc(n);
-          if(scored[n]!=null && compMinV!=null && scored[n]===compMinV) nm+=' <span class="rc-sc">('+scored[n]+')</span>';
-          return nm;
-        }).join(", ")+')</span>';
+        label="";
+        if(comp.length) extra='<span class="rc-with">'+comp.map(function(n){
+          var txt=esc(n)+(scored[n]!=null? '('+scored[n]+')' : '');
+          return (minV!=null&&scored[n]===minV)? '<b class="rc-win">'+txt+'</b>' : txt;
+        }).join(", ")+'</span>';
       } else {
         if(comp.length) extra=' <span class="rc-with">('+esc(comp.join(", "))+')</span>';
       }
@@ -1438,9 +1437,13 @@
     rows.sort(byDateDesc);
     return '<div class="rel-recs">'+rows.map(function(r){return r.html;}).join("")+'</div>';
   }
+  var detailOpenedAt=0;
   function wireDetailRecs(d){
+    detailOpenedAt=Date.now();
     Array.prototype.forEach.call(d.querySelectorAll(".rec"), function(el){
       el.onclick=function(){
+        // 노드를 눌러 팝업이 막 열린 직후의 click이 rec로 새어 수정화면으로 튀는 것 방지
+        if(Date.now()-detailOpenedAt<350) return;
         var evid=el.getAttribute("data-ev");
         if(evid){ var ev=(state.events||[]).filter(function(x){return x.id===evid;})[0]; if(ev){ closeDetail(); reflectEvent(ev); } }
         else { var id=el.getAttribute("data-id"), e=state.entries.filter(function(x){return x.id===id;})[0]; if(e){ closeDetail(); editEntry(e); } }
