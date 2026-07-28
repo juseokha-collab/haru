@@ -1270,7 +1270,8 @@
       var on = focus && (l.a===focus||l.b===focus);
       ctx.beginPath(); ctx.moveTo(l.a.x,l.a.y); ctx.lineTo(l.b.x,l.b.y);
       ctx.lineWidth = on? 1.6 : (0.5+Math.min(2,l.w*0.35));
-      ctx.strokeStyle = on? "rgba(231,178,76,.55)" : (focus? "rgba(150,166,210,.07)" : "rgba(150,166,210,.16)");
+      var lineA = Math.min(0.6, 0.1 + (l.w||1)*0.06);   // 만난 횟수 많을수록 선 선명하게
+      ctx.strokeStyle = on? "rgba(231,178,76,.55)" : (focus? "rgba(150,166,210,.07)" : "rgba(150,166,210,"+lineA.toFixed(3)+")");
       ctx.stroke();
     });
 
