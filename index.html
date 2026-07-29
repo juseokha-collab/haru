@@ -1162,7 +1162,21 @@
       names=allNames.filter(function(n){ return keep[n]; });
       // 앵커 위치: 1명=좌우 넓게, 2명 이상=우측 상하 분산
       searchAnchors=searchAnchors.filter(function(n){ return names.indexOf(n)>=0; });
-      if(searchAnchors.length===1){ searchMeTarget={fx:0.20,fy:0.5}; anchorTargets[searchAnchors[0]]={fx:0.80,fy:0.5}; }
+      if(searchAnchors.length===1){
+        // 한 명(A): 나(좌)–A(우) 간격은 이전의 2/3. 함께 만난 사람은 만난 강도로 배치
+        //  · A보다 자주 본 사람 → 나와 A 사이 (더 자주 볼수록 나에 가깝게)
+        //  · A보다 덜 본 사람 → A의 우측으로 방사형 (덜 볼수록 더 멀리)
+        var A=searchAnchors[0], mA=(g.meetings[A]||0)||1;
+        searchMeTarget={fx:0.30,fy:0.5}; anchorTargets[A]={fx:0.70,fy:0.5};
+        var co=names.filter(function(n){ return n!==A; });
+        var maxM=mA; co.forEach(function(n){ maxM=Math.max(maxM, g.meetings[n]||0); });
+        var g1=[], g2=[];
+        co.forEach(function(n){ ((g.meetings[n]||0)>=mA ? g1 : g2).push(n); });
+        var byM=function(a,b){ return (g.meetings[b]||0)-(g.meetings[a]||0); }; g1.sort(byM); g2.sort(byM);
+        var fanY=function(i,cnt,span){ return cnt<=1? 0.5 : 0.5 + (i-(cnt-1)/2)/(cnt-1)*span; };
+        g1.forEach(function(n,i){ var t=(maxM>mA)?((g.meetings[n]-mA)/(maxM-mA)):0; anchorTargets[n]={fx:Math.max(0.34,0.66-t*0.30), fy:fanY(i,g1.length,0.26)}; });
+        g2.forEach(function(n,i){ var t=(mA>0)?((mA-(g.meetings[n]||0))/mA):0; anchorTargets[n]={fx:Math.min(0.95,0.74+t*0.20), fy:fanY(i,g2.length,0.5)}; });
+      }
       else if(searchAnchors.length>=2){ searchMeTarget={fx:0.24,fy:0.5}; var _an=searchAnchors.length; searchAnchors.forEach(function(nm,i){ anchorTargets[nm]={fx:0.76, fy:0.5 + (i-(_an-1)/2)*(0.88/Math.max(1,_an-1))}; }); }
     } else {
       // 장소 유형(골프/식당) 표시 중이면, 그 유형을 나와 '함께 간' 사람만 사람 노드로 (식사만/미팅만 한 사람 제외)
@@ -1274,6 +1288,7 @@
     state.entries.forEach(function(e){
       if(!inGraphYear(e.date)) return;
       roundsOf(e).forEach(function(r){
+        if(!(state.golf && state.golf[r.place])) return;   // 실제 골프장만(장소 미지정 제외 → 성좌 노드 수와 일치)
         rounds++; courseSet[r.place]=1;
         var mine=r.scores["나"]; if(mine!=null&&mine!==""&&!isNaN(+mine)){ var s=Math.round(+mine*18/(r.holes||18)); if(s<=79) singles.push({date:e.date, place:r.place, score:s}); }
       });
