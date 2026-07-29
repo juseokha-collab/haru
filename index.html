@@ -1126,11 +1126,11 @@
     ctx.setTransform(DPR,0,0,DPR,0,0);
   }
 
-  var placeIndex={}, searchAnchor=null;   // 단일 인물 검색 시 화면 우측에 앵커할 인물명
+  var placeIndex={}, searchAnchors=[], anchorTargets={}, searchMeTarget=null;   // 인물 검색 시 앵커 배치
   function rebuild(){
     var g=buildGraph();
     var allNames=Object.keys(g.meetings);
-    var names, searchPlaceSet=null; searchAnchor=null;
+    var names, searchPlaceSet=null; searchAnchors=[]; anchorTargets={}; searchMeTarget=null;
     if(searchQ){
       var _terms=searchQ.split(/[,，]/).map(function(s){return s.trim();}).filter(Boolean);
       var _sInY=inGraphYear;
@@ -1148,16 +1148,22 @@
             if(gr.place) searchPlaceSet[gr.place]=1;
           });
         });
+        // 검색한 각 사람(용어) → 앵커. 우측에 상하로 배치
+        var _seen={}; _terms.forEach(function(t){ var hit=Object.keys(keep).filter(function(n){ return n.indexOf(t)>=0; })[0]; if(hit && !_seen[hit]){ _seen[hit]=1; searchAnchors.push(hit); } });
       } else {
         // 한 사람 검색: 그 사람 + 함께 만난 인맥, 관련 '골프장'만(식당 제외) + 이름이 일치하는 장소
         var term=_terms[0]||"", matched={};
         allNames.forEach(function(n){ if(n.indexOf(term)>=0){ matched[n]=1; keep[n]=1; } });
-        var _mk=Object.keys(matched); searchAnchor = (_mk.indexOf(term)>=0? term : (_mk.length===1? _mk[0] : null));
+        var _mk=Object.keys(matched), _a=(_mk.indexOf(term)>=0? term : (_mk.length===1? _mk[0] : null)); if(_a) searchAnchors=[_a];
         Object.keys(g.pairs).forEach(function(k){ var ab=k.split(g.S1), a=ab[0], b=ab[1]; if(matched[a]) keep[b]=1; if(matched[b]) keep[a]=1; });
         Object.keys(g.pplace||{}).forEach(function(k){ var ab=k.split(g.S1), pl=ab[0], pn=ab[1]; if(matched[pn] && state.golf&&state.golf[pl]) searchPlaceSet[pl]=1; });
         Object.keys(g.places||{}).forEach(function(pl){ if(pl.indexOf(term)>=0) searchPlaceSet[pl]=1; });
       }
       names=allNames.filter(function(n){ return keep[n]; });
+      // 앵커 위치: 1명=좌우 넓게, 2명 이상=우측 상하 분산
+      searchAnchors=searchAnchors.filter(function(n){ return names.indexOf(n)>=0; });
+      if(searchAnchors.length===1){ searchMeTarget={fx:0.20,fy:0.5}; anchorTargets[searchAnchors[0]]={fx:0.80,fy:0.5}; }
+      else if(searchAnchors.length>=2){ searchMeTarget={fx:0.24,fy:0.5}; var _an=searchAnchors.length; searchAnchors.forEach(function(nm,i){ anchorTargets[nm]={fx:0.76, fy:0.5 + (i-(_an-1)/2)*(0.44/Math.max(1,_an-1))}; }); }
     } else {
       // 장소 유형(골프/식당) 표시 중이면, 그 유형을 나와 '함께 간' 사람만 사람 노드로 (식사만/미팅만 한 사람 제외)
       var golfOn=!hideGolf, restOn=!hideRest, placeFilterActive=(golfOn||restOn), allowPeople=null;
@@ -1316,17 +1322,18 @@
       var f=(d-rest)*0.02*k*0.6;
       n.vx+=dx/d*f; n.vy+=dy/d*f;
     });
-    // gravity to center + integrate. 단일 인물 검색이면 그 인물은 화면 우측(3분면)으로 앵커
+    // gravity to center + integrate. 검색 앵커 인물은 지정 좌표로 강하게 끌어당김
     nodes.forEach(function(n){
       if(n===dragging) return;
-      if(searchAnchor && n.name===searchAnchor){ n.vx+=(W*0.70-n.x)*0.045*k; n.vy+=(H*0.5-n.y)*0.045*k; }
+      var _t=anchorTargets[n.name];
+      if(_t){ n.vx+=(W*_t.fx-n.x)*0.045*k; n.vy+=(H*_t.fy-n.y)*0.045*k; }
       else { n.vx+=(W/2-n.x)*0.0065*k; n.vy+=(H/2-n.y)*0.0065*k; }
       n.vx*=damping; n.vy*=damping;
       n.x+=n.vx; n.y+=n.vy;
       var mx=n.r+20, mt=n.r+16, mb=n.r+30; n.x=Math.max(mx,Math.min(W-mx,n.x)); n.y=Math.max(mt,Math.min(H-mb,n.y));
     });
-    // me: 평소 중앙, 단일 인물 검색이면 화면 좌측(2분면)으로 앵커
-    if(searchAnchor){ me.vx+=(W*0.30-me.x)*0.045*k; me.vy+=(H*0.5-me.y)*0.045*k; }
+    // me: 평소 중앙, 인물 검색이면 화면 좌측으로 앵커
+    if(searchMeTarget){ me.vx+=(W*searchMeTarget.fx-me.x)*0.045*k; me.vy+=(H*searchMeTarget.fy-me.y)*0.045*k; }
     else { me.vx+=(W/2-me.x)*0.012*k; me.vy+=(H/2-me.y)*0.012*k; }
     me.vx*=damping; me.vy*=damping; me.x+=me.vx; me.y+=me.vy;
 
