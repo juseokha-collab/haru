@@ -1162,17 +1162,18 @@
         // 검색한 각 사람(용어) → 앵커. 우측에 상하로 배치
         var _seen={}; _terms.forEach(function(t){ var hit=Object.keys(keep).filter(function(n){ return n.indexOf(t)>=0; })[0]; if(hit && !_seen[hit]){ _seen[hit]=1; searchAnchors.push(hit); } });
       } else {
-        // 한 사람 검색: 그 사람 + 함께 만난 인맥, 관련 '골프장'만(식당 제외) + 이름이 일치하는 장소
+        // 한 사람 검색: 그 사람(A) + 함께 만난 인맥(pairs). minMeet·관계·장소칩은 아래 공통 처리
         var term=_terms[0]||"", matched={};
-        allNames.forEach(function(n){ if(n.indexOf(term)>=0){ matched[n]=1; keep[n]=1; } });
-        var _mk=Object.keys(matched), _a=(_mk.indexOf(term)>=0? term : (_mk.length===1? _mk[0] : null)); if(_a) searchAnchors=[_a];
-        Object.keys(g.pairs).forEach(function(k){ var ab=k.split(g.S1), a=ab[0], b=ab[1]; if(matched[a]) keep[b]=1; if(matched[b]) keep[a]=1; });
-        Object.keys(g.pplace||{}).forEach(function(k){ var ab=k.split(g.S1), pl=ab[0], pn=ab[1]; if(matched[pn] && state.golf&&state.golf[pl]) searchPlaceSet[pl]=1; });
-        Object.keys(g.places||{}).forEach(function(pl){ if(pl.indexOf(term)>=0) searchPlaceSet[pl]=1; });
+        allNames.forEach(function(n){ if(n.indexOf(term)>=0) matched[n]=1; });
+        var _mk=Object.keys(matched), _a=(_mk.indexOf(term)>=0? term : (_mk[0]||null));
+        if(_a){ searchAnchors=[_a]; keep[_a]=1; Object.keys(g.pairs).forEach(function(k){ var ab=k.split(g.S1), a=ab[0], b=ab[1]; if(a===_a) keep[b]=1; else if(b===_a) keep[a]=1; }); }
+        Object.keys(g.places||{}).forEach(function(pl){ if(pl.indexOf(term)>=0) searchPlaceSet[pl]=1; });   // 장소명 검색
       }
-      names=allNames.filter(function(n){ return keep[n]; });
-      // 앵커 위치: 1명=좌우 넓게, 2명 이상=우측 상하 분산
+      // 공통: minMeet(1+/2+…) 적용 — 검색 인물은 항상 포함
+      names=allNames.filter(function(n){ return keep[n] && (searchAnchors.indexOf(n)>=0 || (meetExact? g.meetings[n]===minMeet : g.meetings[n]>=minMeet)); });
       searchAnchors=searchAnchors.filter(function(n){ return names.indexOf(n)>=0; });
+      // 한 명 검색: 표시되는(관계 보이는) 사람과 함께 간 식당·골프장 (식당/골프 칩은 visible에서 게이팅)
+      if(_terms.length<=1){ var _ns={}; names.forEach(function(n){ _ns[n]=1; }); Object.keys(g.pplace||{}).forEach(function(k){ var ab=k.split(g.S1), pl=ab[0], pn=ab[1]; if(_ns[pn] && (searchAnchors.indexOf(pn)>=0 || !hiddenRels[relOf(pn)])) searchPlaceSet[pl]=1; }); }
       searchFocus = searchAnchors.slice();   // 검색 인물이 화면 중앙에 오도록(tick에서 재중심화)
       if(searchAnchors.length===1){
         // 한 명(A)은 화면 중앙. 나는 좌측. 함께 만난 사람은 만난 강도로 배치
@@ -1180,7 +1181,7 @@
         //  · A보다 덜 본 사람 → A의 우측으로 방사형 (덜 볼수록 더 멀리)
         var A=searchAnchors[0], mA=(g.meetings[A]||0)||1;
         searchMeTarget={fx:0.15,fy:0.5}; anchorTargets[A]={fx:0.5,fy:0.5};
-        var co=names.filter(function(n){ return n!==A; });
+        var co=names.filter(function(n){ return n!==A && !hiddenRels[relOf(n)]; });
         var maxM=mA; co.forEach(function(n){ maxM=Math.max(maxM, g.meetings[n]||0); });
         var g1=[], g2=[];
         co.forEach(function(n){ ((g.meetings[n]||0)>=mA ? g1 : g2).push(n); });
@@ -1330,7 +1331,12 @@
     el.innerHTML=html; el.hidden=false;
   }
 
-  function visible(node){ if(searchQ) return true; if(node.type==="place"){ return node.golf? !hideGolf : !hideRest; } return node.me || !hiddenRels[node.rel]; }
+  function visible(node){
+    if(node.type==="place"){ return node.golf? !hideGolf : !hideRest; }   // 장소는 검색이든 아니든 식당/골프 칩 적용
+    if(node.me) return true;
+    if(searchQ) return (searchAnchors.indexOf(node.name)>=0) || !hiddenRels[node.rel];   // 검색 인물은 항상, 나머지는 관계칩 반영
+    return !hiddenRels[node.rel];
+  }
 
   function tick(){
     var damping=0.86, k=alpha;
