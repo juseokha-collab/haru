@@ -219,6 +219,16 @@
   .golf-stats .gs-single .gss{flex:none; font-weight:600}
   .golf-stats .gs-single .gss.win{color:#6FD69A; font-weight:800}
   .golf-stats .gs-none{font-size:11.5px; color:var(--sky-ink-2)}
+  .search-info{position:absolute; left:16px; top:14px; z-index:4; width:186px; background:rgba(19,24,38,.55); border:1px solid rgba(150,166,210,.2); border-radius:10px; padding:10px 12px}
+  .search-info[hidden]{display:none}
+  .search-info .si-h{font-size:11.5px; color:var(--sky-ink-2); margin-bottom:5px}
+  .search-info .si-h b{color:var(--sky-ink); font-weight:800; font-size:13px}
+  .search-info .si-rec{font-size:12.5px; color:var(--sky-ink-2); margin-bottom:4px}
+  .search-info .si-rec b{font-size:16px; font-weight:800; margin-right:5px}
+  .search-info .si-rec .si-w{color:#6FD69A}
+  .search-info .si-rec .si-l{color:#E58A8A}
+  .search-info .si-sub{font-size:10.5px; color:var(--sky-ink-2); line-height:1.45; font-variant-numeric:tabular-nums}
+  .search-info .si-none{font-size:11.5px; color:var(--sky-ink-2)}
   .sky-tip .st-v{font-size:12px; font-weight:700; color:var(--sky-ink)}
   .sky-tip .st-b{font-size:11.5px; color:#8FE0AC; margin-top:1px; font-variant-numeric:tabular-nums}
   .sky-tip .st-b .st-nm{color:var(--sky-ink)}
@@ -706,6 +716,7 @@
         <div class="empty-sky" id="emptySky"><div>아직 기록이 없어요.<br>오른쪽에서 오늘 만난 사람을 적어보면<br>여기에 별이 하나씩 떠올라요.</div></div>
         <div class="sky-tip" id="skyTip" hidden></div>
         <div class="golf-stats" id="golfStats" hidden></div>
+        <div class="search-info" id="searchInfo" hidden></div>
         <div class="detail" id="detail"></div>
       </div>
       <div class="panel-view" id="placesView" hidden></div>
@@ -1279,7 +1290,21 @@
           : "아직 기록이 없어요.<br>오른쪽에서 오늘 만난 사람을 적어보면<br>여기에 별이 하나씩 떠올라요."); }
     // 골프만 표시된 뷰 → 좌측 통계 패널
     renderGolfStatsPanel((!hideGolf && hideRest && !searchQ && !anyRel), g);
+    renderSearchInfo();   // 한 명 검색 → 그 인물과의 기간 내 골프 전적
     wake();
+  }
+  // 한 명 검색 시 좌측: 그 인물과의 골프 승패(연도 필터 반영)
+  function renderSearchInfo(){
+    var el=$("#searchInfo"); if(!el) return;
+    if(!(searchQ && searchAnchors.length===1)){ el.hidden=true; el.innerHTML=""; return; }
+    var name=searchAnchors[0], w=0,l=0,d=0,rounds=0,myTot=0,thTot=0;
+    state.entries.forEach(function(e){ if(!inGraphYear(e.date)) return; roundsOf(e).forEach(function(r){ var mine=r.scores["나"], th=r.scores[name]; if(mine==null||mine===""||th==null||th==="") return; mine=+mine; th=+th; if(isNaN(mine)||isNaN(th)) return; rounds++; myTot+=mine; thTot+=th; if(mine<th)w++; else if(mine>th)l++; else d++; }); });
+    if(!rounds){ el.hidden=true; el.innerHTML=""; return; }
+    var period = graphYear==="all"?"전체":(/^r(\d+)$/.test(graphYear)?("최근 "+graphYear.slice(1)+"년"):graphYear+"년");
+    el.innerHTML='<div class="si-h"><b>'+esc(name)+'</b> 와의 골프 전적</div>'+
+      '<div class="si-rec"><b class="si-w">'+w+'승</b><b class="si-l">'+l+'패</b>'+(d?'<b>'+d+'무</b>':'')+'</div>'+
+      '<div class="si-sub">'+period+' · '+rounds+'라운드<br>평균 나 '+(myTot/rounds).toFixed(1)+' · '+esc(name)+' '+(thTot/rounds).toFixed(1)+'</div>';
+    el.hidden=false;
   }
   // 골프 전용 뷰 좌측 패널: 방문한 골프장 수 + 싱글(18홀 환산 ≤79) 기록 리스트
   function renderGolfStatsPanel(show, g){
