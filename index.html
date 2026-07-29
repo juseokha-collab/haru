@@ -1112,16 +1112,19 @@
     if(searchQ){
       var _terms=searchQ.split(/[,，]/).map(function(s){return s.trim();}).filter(Boolean);
       var _sgy=graphYear, _sInY=function(d){ return _sgy==="all" || (d||"").slice(0,4)===_sgy; };
-      var epeople=function(e){ var o=[]; (e.people||[]).forEach(function(n){ if(o.indexOf(n)<0)o.push(n); }); if(e.meals) MEALS.forEach(function(x){ var m=e.meals[x.key]; ((m&&m.people)||[]).forEach(function(n){ if(o.indexOf(n)<0)o.push(n); }); }); if(e.bizmeet&&e.bizmeet.people) e.bizmeet.people.forEach(function(n){ if(o.indexOf(n)<0)o.push(n); }); return o; };
       searchPlaceSet={}; var keep={};
       if(_terms.length>1){
-        // 여러 사람 동시 검색: 그 사람들이 모두 함께 있었던 기록 → 그 기록의 모든 사람 + 장소(식당·골프 포함)
+        // 여러 사람 동시 검색: 그 사람들이 '같은 자리(끼니/미팅)'에 함께 있었던 경우만 → 그 자리의 사람 + 장소(식당·골프)
         state.entries.forEach(function(e){
           if(!_sInY(e.date)) return;
-          var pp=epeople(e);
-          if(!_terms.every(function(t){ return pp.some(function(n){ return n.indexOf(t)>=0; }); })) return;
-          pp.forEach(function(n){ keep[n]=1; });
-          if(e.meals) MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m&&m.place) searchPlaceSet[m.place]=1; });
+          var groups=[];
+          if(e.meals) MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m && (m.people||[]).length) groups.push({ppl:m.people, place:m.place||""}); });
+          if(e.bizmeet && (e.bizmeet.people||[]).length) groups.push({ppl:e.bizmeet.people, place:""});
+          groups.forEach(function(gr){
+            if(!_terms.every(function(t){ return gr.ppl.some(function(n){ return n.indexOf(t)>=0; }); })) return;
+            gr.ppl.forEach(function(n){ keep[n]=1; });
+            if(gr.place) searchPlaceSet[gr.place]=1;
+          });
         });
       } else {
         // 한 사람 검색: 그 사람 + 함께 만난 인맥, 관련 '골프장'만(식당 제외) + 이름이 일치하는 장소
