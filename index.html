@@ -1178,6 +1178,13 @@
         g2.forEach(function(n,i){ var t=(mA>0)?((mA-(g.meetings[n]||0))/mA):0; anchorTargets[n]={fx:Math.min(0.95,0.74+t*0.20), fy:fanY(i,g2.length,0.5)}; });
       }
       else if(searchAnchors.length>=2){ searchMeTarget={fx:0.24,fy:0.5}; var _an=searchAnchors.length; searchAnchors.forEach(function(nm,i){ anchorTargets[nm]={fx:0.76, fy:0.5 + (i-(_an-1)/2)*(0.88/Math.max(1,_an-1))}; }); }
+      // 전체 앵커를 가로 중앙으로 정렬(오른쪽 방사로 인한 쏠림 보정)
+      if(searchMeTarget){
+        var _xs=[searchMeTarget.fx]; Object.keys(anchorTargets).forEach(function(k){ _xs.push(anchorTargets[k].fx); });
+        var _mn=Math.min.apply(null,_xs), _mx=Math.max.apply(null,_xs), _sh=0.5-(_mn+_mx)/2;
+        searchMeTarget.fx=Math.max(0.06,Math.min(0.94,searchMeTarget.fx+_sh));
+        Object.keys(anchorTargets).forEach(function(k){ anchorTargets[k].fx=Math.max(0.06,Math.min(0.94,anchorTargets[k].fx+_sh)); });
+      }
     } else {
       // 장소 유형(골프/식당) 표시 중이면, 그 유형을 나와 '함께 간' 사람만 사람 노드로 (식사만/미팅만 한 사람 제외)
       var golfOn=!hideGolf, restOn=!hideRest, placeFilterActive=(golfOn||restOn), allowPeople=null;
