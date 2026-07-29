@@ -231,7 +231,7 @@
   .detail .gv-avg b{color:var(--sky-ink); font-weight:800; font-variant-numeric:tabular-nums}
   .detail .gv-rows{max-height:180px; overflow-y:auto; display:flex; flex-direction:column; gap:1px; padding-right:8px}
   .detail .gv-row{display:flex; align-items:center; gap:8px; font-size:11.5px; color:var(--sky-ink-2); padding:3px 0; white-space:nowrap}
-  .detail .gv-row .gv-date{flex:none; width:34px; font-variant-numeric:tabular-nums}
+  .detail .gv-row .gv-date{flex:none; width:50px; font-variant-numeric:tabular-nums}
   .detail .gv-row .gv-place{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; color:var(--sky-ink)}
   .detail .gv-row .gv-sc{flex:none; width:38px; text-align:right; font-variant-numeric:tabular-nums}
   .detail .gv-row .gv-sc.win{color:#5BAE6E; font-weight:800}
@@ -244,11 +244,11 @@
   .detail .rel-h{font-size:10.5px; font-weight:700; letter-spacing:.05em; color:var(--sky-ink-2); text-transform:uppercase; margin:12px 0 5px}
   .detail .rel-none{font-size:12px; color:var(--sky-ink-2)}
   .detail .rel-recs{max-height:148px; overflow-y:auto; display:flex; flex-direction:column; gap:1px; margin:9px -6px 0}
-  .detail .rec{display:flex; align-items:center; gap:9px; width:100%; text-align:left; background:none; border:0; cursor:pointer; color:var(--sky-ink); padding:5px 8px; border-radius:6px; font-family:inherit}
+  .detail .rec{display:flex; align-items:center; gap:4px; width:100%; text-align:left; background:none; border:0; cursor:pointer; color:var(--sky-ink); padding:5px 8px; border-radius:6px; font-family:inherit}
   .detail .rec:hover{background:rgba(255,255,255,.08)}
-  .detail .rec .rd{flex:none; font-size:11px; font-variant-numeric:tabular-nums; color:var(--sky-ink-2); width:36px}
-  .detail .rec .rd.rd-y{width:88px; padding:0 3px; white-space:nowrap; flex:none}
-  .detail .rec .rd.win{color:#6FD69A; background:rgba(91,174,110,.2); border-radius:5px}
+  .detail .rec .rd{flex:none; font-size:11px; font-variant-numeric:tabular-nums; color:var(--sky-ink-2); width:50px}
+  .detail .rec .rd.rd-y{width:82px; padding:0 2px; white-space:nowrap; flex:none}
+  .detail .rec .rd.win{color:#6FD69A}
   .detail .rec .rc-with .rc-win{color:#6FD69A; font-weight:inherit}
   .detail .rec .rc-with .rc-sc{color:var(--sky-ink); font-weight:700}
   .detail .rec .rt{font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
@@ -1481,11 +1481,11 @@
       } else {
         if(comp.length) extra=' <span class="rc-with">('+esc(comp.join(", "))+')</span>';
       }
-      var dLabel = isGolfPlace ? (e.date.slice(2).replace(/-/g,".")+(golfMyScore!=null?' ('+golfMyScore+')':'')) : e.date.slice(5).replace("-",".");
+      var dLabel = isGolfPlace ? (e.date.slice(2).replace(/-/g,".")+(golfMyScore!=null?' ('+golfMyScore+')':'')) : e.date.slice(2).replace(/-/g,".");
       if(isGolfPlace) rdCls+=" rd-y";
       rows.push({date:e.date, html:'<button class="rec" data-id="'+e.id+'"><span class="'+rdCls+'">'+dLabel+'</span><span class="rt">'+esc(label)+extra+'</span></button>'});
     });
-    if(!isPlace) (state.events||[]).forEach(function(ev){ if((ev.attendees||[]).indexOf(node.name)>=0 && _inY(ev.date)) rows.push({date:ev.date, html:'<button class="rec" data-ev="'+ev.id+'"><span class="rd">'+ev.date.slice(5).replace("-",".")+'</span><span class="rt">📅 '+esc(ev.title)+'</span></button>'}); });
+    if(!isPlace) (state.events||[]).forEach(function(ev){ if((ev.attendees||[]).indexOf(node.name)>=0 && _inY(ev.date)) rows.push({date:ev.date, html:'<button class="rec" data-ev="'+ev.id+'"><span class="rd">'+ev.date.slice(2).replace(/-/g,".")+'</span><span class="rt">📅 '+esc(ev.title)+'</span></button>'}); });
     if(!rows.length) return '<div class="rel-none">관련 기록 없음</div>';
     rows.sort(byDateDesc);
     return '<div class="rel-recs">'+rows.map(function(r){return r.html;}).join("")+'</div>';
@@ -1534,7 +1534,7 @@
       var ta=rds.reduce(function(s,r){return s+r.th;},0)/rds.length;
       gvHtml='<div class="golf-vs"><div class="gv-avg"><span>나 <b>'+ma.toFixed(1)+'</b></span><span>'+esc(n.name)+' <b>'+ta.toFixed(1)+'</b></span></div><div class="gv-rows">'+
         rds.map(function(r){ var mw=r.mine<r.th, tw=r.th<r.mine;
-          return '<div class="gv-row"><span class="gv-date">'+r.date.slice(5).replace("-",".")+'</span><span class="gv-place">'+esc(r.place)+'</span><span class="gv-sc'+(mw?" win":"")+'">'+r.mine+'</span><span class="gv-sc'+(tw?" win":"")+'">'+r.th+'</span></div>';
+          return '<div class="gv-row"><span class="gv-date">'+r.date.slice(2).replace(/-/g,".")+'</span><span class="gv-place">'+esc(r.place)+'</span><span class="gv-sc'+(mw?" win":"")+'">'+r.mine+'</span><span class="gv-sc'+(tw?" win":"")+'">'+r.th+'</span></div>';
         }).join("")+'</div></div>';
     }
     var d=$("#detail");
