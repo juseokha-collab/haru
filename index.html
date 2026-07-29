@@ -208,10 +208,10 @@
   .detail.show{display:block}
   .sky-tip{position:absolute; z-index:6; pointer-events:none; transform:translate(-50%,-100%); background:rgba(20,26,40,.96); border:1px solid rgba(150,166,210,.28); border-radius:9px; padding:7px 11px; box-shadow:0 8px 22px rgba(0,0,0,.4); white-space:nowrap; line-height:1.4}
   .sky-tip[hidden]{display:none}
-  .golf-stats{position:absolute; left:16px; top:14px; z-index:4; width:150px; max-height:calc(100% - 28px); overflow-y:auto; background:rgba(19,24,38,.5); border:1px solid rgba(150,166,210,.18); border-radius:10px; padding:10px 12px}
+  .golf-stats{position:absolute; left:16px; top:14px; z-index:4; width:176px; max-height:calc(100% - 28px); overflow-y:auto; background:rgba(19,24,38,.5); border:1px solid rgba(150,166,210,.18); border-radius:10px; padding:10px 12px}
   .golf-stats[hidden]{display:none}
-  .golf-stats .gs-courses{font-size:13px; color:var(--sky-ink-2); margin-bottom:8px}
-  .golf-stats .gs-courses b{font-size:19px; font-weight:800; color:var(--sky-ink); margin-right:2px}
+  .golf-stats .gs-courses{font-size:12.5px; color:var(--sky-ink-2); margin-bottom:8px; white-space:nowrap}
+  .golf-stats .gs-courses b{font-size:16px; font-weight:800; color:var(--sky-ink); margin:0 1px}
   .golf-stats .gs-sub{font-size:10.5px; font-weight:700; letter-spacing:.04em; color:#8FE0AC; text-transform:uppercase; margin-bottom:4px}
   .golf-stats .gs-single{font-size:11.5px; color:var(--sky-ink-2); font-variant-numeric:tabular-nums; padding:1.5px 0; display:flex; justify-content:space-between; gap:8px}
   .golf-stats .gs-single b{color:#6FD69A; font-weight:800}
@@ -243,6 +243,8 @@
   .detail .gv-row .gv-place{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; color:var(--sky-ink)}
   .detail .gv-row .gv-sc{flex:none; width:38px; text-align:right; font-variant-numeric:tabular-nums}
   .detail .gv-row .gv-sc.win{color:#5BAE6E; font-weight:800}
+  .detail .gv-row.gv-click{cursor:pointer; border-radius:5px; margin:0 -4px; padding-left:4px; padding-right:4px}
+  .detail .gv-row.gv-click:hover{background:rgba(255,255,255,.08)}
   .detail .with{font-size:12px; color:var(--sky-ink-2); line-height:1.6; max-height:140px; overflow-y:auto; margin:10px 0 2px}
   .detail .with b{color:var(--sky-ink); font-weight:600}
   .detail .with .wn-list{display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:2px 6px}
@@ -1058,9 +1060,17 @@
   }
 
   // ---------- derived graph model ----------
+  // 성좌 연도 필터: "all" | "r2"/"r3"/"r5"(최근 N년) | "2026"(특정 연도)
+  function inGraphYear(d){
+    var gy=graphYear; if(gy==="all") return true;
+    var y=(d||"").slice(0,4); if(!/^\d{4}$/.test(y)) return false;
+    var m=/^r(\d+)$/.exec(gy);
+    if(m){ return +y >= (new Date().getFullYear()-(+m[1]-1)); }
+    return y===gy;
+  }
   function buildGraph(){
     var meetings={}, last={}, pairs={}, S1=String.fromCharCode(1);
-    var _gy=graphYear, _inY=function(d){ return _gy==="all" || (d||"").slice(0,4)===_gy; };   // 연도 필터(성좌 만난횟수)
+    var _inY=inGraphYear;   // 연도 필터(성좌 만난횟수)
     var _recs=[];
     state.entries.forEach(function(e){
       if(!_inY(e.date)) return;
@@ -1120,7 +1130,7 @@
     var names, searchPlaceSet=null;
     if(searchQ){
       var _terms=searchQ.split(/[,，]/).map(function(s){return s.trim();}).filter(Boolean);
-      var _sgy=graphYear, _sInY=function(d){ return _sgy==="all" || (d||"").slice(0,4)===_sgy; };
+      var _sInY=inGraphYear;
       searchPlaceSet={}; var keep={};
       if(_terms.length>1){
         // 여러 사람 동시 검색: 그 사람들이 '같은 자리(끼니/미팅)'에 함께 있었던 경우만 → 그 자리의 사람 + 장소(식당·골프)
@@ -1250,13 +1260,18 @@
   function renderGolfStatsPanel(show, g){
     var el=$("#golfStats"); if(!el) return;
     if(!show){ el.hidden=true; el.innerHTML=""; return; }
-    var courses=Object.keys(g.places||{}).filter(function(pl){ return state.golf&&state.golf[pl]; }).length;
-    var _gy=graphYear, _inY=function(d){ return _gy==="all"||(d||"").slice(0,4)===_gy; };
-    var singles=[];
-    state.entries.forEach(function(e){ if(!_inY(e.date)) return; var s=normHoles(e,"나"); if(s!=null && s<=79) singles.push({date:e.date, score:s}); });
+    var courseSet={}, rounds=0, singles=[];
+    state.entries.forEach(function(e){
+      if(!inGraphYear(e.date) || !e.meals) return;
+      var gp=""; MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m&&m.place&&state.golf&&state.golf[m.place]&&!gp) gp=m.place; });
+      if(!gp) return;
+      rounds++; courseSet[gp]=1;
+      var s=normHoles(e,"나"); if(s!=null && s<=79) singles.push({date:e.date, score:s});
+    });
+    var courses=Object.keys(courseSet).length;
     singles.sort(function(a,b){ return a.date<b.date?1:-1; });
-    var html='<div class="gs-courses"><b>'+courses+'</b> 골프장</div>';
-    html+='<div class="gs-sub">싱글 기록</div>';
+    var html='<div class="gs-courses"><b>'+rounds+'</b> 라운딩 · <b>'+courses+'</b> 골프장</div>';
+    html+='<div class="gs-sub">싱글 기록 '+singles.length+'회</div>';
     html+= singles.length
       ? singles.map(function(s){ return '<div class="gs-single"><span>'+s.date.replace(/-/g,".")+'</span><b>'+s.score+'</b></div>'; }).join("")
       : '<div class="gs-none">아직 없어요</div>';
@@ -1491,7 +1506,7 @@
   function renderRelatedRecs(node){
     var isPlace=node.type==="place", rows=[];
     var isGolfPlace = isPlace && !!(state.golf && state.golf[node.name]);
-    var _gy=graphYear, _inY=function(d){ return _gy==="all" || (d||"").slice(0,4)===_gy; };   // 연도 필터(성좌 연도 선택과 연동)
+    var _inY=inGraphYear;   // 연도 필터(성좌 연도 선택과 연동)
     (isPlace?entriesForPlace(node.name):entriesForPerson(node.name)).filter(function(e){ return _inY(e.date); }).forEach(function(e){
       var extra="", rdCls="rd", golfMyScore=null, label=isPlace? placeSummary(e, node.name) : personSummary(e, node.name);
       var comp=isPlace? placeCompanions(e, node.name) : personCompanions(e, node.name);
@@ -1564,7 +1579,7 @@
       var ta=rds.reduce(function(s,r){return s+r.th;},0)/rds.length;
       gvHtml='<div class="golf-vs"><div class="gv-avg"><span>나 <b>'+ma.toFixed(1)+'</b></span><span>'+esc(n.name)+' <b>'+ta.toFixed(1)+'</b></span></div><div class="gv-rows">'+
         rds.map(function(r){ var mw=r.mine<r.th, tw=r.th<r.mine;
-          return '<div class="gv-row"><span class="gv-date">'+r.date.slice(2).replace(/-/g,".")+'</span><span class="gv-place">'+esc(r.place)+'</span><span class="gv-sc'+(mw?" win":"")+'">'+r.mine+'</span><span class="gv-sc'+(tw?" win":"")+'">'+r.th+'</span></div>';
+          return '<div class="gv-row gv-click" data-date="'+r.date+'" title="이 날짜 기록 수정"><span class="gv-date">'+r.date.slice(2).replace(/-/g,".")+'</span><span class="gv-place">'+esc(r.place)+'</span><span class="gv-sc'+(mw?" win":"")+'">'+r.mine+'</span><span class="gv-sc'+(tw?" win":"")+'">'+r.th+'</span></div>';
         }).join("")+'</div></div>';
     }
     var d=$("#detail");
@@ -1578,6 +1593,9 @@
     d.classList.add("show");
     d.querySelector(".x").onclick=closeDetail;
     var chk=d.querySelector(".gv-chk"); if(chk) chk.onchange=function(){ d.classList.toggle("golf-mode", chk.checked); };
+    Array.prototype.forEach.call(d.querySelectorAll(".gv-click"), function(row){
+      row.onclick=function(){ if(Date.now()-detailOpenedAt<350) return; var e=existingFor(row.getAttribute("data-date")); if(e){ closeDetail(); editEntry(e); } };
+    });
     wireDetailRecs(d);
   }
   function relDays(dstr){
@@ -2412,8 +2430,9 @@
     var sel=$("#graphYearSel"); if(!sel) return;
     var years={}; state.entries.forEach(function(e){ var y=(e.date||"").slice(0,4); if(/^\d{4}$/.test(y)) years[y]=1; });
     var list=Object.keys(years).sort().reverse();
-    if(graphYear!=="all" && !years[graphYear]) graphYear = list.length? list[0] : "all";
-    var html='<option value="all">전체</option>'+list.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join("");
+    var isRecent=/^r\d+$/.test(graphYear);
+    if(graphYear!=="all" && !isRecent && !years[graphYear]) graphYear = list.length? list[0] : "all";
+    var html='<option value="all">전체</option><option value="r2">최근 2년</option><option value="r3">최근 3년</option><option value="r5">최근 5년</option>'+list.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join("");
     if(sel.innerHTML!==html) sel.innerHTML=html;
     sel.value=graphYear;
   }
