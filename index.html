@@ -1126,11 +1126,11 @@
     ctx.setTransform(DPR,0,0,DPR,0,0);
   }
 
-  var placeIndex={}, searchAnchors=[], anchorTargets={}, searchMeTarget=null;   // 인물 검색 시 앵커 배치
+  var placeIndex={}, searchAnchors=[], anchorTargets={}, searchMeTarget=null, searchFocus=[];   // 인물 검색 시 앵커 배치
   function rebuild(){
     var g=buildGraph();
     var allNames=Object.keys(g.meetings);
-    var names, searchPlaceSet=null; searchAnchors=[]; anchorTargets={}; searchMeTarget=null;
+    var names, searchPlaceSet=null; searchAnchors=[]; anchorTargets={}; searchMeTarget=null; searchFocus=[];
     if(searchQ){
       var _terms=searchQ.split(/[,，]/).map(function(s){return s.trim();}).filter(Boolean);
       var _sInY=inGraphYear;
@@ -1162,29 +1162,23 @@
       names=allNames.filter(function(n){ return keep[n]; });
       // 앵커 위치: 1명=좌우 넓게, 2명 이상=우측 상하 분산
       searchAnchors=searchAnchors.filter(function(n){ return names.indexOf(n)>=0; });
+      searchFocus = searchAnchors.slice();   // 검색 인물이 화면 중앙에 오도록(tick에서 재중심화)
       if(searchAnchors.length===1){
-        // 한 명(A): 나(좌)–A(우) 간격은 이전의 2/3. 함께 만난 사람은 만난 강도로 배치
+        // 한 명(A)은 화면 중앙. 나는 좌측. 함께 만난 사람은 만난 강도로 배치
         //  · A보다 자주 본 사람 → 나와 A 사이 (더 자주 볼수록 나에 가깝게)
         //  · A보다 덜 본 사람 → A의 우측으로 방사형 (덜 볼수록 더 멀리)
         var A=searchAnchors[0], mA=(g.meetings[A]||0)||1;
-        searchMeTarget={fx:0.30,fy:0.5}; anchorTargets[A]={fx:0.70,fy:0.5};
+        searchMeTarget={fx:0.15,fy:0.5}; anchorTargets[A]={fx:0.5,fy:0.5};
         var co=names.filter(function(n){ return n!==A; });
         var maxM=mA; co.forEach(function(n){ maxM=Math.max(maxM, g.meetings[n]||0); });
         var g1=[], g2=[];
         co.forEach(function(n){ ((g.meetings[n]||0)>=mA ? g1 : g2).push(n); });
         var byM=function(a,b){ return (g.meetings[b]||0)-(g.meetings[a]||0); }; g1.sort(byM); g2.sort(byM);
         var fanY=function(i,cnt,span){ return cnt<=1? 0.5 : 0.5 + (i-(cnt-1)/2)/(cnt-1)*span; };
-        g1.forEach(function(n,i){ var t=(maxM>mA)?((g.meetings[n]-mA)/(maxM-mA)):0; anchorTargets[n]={fx:Math.max(0.34,0.66-t*0.30), fy:fanY(i,g1.length,0.26)}; });
-        g2.forEach(function(n,i){ var t=(mA>0)?((mA-(g.meetings[n]||0))/mA):0; anchorTargets[n]={fx:Math.min(0.95,0.74+t*0.20), fy:fanY(i,g2.length,0.5)}; });
+        g1.forEach(function(n,i){ var t=(maxM>mA)?((g.meetings[n]-mA)/(maxM-mA)):0; anchorTargets[n]={fx:0.47-t*0.28, fy:fanY(i,g1.length,0.26)}; });
+        g2.forEach(function(n,i){ var t=(mA>0)?((mA-(g.meetings[n]||0))/mA):0; anchorTargets[n]={fx:0.55+t*0.33, fy:fanY(i,g2.length,0.5)}; });
       }
-      else if(searchAnchors.length>=2){ searchMeTarget={fx:0.24,fy:0.5}; var _an=searchAnchors.length; searchAnchors.forEach(function(nm,i){ anchorTargets[nm]={fx:0.76, fy:0.5 + (i-(_an-1)/2)*(0.88/Math.max(1,_an-1))}; }); }
-      // 전체 앵커를 가로 중앙으로 정렬(오른쪽 방사로 인한 쏠림 보정)
-      if(searchMeTarget){
-        var _xs=[searchMeTarget.fx]; Object.keys(anchorTargets).forEach(function(k){ _xs.push(anchorTargets[k].fx); });
-        var _mn=Math.min.apply(null,_xs), _mx=Math.max.apply(null,_xs), _sh=0.5-(_mn+_mx)/2;
-        searchMeTarget.fx=Math.max(0.06,Math.min(0.94,searchMeTarget.fx+_sh));
-        Object.keys(anchorTargets).forEach(function(k){ anchorTargets[k].fx=Math.max(0.06,Math.min(0.94,anchorTargets[k].fx+_sh)); });
-      }
+      else if(searchAnchors.length>=2){ searchMeTarget={fx:0.15,fy:0.5}; var _an=searchAnchors.length; searchAnchors.forEach(function(nm,i){ anchorTargets[nm]={fx:0.5, fy:0.5 + (i-(_an-1)/2)*(0.88/Math.max(1,_an-1))}; }); }
     } else {
       // 장소 유형(골프/식당) 표시 중이면, 그 유형을 나와 '함께 간' 사람만 사람 노드로 (식사만/미팅만 한 사람 제외)
       var golfOn=!hideGolf, restOn=!hideRest, placeFilterActive=(golfOn||restOn), allowPeople=null;
@@ -1358,6 +1352,16 @@
     if(searchMeTarget){ me.vx+=(W*searchMeTarget.fx-me.x)*0.045*k; me.vy+=(H*searchMeTarget.fy-me.y)*0.045*k; }
     else { me.vx+=(W/2-me.x)*0.012*k; me.vy+=(H/2-me.y)*0.012*k; }
     me.vx*=damping; me.vy*=damping; me.x+=me.vx; me.y+=me.vy;
+
+    // 검색 인물(들)을 화면 중앙에 고정: 그 평균 위치가 (W/2,H/2)가 되도록 전체 평행이동
+    if(!dragging && searchFocus && searchFocus.length){
+      var fcx=0, fcy=0, fcn=0;
+      searchFocus.forEach(function(nm){ var fn=nodeIndex[nm]; if(fn){ fcx+=fn.x; fcy+=fn.y; fcn++; } });
+      if(fcn){ var ddx=W/2-fcx/fcn, ddy=H/2-fcy/fcn;
+        nodes.forEach(function(n){ n.x+=ddx; n.y+=ddy; });
+        me.x+=ddx; me.y+=ddy;
+      }
+    }
 
     if(alpha>0.02) alpha*=0.985;
   }
