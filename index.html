@@ -208,6 +208,14 @@
   .detail.show{display:block}
   .sky-tip{position:absolute; z-index:6; pointer-events:none; transform:translate(-50%,-100%); background:rgba(20,26,40,.96); border:1px solid rgba(150,166,210,.28); border-radius:9px; padding:7px 11px; box-shadow:0 8px 22px rgba(0,0,0,.4); white-space:nowrap; line-height:1.4}
   .sky-tip[hidden]{display:none}
+  .golf-stats{position:absolute; left:16px; top:14px; z-index:4; width:150px; max-height:calc(100% - 28px); overflow-y:auto; background:rgba(19,24,38,.5); border:1px solid rgba(150,166,210,.18); border-radius:10px; padding:10px 12px}
+  .golf-stats[hidden]{display:none}
+  .golf-stats .gs-courses{font-size:13px; color:var(--sky-ink-2); margin-bottom:8px}
+  .golf-stats .gs-courses b{font-size:19px; font-weight:800; color:var(--sky-ink); margin-right:2px}
+  .golf-stats .gs-sub{font-size:10.5px; font-weight:700; letter-spacing:.04em; color:#8FE0AC; text-transform:uppercase; margin-bottom:4px}
+  .golf-stats .gs-single{font-size:11.5px; color:var(--sky-ink-2); font-variant-numeric:tabular-nums; padding:1.5px 0; display:flex; justify-content:space-between; gap:8px}
+  .golf-stats .gs-single b{color:#6FD69A; font-weight:800}
+  .golf-stats .gs-none{font-size:11.5px; color:var(--sky-ink-2)}
   .sky-tip .st-v{font-size:12px; font-weight:700; color:var(--sky-ink)}
   .sky-tip .st-b{font-size:11.5px; color:#8FE0AC; margin-top:1px; font-variant-numeric:tabular-nums}
   .sky-tip .st-b .st-nm{color:var(--sky-ink)}
@@ -692,6 +700,7 @@
         <canvas id="sky"></canvas>
         <div class="empty-sky" id="emptySky"><div>아직 기록이 없어요.<br>오른쪽에서 오늘 만난 사람을 적어보면<br>여기에 별이 하나씩 떠올라요.</div></div>
         <div class="sky-tip" id="skyTip" hidden></div>
+        <div class="golf-stats" id="golfStats" hidden></div>
         <div class="detail" id="detail"></div>
       </div>
       <div class="panel-view" id="placesView" hidden></div>
@@ -1233,7 +1242,25 @@
         : (allNames.length
           ? ((meetExact?"‘"+minMeet+"회만’ 만난 사람이":"‘"+minMeet+"회 이상’ 만난 사람이")+" 없어요.<br>위에서 기준(1+/2+/3+…)을 낮춰보세요.")
           : "아직 기록이 없어요.<br>오른쪽에서 오늘 만난 사람을 적어보면<br>여기에 별이 하나씩 떠올라요."); }
+    // 골프만 표시된 뷰 → 좌측 통계 패널
+    renderGolfStatsPanel((!hideGolf && hideRest && !searchQ && !anyRel), g);
     wake();
+  }
+  // 골프 전용 뷰 좌측 패널: 방문한 골프장 수 + 싱글(18홀 환산 ≤79) 기록 리스트
+  function renderGolfStatsPanel(show, g){
+    var el=$("#golfStats"); if(!el) return;
+    if(!show){ el.hidden=true; el.innerHTML=""; return; }
+    var courses=Object.keys(g.places||{}).filter(function(pl){ return state.golf&&state.golf[pl]; }).length;
+    var _gy=graphYear, _inY=function(d){ return _gy==="all"||(d||"").slice(0,4)===_gy; };
+    var singles=[];
+    state.entries.forEach(function(e){ if(!_inY(e.date)) return; var s=normHoles(e,"나"); if(s!=null && s<=79) singles.push({date:e.date, score:s}); });
+    singles.sort(function(a,b){ return a.date<b.date?1:-1; });
+    var html='<div class="gs-courses"><b>'+courses+'</b> 골프장</div>';
+    html+='<div class="gs-sub">싱글 기록</div>';
+    html+= singles.length
+      ? singles.map(function(s){ return '<div class="gs-single"><span>'+s.date.replace(/-/g,".")+'</span><b>'+s.score+'</b></div>'; }).join("")
+      : '<div class="gs-none">아직 없어요</div>';
+    el.innerHTML=html; el.hidden=false;
   }
 
   function visible(node){ if(searchQ) return true; if(node.type==="place"){ return node.golf? !hideGolf : !hideRest; } return node.me || !hiddenRels[node.rel]; }
@@ -1381,7 +1408,7 @@
   // 골프장 위 호버 → 방문횟수·최고기록 플로팅(PC)
   function showSkyTip(node, ev){
     var tip=$("#skyTip"), gv=$("#graphView"); if(!tip||!gv) return;
-    var info=golfPlaceBest(node.name), medals=['🥇','🥈','🥉'];
+    var info=golfPlaceBest(node.name), medals=['🥇','🥈','🥉','4️⃣'];
     var lines = info.top.length
       ? info.top.map(function(b,i){ return '<div class="st-b">'+medals[i]+' '+b.date.slice(2).replace(/-/g,".")+' <span class="st-nm">'+esc(b.name)+'</span>('+b.score+')</div>'; }).join("")
       : '<div class="st-b">기록 없음</div>';
@@ -1431,7 +1458,7 @@
       Object.keys(gs).forEach(function(nm){ var v=+gs[nm]; if(gs[nm]==null||gs[nm]===""||isNaN(v)) return; recs.push({date:e.date, name:nm, score:v}); });
     });
     recs.sort(function(a,b){ return a.score-b.score || (a.date<b.date?1:-1); });
-    return {visits:visits, top:recs.slice(0,3)};
+    return {visits:visits, top:recs.slice(0,4)};
   }
   function placeCompanions(e, place){
     var out=[];
