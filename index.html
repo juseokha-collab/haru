@@ -1266,11 +1266,11 @@
     if(!show){ el.hidden=true; el.innerHTML=""; return; }
     var courseSet={}, rounds=0, singles=[];
     state.entries.forEach(function(e){
-      if(!inGraphYear(e.date) || !e.meals) return;
-      var gp=""; MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m&&m.place&&state.golf&&state.golf[m.place]&&!gp) gp=m.place; });
-      if(!gp) return;
-      rounds++; courseSet[gp]=1;
-      var s=normHoles(e,"나"); if(s!=null && s<=79) singles.push({date:e.date, place:gp, score:s});
+      if(!inGraphYear(e.date)) return;
+      roundsOf(e).forEach(function(r){
+        rounds++; courseSet[r.place]=1;
+        var mine=r.scores["나"]; if(mine!=null&&mine!==""&&!isNaN(+mine)){ var s=Math.round(+mine*18/(r.holes||18)); if(s<=79) singles.push({date:e.date, place:r.place, score:s}); }
+      });
     });
     var courses=Object.keys(courseSet).length;
     singles.sort(function(a,b){ return a.date<b.date?1:-1; });
@@ -1472,12 +1472,11 @@
   function golfPlaceBest(place){
     var visits=0, recs=[];
     state.entries.forEach(function(e){
-      if(!e.meals) return;
-      var here=MEALS.some(function(x){ var m=e.meals[x.key]; return m&&m.place===place; });
-      if(!here) return;
-      visits++;
-      var gs=e.golfScore||{};
-      Object.keys(gs).forEach(function(nm){ var v=+gs[nm]; if(gs[nm]==null||gs[nm]===""||isNaN(v)) return; recs.push({date:e.date, name:nm, score:v}); });
+      roundsOf(e).forEach(function(r){
+        if(r.place!==place) return;
+        visits++;
+        Object.keys(r.scores).forEach(function(nm){ var v=+r.scores[nm]; if(r.scores[nm]==null||r.scores[nm]===""||isNaN(v)) return; recs.push({date:e.date, name:nm, score:v}); });
+      });
     });
     recs.sort(function(a,b){ return a.score-b.score || (a.date<b.date?1:-1); });
     return {visits:visits, top:recs.slice(0,4)};
@@ -1519,7 +1518,8 @@
       var comp=isPlace? placeCompanions(e, node.name) : personCompanions(e, node.name);
       if(isGolfPlace){
         // 날짜 옆 (내 타수), 동반자는 모두 이름(타수). 그 라운드 최저타(우승자) 하이라이트. 골프장명은 헤더에 있으니 생략
-        var gs=e.golfScore||{}, scored={}, vals=[];
+        var _rnd=null; roundsOf(e).forEach(function(r){ if(r.place===node.name && !_rnd) _rnd=r; });
+        var gs=(_rnd&&_rnd.scores)||e.golfScore||{}, scored={}, vals=[];
         if(gs["나"]!=null&&gs["나"]!==""&&!isNaN(+gs["나"])){ scored["나"]=+gs["나"]; vals.push(+gs["나"]); }
         comp.forEach(function(n){ if(gs[n]!=null&&gs[n]!==""&&!isNaN(+gs[n])){ scored[n]=+gs[n]; vals.push(+gs[n]); } });
         var minV=vals.length?Math.min.apply(null,vals):null;
@@ -1620,37 +1620,59 @@
   function loadBiz(b){ b=b||{}; var nm=document.getElementById("bm-name"), tm=document.getElementById("bm-time"), pp=document.getElementById("bm-people"); if(nm)nm.value=b.name||""; if(tm)tm.value=b.time||""; if(pp)pp.value=(b.people||[]).join(", "); }
   function readExercise(){ var mn=document.getElementById("ex-minutes"); return { activity:mval("ex-activity"), minutes:mn?(+mn.value||0):0, weight:mval("ex-weight"), waist:mval("ex-waist") }; }
   function loadExercise(x){ x=x||{}; var a=document.getElementById("ex-activity"), mn=document.getElementById("ex-minutes"), w=document.getElementById("ex-weight"), ws=document.getElementById("ex-waist"); if(a)a.value=x.activity||""; if(mn)mn.value=String(+x.minutes||0); if(w)w.value=(x.weight===0||x.weight)?x.weight:""; if(ws)ws.value=(x.waist===0||x.waist)?x.waist:""; }
-  // 골프 스코어: 현재 입력된 골프 끼니의 동반자 + 나 → 타수 입력
-  function golfPeopleNow(){
-    var meals=readMeals(), gp=[]; MEALS.forEach(function(x){ var m=meals[x.key], chk=document.querySelector('.golf-chk[data-meal="'+x.key+'"]'); if(m.place && chk && chk.checked) (m.people||[]).forEach(function(n){ if(n && gp.indexOf(n)<0) gp.push(n); }); }); return gp;
+  // 골프 스코어: 현재 골프로 체크된 끼니(슬롯)들 → 각각 라운드 스코어 입력(하루 여러 라운드)
+  function golfSlotsNow(){
+    var meals=readMeals(), out=[]; MEALS.forEach(function(x){ var m=meals[x.key], chk=document.querySelector('.golf-chk[data-meal="'+x.key+'"]'); if(m.place && chk && chk.checked) out.push({slot:x.key, place:m.place, people:(m.people||[]).filter(Boolean)}); }); return out;
   }
+  function golfPeopleNow(){ var gp=[]; golfSlotsNow().forEach(function(sl){ sl.people.forEach(function(n){ if(gp.indexOf(n)<0) gp.push(n); }); }); return gp; }
   function renderGolfScore(){
     var wrap=$("#golfScore"); if(!wrap) return;
-    var gp=golfPeopleNow(); wrap.innerHTML="";
-    if(!gp.length){ wrap.hidden=true; return; }
+    var slots=golfSlotsNow(); wrap.innerHTML="";
+    if(!slots.length){ wrap.hidden=true; return; }
     wrap.hidden=false;
-    var lab=document.createElement("label"); lab.textContent='⛳ 골프 스코어'; wrap.appendChild(lab);
-    var grid=document.createElement("div"); grid.className="gs-grid";
-    var sc=draft.golfScore||{};
-    ["나"].concat(gp).forEach(function(n){
-      var row=document.createElement("label"); row.className="gs-row";
-      var nm=document.createElement("span"); nm.className="gs-nm"; nm.textContent=n;
-      var inp=document.createElement("input"); inp.type="number"; inp.className="gs-in"; inp.inputMode="numeric"; inp.placeholder="타수"; if(sc[n]!=null && sc[n]!=="") inp.value=sc[n];
-      inp.onchange=function(){ draft.golfScore=draft.golfScore||{}; var v=inp.value.trim(); if(v==="") delete draft.golfScore[n]; else draft.golfScore[n]=+v; };
-      row.appendChild(nm); row.appendChild(inp); grid.appendChild(row);
+    draft.golfScores = draft.golfScores || {};
+    // 구형 flat(draft.golfScore) → 첫 골프 슬롯으로 이전
+    if(draft.golfScore && Object.keys(draft.golfScore).length){ if(!draft.golfScores[slots[0].slot]) draft.golfScores[slots[0].slot]=draft.golfScore; draft.golfScore=null; }
+    var multi=slots.length>1;
+    slots.forEach(function(sl){
+      var scMap = draft.golfScores[sl.slot] = draft.golfScores[sl.slot] || {};
+      var lab=document.createElement("label"); lab.textContent = multi? ('⛳ '+sl.place+' 스코어') : '⛳ 골프 스코어'; wrap.appendChild(lab);
+      var grid=document.createElement("div"); grid.className="gs-grid";
+      ["나"].concat(sl.people).forEach(function(n){
+        var row=document.createElement("label"); row.className="gs-row";
+        var nm=document.createElement("span"); nm.className="gs-nm"; nm.textContent=n;
+        var inp=document.createElement("input"); inp.type="number"; inp.className="gs-in"; inp.inputMode="numeric"; inp.placeholder="타수"; if(scMap[n]!=null && scMap[n]!=="") inp.value=scMap[n];
+        inp.onchange=(function(map,name,el){ return function(){ var v=el.value.trim(); if(v==="") delete map[name]; else map[name]=+v; }; })(scMap,n,inp);
+        row.appendChild(nm); row.appendChild(inp); grid.appendChild(row);
+      });
+      wrap.appendChild(grid);
     });
-    wrap.appendChild(grid);
   }
-  // 나 기준 특정인과의 골프 전적(스코어 낮은 쪽 승)
+  // ── 골프 라운드(하루 여러 라운드 지원) ─────────────────────────
+  // 골프 끼니(장소가 골프장인 슬롯) 목록
+  function golfSlotsOf(e){ var s=[]; if(e.meals) MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m&&m.place&&state.golf&&state.golf[m.place]) s.push(x.key); }); return s; }
+  // 한 기록의 골프 라운드들 → [{slot, place, holes, scores:{name:score}}]
+  // 저장 형식: e.golfScores={slot:{name:score}} · e.golfHolesBy={slot:holes} (신규) / e.golfScore·e.golfHoles (구형=첫 라운드)
+  function roundsOf(e){
+    var slots=golfSlotsOf(e), out=[], multi=e.golfScores&&typeof e.golfScores==="object";
+    if(!slots.length){
+      if(e.golfScore && Object.keys(e.golfScore).length) out.push({slot:null, place:"(장소 미지정)", holes:e.golfHoles||18, scores:e.golfScore});
+      return out;
+    }
+    slots.forEach(function(sk,i){
+      var scores = (multi && e.golfScores[sk]) ? e.golfScores[sk] : (i===0 ? (e.golfScore||{}) : {});
+      var holes = (e.golfHolesBy && e.golfHolesBy[sk]) || (i===0 ? (e.golfHoles||18) : 18);
+      out.push({slot:sk, place:e.meals[sk].place, holes:holes, scores:scores});
+    });
+    return out;
+  }
+  // 나 기준 특정인과의 골프 전적(스코어 낮은 쪽 승) — 라운드 단위
   function golfRecordVs(name){
-    var w=0,l=0,d=0; state.entries.forEach(function(e){ var gs=e.golfScore; if(!gs) return; var mine=gs["나"], th=gs[name]; if(mine==null||mine===""||th==null||th==="") return; mine=+mine; th=+th; if(mine<th) w++; else if(mine>th) l++; else d++; }); return {w:w,l:l,d:d,n:w+l+d};
+    var w=0,l=0,d=0; state.entries.forEach(function(e){ roundsOf(e).forEach(function(r){ var mine=r.scores["나"], th=r.scores[name]; if(mine==null||mine===""||th==null||th==="") return; mine=+mine; th=+th; if(isNaN(mine)||isNaN(th)) return; if(mine<th) w++; else if(mine>th) l++; else d++; }); }); return {w:w,l:l,d:d,n:w+l+d};
   }
   // 둘이 함께 친 라운드 목록(날짜 최신순): {date, place, mine, th}
   function golfRoundsVs(name){
-    var rounds=[]; state.entries.forEach(function(e){ var gs=e.golfScore; if(!gs) return; var mine=gs["나"], th=gs[name]; if(mine==null||mine===""||th==null||th==="") return; mine=+mine; th=+th; if(isNaN(mine)||isNaN(th)) return;
-      var place=""; if(e.meals) MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m&&m.place&&state.golf&&state.golf[m.place]&&!place) place=m.place; });
-      rounds.push({date:e.date, place:place||"(장소)", mine:mine, th:th});
-    });
+    var rounds=[]; state.entries.forEach(function(e){ roundsOf(e).forEach(function(r){ var mine=r.scores["나"], th=r.scores[name]; if(mine==null||mine===""||th==null||th==="") return; mine=+mine; th=+th; if(isNaN(mine)||isNaN(th)) return; rounds.push({date:e.date, place:r.place||"(장소)", mine:mine, th:th}); }); });
     rounds.sort(byDateDesc); return rounds;
   }
   function mealPeople(m){ var out=[]; if(m) MEALS.forEach(function(x){ ((m[x.key]||{}).people||[]).forEach(function(n){ if(out.indexOf(n)<0)out.push(n); }); }); return out; }
@@ -1713,15 +1735,15 @@
     draft.people.forEach(function(p){ state.people[p.name]={rel:p.rel}; });
     var withAll=mealPeople(draft.meals).concat((draft.bizmeet&&draft.bizmeet.people)||[]);
     withAll.forEach(function(n){ if(!state.people[n]) state.people[n]={rel:"etc"}; });
-    // 골프 스코어: 현재 골프 동반자 + 나 것만 남김
-    var gpNow=golfPeopleNow(), gsAllowed={"나":1}; gpNow.forEach(function(n){ gsAllowed[n]=1; });
-    var gScore={}; Object.keys(draft.golfScore||{}).forEach(function(n){ if(gsAllowed[n] && draft.golfScore[n]!=null && draft.golfScore[n]!=="") gScore[n]=+draft.golfScore[n]; });
-    draft.golfScore=gScore;
+    // 골프 스코어: 골프 체크된 각 라운드(슬롯)별로 나+동반자 것만 남김
+    var gSlots=golfSlotsNow(), gScores={};
+    gSlots.forEach(function(sl){ var src=(draft.golfScores&&draft.golfScores[sl.slot])||{}, allowed={"나":1}; sl.people.forEach(function(n){ allowed[n]=1; }); var m={}; Object.keys(src).forEach(function(n){ if(allowed[n] && src[n]!=null && src[n]!=="") m[n]=+src[n]; }); if(Object.keys(m).length) gScores[sl.slot]=m; });
+    draft.golfScores=gScores; draft.golfScore={};
     var ex=existingFor(draft.date);
     var names=draft.people.map(function(p){return p.name;});
     withAll.forEach(function(n){ if(names.indexOf(n)<0) names.push(n); }); // 식사·업무미팅 동행도 만난 사람에 포함
-    if(ex){ ex.people=names; ex.schedule=draft.schedule; ex.mark=draft.mark; ex.meals=draft.meals; ex.bizmeet=draft.bizmeet; ex.drinks=draft.drinks; ex.exercise=draft.exercise; ex.golfScore=gScore; ex.thoughts=draft.thoughts; ex.learning=draft.learning; ex.ts=Date.now(); }
-    else state.entries.push({id:id(), date:draft.date, people:names, schedule:draft.schedule, mark:draft.mark, meals:draft.meals, bizmeet:draft.bizmeet, drinks:draft.drinks, exercise:draft.exercise, golfScore:gScore, thoughts:draft.thoughts, learning:draft.learning, ts:Date.now()});
+    if(ex){ ex.people=names; ex.schedule=draft.schedule; ex.mark=draft.mark; ex.meals=draft.meals; ex.bizmeet=draft.bizmeet; ex.drinks=draft.drinks; ex.exercise=draft.exercise; ex.golfScore={}; ex.golfScores=gScores; ex.thoughts=draft.thoughts; ex.learning=draft.learning; ex.ts=Date.now(); }
+    else state.entries.push({id:id(), date:draft.date, people:names, schedule:draft.schedule, mark:draft.mark, meals:draft.meals, bizmeet:draft.bizmeet, drinks:draft.drinks, exercise:draft.exercise, golfScore:{}, golfScores:gScores, thoughts:draft.thoughts, learning:draft.learning, ts:Date.now()});
     save();
     flash("저장했어요 ✦");
     loadDraft();   // 저장 후에도 입력 내용을 비우지 않고 그대로 남김
@@ -1743,7 +1765,7 @@
 
   function scrollToComposer(){ var c=document.querySelector(".composer-wide"); if(c){ c.scrollIntoView({behavior:reduce?"auto":"smooth", block:"start"}); var f=document.getElementById("schedule"); } }
   function editEntry(e, noScroll){
-    draft={ date:e.date, people:e.people.map(function(n){return {name:n, rel:relOf(n)};}), schedule:e.schedule||"", mark:!!e.mark, meals:e.meals?JSON.parse(JSON.stringify(e.meals)):emptyMeals(), bizmeet:e.bizmeet?JSON.parse(JSON.stringify(e.bizmeet)):emptyBiz(), drinks:e.drinks?JSON.parse(JSON.stringify(e.drinks)):emptyDrinks(), exercise:e.exercise?JSON.parse(JSON.stringify(e.exercise)):emptyExercise(), golfScore:e.golfScore?JSON.parse(JSON.stringify(e.golfScore)):{}, thoughts:e.thoughts, learning:e.learning };
+    draft={ date:e.date, people:e.people.map(function(n){return {name:n, rel:relOf(n)};}), schedule:e.schedule||"", mark:!!e.mark, meals:e.meals?JSON.parse(JSON.stringify(e.meals)):emptyMeals(), bizmeet:e.bizmeet?JSON.parse(JSON.stringify(e.bizmeet)):emptyBiz(), drinks:e.drinks?JSON.parse(JSON.stringify(e.drinks)):emptyDrinks(), exercise:e.exercise?JSON.parse(JSON.stringify(e.exercise)):emptyExercise(), golfScore:e.golfScore?JSON.parse(JSON.stringify(e.golfScore)):{}, golfScores:e.golfScores?JSON.parse(JSON.stringify(e.golfScores)):{}, thoughts:e.thoughts, learning:e.learning };
     loadDraft(); if(!noScroll) scrollToComposer();
   }
   function delEntry(e){
@@ -1960,12 +1982,11 @@
     var el=$("#adminGolf"); if(!el) return;
     var allRounds=[];
     state.entries.forEach(function(e){
-      var gplace=""; if(e.meals) MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m&&m.place&&state.golf&&state.golf[m.place]&&!gplace) gplace=m.place; });
-      var hasScore=e.golfScore&&Object.keys(e.golfScore).length;
-      if(!gplace && !hasScore) return;
-      var ppl=[]; if(e.meals&&gplace) MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m&&m.place===gplace)(m.people||[]).forEach(function(n){ if(ppl.indexOf(n)<0) ppl.push(n); }); });
-      Object.keys(e.golfScore||{}).forEach(function(n){ if(n!=="나"&&ppl.indexOf(n)<0) ppl.push(n); });
-      allRounds.push({e:e, date:e.date, place:gplace||"(장소 미지정)", ppl:ppl, holes:e.golfHoles||18});
+      roundsOf(e).forEach(function(r){
+        var ppl=[]; if(r.slot && e.meals && e.meals[r.slot]) (e.meals[r.slot].people||[]).forEach(function(n){ if(ppl.indexOf(n)<0) ppl.push(n); });
+        Object.keys(r.scores).forEach(function(n){ if(n!=="나"&&ppl.indexOf(n)<0) ppl.push(n); });
+        allRounds.push({e:e, slot:r.slot, date:e.date, place:r.place||"(장소 미지정)", ppl:ppl, holes:r.holes||18, scores:r.scores});
+      });
     });
     allRounds.sort(function(a,b){ return a.date<b.date?1:a.date>b.date?-1:0; });
     // 연도 목록
@@ -1975,7 +1996,7 @@
     // 목록 필터: 연도 + (인물 선택 시) 그 인물과 함께한 라운드만
     var listRounds=allRounds.filter(function(r){
       if(golfListPeriod!=="all" && r.date.slice(0,4)!==golfListPeriod) return false;
-      if(golfCompare){ var gs=r.e&&r.e.golfScore; if(!gs || gs[golfCompare]==null || gs[golfCompare]==="") return false; }
+      if(golfCompare){ var gs=r.scores||{}; if(gs[golfCompare]==null || gs[golfCompare]==="") return false; }
       return true;
     });
     el.innerHTML="";
@@ -2021,11 +2042,14 @@
     var inP=function(dt){ return /^\d{4}-\d{2}-\d{2}$/.test(dt) && (!cutoff||dt>=cutoff); };
     var myPts=[], cmpPts=[], names={};
     state.entries.forEach(function(e){
-      if(e.golfScore) Object.keys(e.golfScore).forEach(function(k){ if(k!=="나") names[k]=1; });
+      var rs=roundsOf(e);
+      rs.forEach(function(r){ Object.keys(r.scores).forEach(function(k){ if(k!=="나") names[k]=1; }); });
       if(!inP(e.date)) return;
-      var h=e.golfHoles||18;
-      var mv=normHoles(e,"나"); if(mv!=null) myPts.push({date:e.date, score:mv, raw:+e.golfScore["나"], holes:h});
-      if(golfCompare){ var cv=normHoles(e,golfCompare); if(cv!=null) cmpPts.push({date:e.date, score:cv, raw:+e.golfScore[golfCompare], holes:h}); }
+      rs.forEach(function(r){
+        var h=r.holes||18, mine=r.scores["나"];
+        if(mine!=null&&mine!==""&&!isNaN(+mine)) myPts.push({date:e.date, score:Math.round(+mine*18/h), raw:+mine, holes:h});
+        if(golfCompare){ var cvv=r.scores[golfCompare]; if(cvv!=null&&cvv!==""&&!isNaN(+cvv)) cmpPts.push({date:e.date, score:Math.round(+cvv*18/h), raw:+cvv, holes:h}); }
+      });
     });
     myPts.sort(byAsc); cmpPts.sort(byAsc);
     var cnt=myPts.length, avg=cnt? myPts.reduce(function(s,p){return s+p.score;},0)/cnt : 0;
@@ -2127,7 +2151,7 @@
   }
   // 골프 라운드 한 행(편집 후 저장 버튼으로 커밋). r.e가 null이면 새 라운드(초안)
   function buildGolfRow(r){
-    var e=r.e, gs=(e&&e.golfScore)||{}, isDraft=!e;
+    var e=r.e, gs=r.scores||{}, isDraft=!e;
     var row=document.createElement("div"); row.className="adm-golf-row"+(isDraft?" is-draft":"");
     var head=document.createElement("div"); head.className="agr-head";
     var dIn=document.createElement("input"); dIn.type="date"; dIn.className="agr-date-in"; dIn.value=r.date;
@@ -2148,28 +2172,27 @@
     var addBtn=document.createElement("button"); addBtn.type="button"; addBtn.className="agr-add"; addBtn.textContent="+ 동반자";
     addBtn.onclick=function(){ var c=makeScoreCell("", "", false); sc.appendChild(c); var ni=c.querySelector(".agr-nm-in"); if(ni) ni.focus(); };
     var saveBtn=document.createElement("button"); saveBtn.type="button"; saveBtn.className="agr-save"; saveBtn.textContent="저장";
-    row._apply=function(){ return applyGolfRound(e, r.place, dIn, pIn, sc, hSel, r.draftRef); };
+    row._apply=function(){ return applyGolfRound(e, r.place, dIn, pIn, sc, hSel, r.slot, r.draftRef); };
     saveBtn.onclick=function(){ var ent=row._apply(); save(); refresh(); rebuild(); renderAdminGolf(); golfToast("✓ 저장 완료 · "+((ent&&ent.date)||dIn.value)); };
     acts.appendChild(addBtn); acts.appendChild(saveBtn);
     row.appendChild(head); row.appendChild(sc); row.appendChild(acts);
     delR.onclick=function(){
       if(isDraft){ var i=golfDrafts.indexOf(r.draftRef); if(i>=0) golfDrafts.splice(i,1); renderAdminGolf(); return; }
-      askConfirm({ title:"골프 라운드 삭제", message:e.date+" · "+r.place+" 라운드를 삭제할까요?\n해당 날짜 기록의 골프 내용도 함께 정리돼요.", okText:"삭제", danger:true, onOk:function(){ deleteGolfRound(e, r.place); renderAdminGolf(); golfToast("✓ 라운드 삭제됨"); } });
+      askConfirm({ title:"골프 라운드 삭제", message:e.date+" · "+r.place+" 라운드를 삭제할까요?\n이 라운드의 골프 내용만 정리돼요.", okText:"삭제", danger:true, onOk:function(){ deleteGolfRound(e, r.place, r.slot); renderAdminGolf(); golfToast("✓ 라운드 삭제됨"); } });
     };
     return row;
   }
   // 편집된 라운드 값을 기록에 반영(날짜·골프장·홀수·나·동반자 점수) — 저장/렌더는 호출측에서
   // e가 null이면 새 라운드: 날짜의 기존 기록에 합치거나 새 기록 생성. 반영한 entry를 반환
-  function applyGolfRound(e, oldPlace, dIn, pIn, sc, hSel, draftRef){
+  function applyGolfRound(e, oldPlace, dIn, pIn, sc, hSel, slot, draftRef){
     var nd=dIn.value; if(!/^\d{4}-\d{2}-\d{2}$/.test(nd)) nd=(e&&e.date)||todayStr();
     if(!e){
       e=existingFor(nd);
-      if(!e){ e={id:id(), date:nd, people:[], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), drinks:emptyDrinks(), exercise:emptyExercise(), golfScore:{}, thoughts:"", learning:"", ts:Date.now()}; state.entries.push(e); }
-      oldPlace="";
+      if(!e){ e={id:id(), date:nd, people:[], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), drinks:emptyDrinks(), exercise:emptyExercise(), golfScore:{}, golfScores:{}, thoughts:"", learning:"", ts:Date.now()}; state.entries.push(e); }
+      oldPlace=""; slot=null;
       if(draftRef){ var di=golfDrafts.indexOf(draftRef); if(di>=0) golfDrafts.splice(di,1); }
     }
     e.date=nd;
-    if(hSel){ var hv=+hSel.value; if(hv&&hv!==18) e.golfHoles=hv; else delete e.golfHoles; }
     var newPlace=(pIn.value||"").trim()||oldPlace||"(장소 미지정)";
     var gsNew={}, people=[], seen={};
     Array.prototype.forEach.call(sc.querySelectorAll(".agr-sc"), function(cell){
@@ -2181,12 +2204,17 @@
       if(v!=="" && !isNaN(+v)) gsNew[name]=+v;
     });
     e.meals=e.meals||emptyMeals();
-    var slot=null; MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m && m.place===oldPlace && !slot) slot=x.key; });
+    // 이 라운드의 슬롯 결정: 지정된 슬롯 → oldPlace 슬롯 → 빈 슬롯
+    if(!slot && oldPlace){ MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m && m.place===oldPlace && !slot) slot=x.key; }); }
     if(!slot){ ["lunch","dinner","breakfast","special"].forEach(function(s){ if(!slot && !((e.meals[s]||{}).place)) slot=s; }); slot=slot||"lunch"; }
     var food=(e.meals[slot]||{}).food||"";
     e.meals[slot]={place:newPlace, food:food, people:people.slice()};
     state.golf=state.golf||{}; state.golf[newPlace]=true;
-    e.golfScore=gsNew;
+    // 라운드(슬롯)별 스코어·홀수 저장 (구형 flat은 첫 골프 슬롯으로 이전 후 제거)
+    e.golfScores=e.golfScores||{};
+    if(!Object.keys(e.golfScores).length && e.golfScore && Object.keys(e.golfScore).length){ var _s0=golfSlotsOf(e)[0]; if(_s0) e.golfScores[_s0]=e.golfScore; }
+    e.golfScores[slot]=gsNew; e.golfScore={};
+    e.golfHolesBy=e.golfHolesBy||{}; if(hSel){ var hv=+hSel.value; if(hv&&hv!==18) e.golfHolesBy[slot]=hv; else delete e.golfHolesBy[slot]; }
     people.forEach(function(n){ if(!state.people[n]) state.people[n]={rel:"etc"}; });
     var np=[]; MEALS.forEach(function(x){ ((e.meals[x.key]||{}).people||[]).forEach(function(n){ if(np.indexOf(n)<0) np.push(n); }); });
     if(e.bizmeet&&e.bizmeet.people) e.bizmeet.people.forEach(function(n){ if(np.indexOf(n)<0) np.push(n); });
@@ -2194,10 +2222,12 @@
     e.ts=Date.now();
     return e;
   }
-  // 골프 라운드 삭제: 그 골프 끼니·스코어 제거 + 사람 목록 재계산, 남은 내용 없으면 기록 자체 삭제
-  function deleteGolfRound(e, place){
-    if(e.meals) MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m && m.place && (m.place===place || (state.golf&&state.golf[m.place]))) e.meals[x.key]={place:"",food:"",people:[]}; });
-    e.golfScore={};
+  // 골프 라운드 삭제: 지정 슬롯(없으면 place 매칭 슬롯)의 골프 끼니·스코어만 제거 + 사람 재계산
+  function deleteGolfRound(e, place, slot){
+    var kill=function(sk){ if(!e.meals||!e.meals[sk]) return; e.meals[sk]={place:"",food:"",people:[]}; if(e.golfScores) delete e.golfScores[sk]; if(e.golfHolesBy) delete e.golfHolesBy[sk]; };
+    if(slot){ kill(slot); }
+    else if(e.meals){ MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m && m.place && (m.place===place || (state.golf&&state.golf[m.place]))) kill(x.key); }); }
+    if(!e.golfScores || !Object.keys(e.golfScores).length) e.golfScore={};   // 남은 라운드 없으면 flat도 정리
     var np=[]; if(e.meals) MEALS.forEach(function(x){ ((e.meals[x.key]||{}).people||[]).forEach(function(n){ if(np.indexOf(n)<0) np.push(n); }); });
     if(e.bizmeet && e.bizmeet.people) e.bizmeet.people.forEach(function(n){ if(np.indexOf(n)<0) np.push(n); });
     e.people=np;
@@ -2688,7 +2718,10 @@
       var slot=null; ["breakfast","lunch","dinner","special"].forEach(function(s){ if(e.meals[s]&&e.meals[s].place===place) slot=s; });
       if(!slot) slot=["lunch","dinner","breakfast","special"].filter(function(s){ return !(e.meals[s]&&e.meals[s].place); })[0]||"lunch";
       e.meals[slot]={place:place,food:"",people:people.slice()};
-      e.golfScore=e.golfScore||{}; Object.keys(gs).forEach(function(k){ e.golfScore[k]=gs[k]; });
+      // 슬롯별 스코어로 저장(하루 여러 라운드 지원). 구형 flat이 있으면 첫 골프 슬롯으로 이전
+      e.golfScores=e.golfScores||{};
+      if(!Object.keys(e.golfScores).length && e.golfScore && Object.keys(e.golfScore).length){ var _cs0=golfSlotsOf(e)[0]; if(_cs0 && _cs0!==slot) e.golfScores[_cs0]=e.golfScore; }
+      e.golfScores[slot]=gs; e.golfScore={};
       people.forEach(function(n){ if(e.people.indexOf(n)<0) e.people.push(n); });
       e.ts=Date.now(); added++;
     });
@@ -2835,7 +2868,48 @@
     state.todos=sortTodos(arr); save();
   }
 
+  // 같은 날짜에 기록이 둘 이상이면 하나로 병합(끼니는 빈 슬롯으로 이동, 골프 라운드는 슬롯별 스코어로 보존)
+  // → 달력(마지막)과 수정(첫번째)이 서로 다른 기록을 보던 문제 해결 + 하루 여러 라운드 자연 지원
+  function mergeDuplicateDates(){
+    var byDate={}, order=[];
+    (state.entries||[]).forEach(function(e){ if(!byDate[e.date]){ byDate[e.date]=[e]; order.push(e.date); } else byDate[e.date].push(e); });
+    var changed=false, out=[];
+    order.forEach(function(dt){
+      var list=byDate[dt];
+      if(list.length===1){ out.push(list[0]); return; }
+      changed=true;
+      var base=list[0]; base.meals=base.meals||emptyMeals(); base.golfScores=base.golfScores||{};
+      if(!Object.keys(base.golfScores).length && base.golfScore && Object.keys(base.golfScore).length){ var b0=golfSlotsOf(base)[0]; if(b0) base.golfScores[b0]=base.golfScore; }
+      base.golfScore={}; base.people=base.people||[];
+      for(var i=1;i<list.length;i++){
+        var e2=list[i];
+        var e2Scores=e2.golfScores||{};
+        if(!Object.keys(e2Scores).length && e2.golfScore && Object.keys(e2.golfScore).length){ var s2=golfSlotsOf(e2)[0]; if(s2){ e2Scores={}; e2Scores[s2]=e2.golfScore; } }
+        if(e2.meals) MEALS.forEach(function(x){
+          var m=e2.meals[x.key]; if(!m || (!m.place && !m.food && !((m.people||[]).length))) return;
+          var target=null; MEALS.forEach(function(y){ if(!target){ var bm=base.meals[y.key]; if(!bm || (!bm.place && !bm.food && !((bm.people||[]).length))) target=y.key; } });
+          if(!target) target=x.key;
+          base.meals[target]={place:m.place||"", food:m.food||"", people:(m.people||[]).slice()};
+          if(e2Scores[x.key]) base.golfScores[target]=e2Scores[x.key];
+          if(e2.golfHolesBy && e2.golfHolesBy[x.key]){ base.golfHolesBy=base.golfHolesBy||{}; base.golfHolesBy[target]=e2.golfHolesBy[x.key]; }
+        });
+        (e2.people||[]).forEach(function(n){ if(base.people.indexOf(n)<0) base.people.push(n); });
+        if(e2.schedule && (base.schedule||"").indexOf(e2.schedule)<0) base.schedule=(base.schedule?base.schedule+" · ":"")+e2.schedule;
+        base.mark=base.mark||e2.mark;
+        if((!base.bizmeet || (!base.bizmeet.name && !((base.bizmeet.people||[]).length))) && e2.bizmeet) base.bizmeet=e2.bizmeet;
+        if(e2.drinks){ base.drinks=base.drinks||emptyDrinks(); DRINKS.forEach(function(dk){ base.drinks[dk.key]=(+base.drinks[dk.key]||0)+(+e2.drinks[dk.key]||0); }); }
+        if((!base.exercise || !exHasContent(base.exercise)) && e2.exercise && exHasContent(e2.exercise)) base.exercise=e2.exercise;
+        if(e2.thoughts && (base.thoughts||"").indexOf(e2.thoughts)<0) base.thoughts=(base.thoughts?base.thoughts+" · ":"")+e2.thoughts;
+        if(e2.learning && (base.learning||"").indexOf(e2.learning)<0) base.learning=(base.learning?base.learning+" · ":"")+e2.learning;
+      }
+      base.ts=Date.now(); out.push(base);
+    });
+    if(changed){ state.entries=out; save(); }
+    return changed;
+  }
+
   // ---------- boot ----------
+  mergeDuplicateDates();
   (function(){
     var d=new Date();
     var st=$("#skyDate"); if(st) st.textContent = d.getFullYear()+". "+pad(d.getMonth()+1)+". "+pad(d.getDate())+". ("+DOW[d.getDay()]+")";
@@ -2857,6 +2931,7 @@
     replace:function(s, keepDraft){
       if(!s || !Array.isArray(s.entries)) return;
       state={ people:s.people||{}, entries:s.entries||[], events:s.events||[], golf:s.golf||{}, todos:s.todos||[] };
+      mergeDuplicateDates();
       save();
       if(!keepDraft) resetDraft();
       refresh(); rebuild(); renderTodos(); closeDetail(); updateCalStatus();
