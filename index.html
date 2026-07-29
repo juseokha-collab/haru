@@ -1355,14 +1355,18 @@
       var fx=dx/d*f, fy=dy/d*f;
       l.a.vx+=fx; l.a.vy+=fy; l.b.vx-=fx; l.b.vy-=fy;
     });
-    // 골프장: 자주/최근 방문할수록 나(중심)에 더 가깝게
-    nodes.forEach(function(n){
-      if(n===dragging || n.type!=="place" || !n.golf || !visible(n)) return;
-      var dx=me.x-n.x, dy=me.y-n.y, d=Math.sqrt(dx*dx+dy*dy)||0.01;
-      var rest=230 - (n.golfClose||0)*160;   // close 1 → 70(가까이), 0 → 230(멀리)
-      var f=(d-rest)*0.02*k*0.6;
-      n.vx+=dx/d*f; n.vy+=dy/d*f;
-    });
+    // 방사형 레이어링: 사람은 안쪽 원(0~5), 식당·골프장은 바깥 링(5~10). 검색 중엔 앵커 우선이라 생략
+    if(!searchFocus.length){
+      var Rvis=Math.min(W,H)*0.46, innerR=Rvis*0.5;
+      nodes.forEach(function(n){
+        if(n===dragging || !visible(n)) return;
+        var dx=n.x-me.x, dy=n.y-me.y, d=Math.sqrt(dx*dx+dy*dy)||0.01, target;
+        if(n.type==="place"){ target = d<innerR? innerR : (d>Rvis? Rvis : d); }   // 장소: [5,10]
+        else { target = d>innerR? innerR : d; }                                    // 사람: [0,5]
+        var f=(target-d)*0.04*k;
+        n.vx+=dx/d*f; n.vy+=dy/d*f;
+      });
+    }
     // gravity to center + integrate. 검색 앵커 인물은 지정 좌표로 강하게 끌어당김
     nodes.forEach(function(n){
       if(n===dragging) return;
