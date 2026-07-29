@@ -213,8 +213,11 @@
   .golf-stats .gs-courses{font-size:12.5px; color:var(--sky-ink-2); margin-bottom:8px; white-space:nowrap}
   .golf-stats .gs-courses b{font-size:16px; font-weight:800; color:var(--sky-ink); margin:0 1px}
   .golf-stats .gs-sub{font-size:10.5px; font-weight:700; letter-spacing:.04em; color:#8FE0AC; text-transform:uppercase; margin-bottom:4px}
-  .golf-stats .gs-single{font-size:11.5px; color:var(--sky-ink-2); font-variant-numeric:tabular-nums; padding:1.5px 0; display:flex; justify-content:space-between; gap:8px}
-  .golf-stats .gs-single b{color:#6FD69A; font-weight:800}
+  .golf-stats .gs-single{font-size:11.5px; color:var(--sky-ink-2); font-variant-numeric:tabular-nums; padding:1.5px 0; display:flex; align-items:center; gap:6px}
+  .golf-stats .gs-single .gsd{flex:none}
+  .golf-stats .gs-single .gsp{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--sky-ink)}
+  .golf-stats .gs-single .gss{flex:none; font-weight:600}
+  .golf-stats .gs-single .gss.win{color:#6FD69A; font-weight:800}
   .golf-stats .gs-none{font-size:11.5px; color:var(--sky-ink-2)}
   .sky-tip .st-v{font-size:12px; font-weight:700; color:var(--sky-ink)}
   .sky-tip .st-b{font-size:11.5px; color:#8FE0AC; margin-top:1px; font-variant-numeric:tabular-nums}
@@ -1266,14 +1269,15 @@
       var gp=""; MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m&&m.place&&state.golf&&state.golf[m.place]&&!gp) gp=m.place; });
       if(!gp) return;
       rounds++; courseSet[gp]=1;
-      var s=normHoles(e,"나"); if(s!=null && s<=79) singles.push({date:e.date, score:s});
+      var s=normHoles(e,"나"); if(s!=null && s<=79) singles.push({date:e.date, place:gp, score:s});
     });
     var courses=Object.keys(courseSet).length;
     singles.sort(function(a,b){ return a.date<b.date?1:-1; });
+    var minS=singles.length? Math.min.apply(null, singles.map(function(s){return s.score;})) : null;   // 싱글 중 최저타
     var html='<div class="gs-courses"><b>'+rounds+'</b> 라운딩 · <b>'+courses+'</b> 골프장</div>';
     html+='<div class="gs-sub">싱글 기록 '+singles.length+'회</div>';
     html+= singles.length
-      ? singles.map(function(s){ return '<div class="gs-single"><span>'+s.date.replace(/-/g,".")+'</span><b>'+s.score+'</b></div>'; }).join("")
+      ? singles.map(function(s){ return '<div class="gs-single"><span class="gsd">'+s.date.slice(2).replace(/-/g,".")+'</span><span class="gsp">'+esc(s.place)+'</span><span class="gss'+(s.score===minS?" win":"")+'">'+s.score+'</span></div>'; }).join("")
       : '<div class="gs-none">아직 없어요</div>';
     el.innerHTML=html; el.hidden=false;
   }
