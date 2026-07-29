@@ -206,6 +206,11 @@
     background:rgba(19,24,38,.92); backdrop-filter:blur(8px); border:1px solid rgba(150,166,210,.28);
     border-radius:12px; padding:14px; color:var(--sky-ink); box-shadow:0 12px 40px rgba(0,0,0,.5); display:none}
   .detail.show{display:block}
+  .sky-tip{position:absolute; z-index:6; pointer-events:none; transform:translate(-50%,-100%); background:rgba(20,26,40,.96); border:1px solid rgba(150,166,210,.28); border-radius:9px; padding:7px 11px; box-shadow:0 8px 22px rgba(0,0,0,.4); white-space:nowrap; line-height:1.4}
+  .sky-tip[hidden]{display:none}
+  .sky-tip .st-v{font-size:12px; font-weight:700; color:var(--sky-ink)}
+  .sky-tip .st-b{font-size:11.5px; color:#8FE0AC; margin-top:1px; font-variant-numeric:tabular-nums}
+  .sky-tip .st-b .st-nm{color:var(--sky-ink)}
   .detail .dh{display:flex; align-items:center; justify-content:space-between; gap:10px}
   .detail .nm{display:flex; align-items:center; gap:9px; font-weight:700; font-size:16px}
   .detail .nm .dot{width:11px; height:11px; border-radius:50%}
@@ -686,6 +691,7 @@
       <div class="sky-wrap" id="graphView">
         <canvas id="sky"></canvas>
         <div class="empty-sky" id="emptySky"><div>아직 기록이 없어요.<br>오른쪽에서 오늘 만난 사람을 적어보면<br>여기에 별이 하나씩 떠올라요.</div></div>
+        <div class="sky-tip" id="skyTip" hidden></div>
         <div class="detail" id="detail"></div>
       </div>
       <div class="panel-view" id="placesView" hidden></div>
@@ -1345,13 +1351,26 @@
   }
   canvas.addEventListener("mousemove",function(ev){
     var p=pos(ev);
-    if(dragging){ dragging.x=p.x; dragging.y=p.y; dragging.vx=0; dragging.vy=0; alpha=Math.max(alpha,0.5); wake(); return; }
+    if(dragging){ dragging.x=p.x; dragging.y=p.y; dragging.vx=0; dragging.vy=0; alpha=Math.max(alpha,0.5); hideSkyTip(); wake(); return; }
     var pk=pick(p), prev=hover;
     hover=pk;
     canvas.style.cursor=pk?"pointer":"default";
+    if(pk && pk.type==="place" && pk.golf) showSkyTip(pk, ev); else hideSkyTip();
     if(hover!==prev) wake();
   });
-  canvas.addEventListener("mouseleave",function(){ if(hover){ hover=null; wake(); } });
+  canvas.addEventListener("mouseleave",function(){ hideSkyTip(); if(hover){ hover=null; wake(); } });
+  // 골프장 위 호버 → 방문횟수·최고기록 플로팅(PC)
+  function showSkyTip(node, ev){
+    var tip=$("#skyTip"), gv=$("#graphView"); if(!tip||!gv) return;
+    var info=golfPlaceBest(node.name);
+    var l2 = info.best ? (info.best.date.slice(2).replace(/-/g,".")+' <span class="st-nm">'+esc(info.best.name)+'</span>('+info.best.score+')') : '기록 없음';
+    tip.innerHTML='<div class="st-v">'+info.visits+'회 방문</div><div class="st-b">🏆 '+l2+'</div>';
+    var r=gv.getBoundingClientRect();
+    tip.style.left=(ev.clientX-r.left)+"px";
+    tip.style.top=(ev.clientY-r.top-14)+"px";
+    tip.hidden=false;
+  }
+  function hideSkyTip(){ var tip=$("#skyTip"); if(tip&&!tip.hidden) tip.hidden=true; }
   canvas.addEventListener("mousedown",function(ev){ var p=pos(ev); dragging=pick(p); if(dragging&&!dragging.me){ selectNode(dragging); } wake(); });
   window.addEventListener("mouseup",function(){ if(dragging){ dragging=null; wake(); } });
   canvas.addEventListener("click",function(ev){ var p=pos(ev); var n=pick(p); if(n&&!n.me) selectNode(n); else if(!n) closeDetail(); wake(); });
@@ -1378,6 +1397,19 @@
     if(e.meals){ var s=""; MEALS.forEach(function(x){ var m=e.meals[x.key]; if(!s&&m&&(m.place||m.food)) s=(m.place||"")+(m.place&&m.food?" · ":"")+(m.food||""); }); if(s) return s; }
     var note=[e.thoughts,e.learning].filter(Boolean).join(" · ");
     return note||"기록";
+  }
+  // 골프장 전체 기록 요약: 방문 횟수 + 최고기록(전 라운드 통틀어 최저타) {date,name,score}
+  function golfPlaceBest(place){
+    var visits=0, best=null;
+    state.entries.forEach(function(e){
+      if(!e.meals) return;
+      var here=MEALS.some(function(x){ var m=e.meals[x.key]; return m&&m.place===place; });
+      if(!here) return;
+      visits++;
+      var gs=e.golfScore||{};
+      Object.keys(gs).forEach(function(nm){ var v=+gs[nm]; if(gs[nm]==null||gs[nm]===""||isNaN(v)) return; if(!best||v<best.score) best={date:e.date, name:nm, score:v}; });
+    });
+    return {visits:visits, best:best};
   }
   function placeCompanions(e, place){
     var out=[];
@@ -1426,7 +1458,7 @@
         if(comp.length) extra='<span class="rc-with">'+comp.map(function(n){
           var txt=esc(n)+(scored[n]!=null? '('+scored[n]+')' : '');
           return (minV!=null&&scored[n]===minV)? '<span class="rc-win">'+txt+'</span>' : txt;
-        }).join(", ")+'</span>';
+        }).join("  ")+'</span>';
       } else {
         if(comp.length) extra=' <span class="rc-with">('+esc(comp.join(", "))+')</span>';
       }
