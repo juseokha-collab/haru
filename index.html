@@ -1108,13 +1108,29 @@
   function rebuild(){
     var g=buildGraph();
     var allNames=Object.keys(g.meetings);
-    var names;
+    var names, searchPlaceSet=null;
     if(searchQ){
-      var matched={}; allNames.forEach(function(n){ if(n.indexOf(searchQ)>=0) matched[n]=1; });
-      var keep={}; for(var mn in matched) keep[mn]=1;
-      Object.keys(g.pairs).forEach(function(k){ var ab=k.split(g.S1), a=ab[0], b=ab[1]; if(matched[a]) keep[b]=1; if(matched[b]) keep[a]=1; });
-      // 장소명 검색: 이름이 일치하는 장소에 함께 간 사람도 포함
-      Object.keys(g.pplace||{}).forEach(function(k){ var ab=k.split(g.S1), pl=ab[0], pn=ab[1]; if(pl.indexOf(searchQ)>=0) keep[pn]=1; });
+      var _terms=searchQ.split(/[,，]/).map(function(s){return s.trim();}).filter(Boolean);
+      var _sgy=graphYear, _sInY=function(d){ return _sgy==="all" || (d||"").slice(0,4)===_sgy; };
+      var epeople=function(e){ var o=[]; (e.people||[]).forEach(function(n){ if(o.indexOf(n)<0)o.push(n); }); if(e.meals) MEALS.forEach(function(x){ var m=e.meals[x.key]; ((m&&m.people)||[]).forEach(function(n){ if(o.indexOf(n)<0)o.push(n); }); }); if(e.bizmeet&&e.bizmeet.people) e.bizmeet.people.forEach(function(n){ if(o.indexOf(n)<0)o.push(n); }); return o; };
+      searchPlaceSet={}; var keep={};
+      if(_terms.length>1){
+        // 여러 사람 동시 검색: 그 사람들이 모두 함께 있었던 기록 → 그 기록의 모든 사람 + 장소(식당·골프 포함)
+        state.entries.forEach(function(e){
+          if(!_sInY(e.date)) return;
+          var pp=epeople(e);
+          if(!_terms.every(function(t){ return pp.some(function(n){ return n.indexOf(t)>=0; }); })) return;
+          pp.forEach(function(n){ keep[n]=1; });
+          if(e.meals) MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m&&m.place) searchPlaceSet[m.place]=1; });
+        });
+      } else {
+        // 한 사람 검색: 그 사람 + 함께 만난 인맥, 관련 '골프장'만(식당 제외) + 이름이 일치하는 장소
+        var term=_terms[0]||"", matched={};
+        allNames.forEach(function(n){ if(n.indexOf(term)>=0){ matched[n]=1; keep[n]=1; } });
+        Object.keys(g.pairs).forEach(function(k){ var ab=k.split(g.S1), a=ab[0], b=ab[1]; if(matched[a]) keep[b]=1; if(matched[b]) keep[a]=1; });
+        Object.keys(g.pplace||{}).forEach(function(k){ var ab=k.split(g.S1), pl=ab[0], pn=ab[1]; if(matched[pn] && state.golf&&state.golf[pl]) searchPlaceSet[pl]=1; });
+        Object.keys(g.places||{}).forEach(function(pl){ if(pl.indexOf(term)>=0) searchPlaceSet[pl]=1; });
+      }
       names=allNames.filter(function(n){ return keep[n]; });
     } else {
       // 장소 유형(골프/식당) 표시 중이면, 그 유형을 나와 '함께 간' 사람만 사람 노드로 (식사만/미팅만 한 사람 제외)
@@ -1154,7 +1170,7 @@
     // 인맥(관계) 표시 중: 표시된 사람과 함께 간 장소만 (식당·골프 공통)
     // 인맥 모두 꺼짐: 방문 횟수 기준(1+/2+…)
     var placeMatch = searchQ
-      ? function(pl){ return showPlaceAny[pl] || pl.indexOf(searchQ)>=0; }
+      ? function(pl){ return !!(searchPlaceSet && searchPlaceSet[pl]); }
       : anyRel
         ? function(pl){ return !!showPlaceVis[pl]; }
         : function(pl){ var v=g.places[pl].visits; return meetExact ? v===minMeet : v>=minMeet; };
@@ -1217,7 +1233,7 @@
     wake();
   }
 
-  function visible(node){ if(node.type==="place"){ if(searchQ) return true; return node.golf? !hideGolf : !hideRest; } return node.me || !hiddenRels[node.rel]; }
+  function visible(node){ if(searchQ) return true; if(node.type==="place"){ return node.golf? !hideGolf : !hideRest; } return node.me || !hiddenRels[node.rel]; }
 
   function tick(){
     var damping=0.86, k=alpha;
@@ -1814,7 +1830,8 @@
     l.appendChild(rc);
     var gc=document.createElement("span"); gc.className="chip place-chip"; gc.setAttribute("aria-pressed", hideGolf?"false":"true");
     gc.innerHTML='<span class="golf-ico">⛳</span>골프';
-    gc.onclick=function(){ hideGolf=!hideGolf; gc.setAttribute("aria-pressed",hideGolf?"false":"true"); rebuild(); alpha=Math.max(alpha,0.4); wake(); };
+    gc.onclick=function(){ hideGolf=!hideGolf; if(!hideGolf){ REL_ORDER.forEach(function(r){ hiddenRels[r]=true; }); }   /* 골프 켜면 인맥 모두 비활성화 */
+      renderLegend(); renderStats(); rebuild(); alpha=Math.max(alpha,0.4); wake(); };
     l.appendChild(gc);
   }
 
