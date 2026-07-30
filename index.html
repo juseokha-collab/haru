@@ -2710,12 +2710,13 @@
         ppl='<div class="cv-ppl">'+names+more+'</div>';
       }
       var place='', pico2='', gseen=false, bseen=false;
-      if(e && e.meals){ var pls=[], spPl=[]; mealKeys(e).forEach(function(_k){ var m=e.meals[_k]; if(!m||!m.place) return;
-          if(_k.indexOf("special")===0){ spPl.push(m.place); } else if(pls.indexOf(m.place)<0){ pls.push(m.place); }
+      if(e && e.meals){ var pls=[], eve=[], hasSp=false; mealKeys(e).forEach(function(_k){ var m=e.meals[_k]; if(!m||!m.place) return;
+          if(_k==="dinner" || _k.indexOf("special")===0){ eve.push(m.place); if(_k.indexOf("special")===0) hasSp=true; }   // 저녁=1차, Special=2·3차…
+          else if(pls.indexOf(m.place)<0){ pls.push(m.place); }
           if(state.golf&&state.golf[m.place]&&!gseen){ pico2+='<span class="cv-pico">⛳</span>'; gseen=true; }
           if(placeEmoji(m.place)) bseen=true;   // 당구장 → 우측하단 빨간 8볼
         });
-        if(spPl.length){ pls.push(spPl[0] + (spPl.length>1? " · "+spPl.length+"차" : "")); }
+        if(eve.length){ if(hasSp && eve.length>1){ pls.push(eve[0]+" · "+eve.length+"차"); } else { eve.forEach(function(p){ if(pls.indexOf(p)<0) pls.push(p); }); } }
         if(pls.length) place='<div class="cv-place">🍴 '+esc(pls.join(" · "))+'</div>'; }
       var title=e?' title="'+ds.slice(5).replace("-",".")+' · '+esc(calSummary(e))+'"':'';
       var cam=photoDates[ds]?'<span class="cv-cam">📷</span>':'';
