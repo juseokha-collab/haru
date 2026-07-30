@@ -870,6 +870,8 @@
           <label title="막걸리">🥛<input type="number" min="0" step="0.5" inputmode="decimal" id="d-makgeolli" placeholder="0"></label>
           <label title="기타">🍷<input type="number" min="0" step="0.5" inputmode="decimal" id="d-etc" placeholder="0"></label>
         </div>
+        <b id="exHome" hidden></b>
+        <div id="exBlock">
         <label>운동 <span class="lab-hint">활동 · 시간 · 몸무게</span></label>
         <div class="ex-grid">
           <input type="text" id="ex-activity" placeholder="활동명 (예: 헬스, 러닝)" autocomplete="off">
@@ -887,6 +889,7 @@
           </select>
           <label class="wt-wrap" title="몸무게">⚖️<input type="number" min="0" step="0.1" inputmode="decimal" id="ex-weight" placeholder="kg"></label>
           <label class="wt-wrap" title="허리둘레">📏<input type="number" min="0" step="0.1" inputmode="decimal" id="ex-waist" placeholder="cm"></label>
+        </div>
         </div>
         <label for="thoughts">고민 · 생각</label>
         <textarea id="thoughts" placeholder="오늘 마음에 남은 고민이나 생각…"></textarea>
@@ -2979,10 +2982,18 @@
   })();
   renderTodos();
   renderLegend();
+  // 모바일(≤640px)에선 '운동' 입력을 '오늘의 사진' 앞으로 이동, PC는 원위치 유지
+  function placeExerciseForViewport(){
+    var ex=document.getElementById("exBlock"), home=document.getElementById("exHome"), ph=document.querySelector(".photo-head");
+    if(!ex||!home||!ph) return;
+    if(window.matchMedia("(max-width:640px)").matches){ if(ph.previousElementSibling!==ex) ph.parentNode.insertBefore(ex, ph); }
+    else { if(home.nextElementSibling!==ex) home.parentNode.insertBefore(ex, home.nextElementSibling); }
+  }
+  placeExerciseForViewport();
   loadPhotoDates().then(function(){ var te=existingFor(todayStr()); if(te) editEntry(te, true); else loadDraft(); refresh(); });
   resize(); rebuild();
   var _rzT=null;
-  window.addEventListener("resize",function(){ resize(); wake(); if(_rzT)clearTimeout(_rzT); _rzT=setTimeout(function(){ syncTimelineHeight(); renderWeightChart(); renderStats(); },120); });
+  window.addEventListener("resize",function(){ resize(); wake(); placeExerciseForViewport(); if(_rzT)clearTimeout(_rzT); _rzT=setTimeout(function(){ syncTimelineHeight(); renderWeightChart(); renderStats(); },120); });
   if("ResizeObserver" in window){ new ResizeObserver(function(){ resize(); wake(); }).observe(canvas); }
   window.addEventListener("load", syncTimelineHeight);
   requestAnimationFrame(function(){ syncTimelineHeight(); });
