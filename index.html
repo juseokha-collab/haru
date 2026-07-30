@@ -125,7 +125,8 @@
   .cv-wd{text-align:center; font-size:11px; color:var(--ink-3); padding:2px 0 4px}
   .cv-wd.sun{color:#D98A8A}
   .cv-wd.sat{color:#8AA6D9}
-  .cv-cell{min-height:76px; border:1px solid transparent; background:var(--surface-2); border-radius:10px; display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:1px; cursor:pointer; font-family:inherit; padding:5px 7px 4px; transition:.12s; overflow:hidden; text-align:left}
+  .cv-cell{position:relative; min-height:76px; border:1px solid transparent; background:var(--surface-2); border-radius:10px; display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:1px; cursor:pointer; font-family:inherit; padding:5px 7px 4px; transition:.12s; overflow:hidden; text-align:left}
+  .cv-ball8{position:absolute; right:4px; bottom:4px; width:14px; height:14px; border-radius:50%; background:#D64545; color:#fff; font-size:9px; font-weight:800; display:flex; align-items:center; justify-content:center; line-height:1; box-shadow:0 1px 2px rgba(0,0,0,.3), inset 0 1px 1px rgba(255,255,255,.35)}
   .cv-cell.blank{background:transparent; cursor:default; pointer-events:none}
   .cv-cell.has{background:var(--accent-soft)}
   .cv-cell.mark{background:color-mix(in srgb, #6F7BE0 20%, transparent); border-color:color-mix(in srgb, #6F7BE0 42%, transparent)}
@@ -684,7 +685,6 @@
         <button class="btn ghost" id="exportBtn" title="JSON 백업 파일 내려받기">내보내기</button>
         <button class="btn ghost" id="importBtn" title="백업 파일에서 복원">가져오기</button>
         <input type="file" id="importFile" accept="application/json,.json" style="display:none">
-        <button class="btn ghost" id="golfCsvBtn" title="골프 라운드 CSV 가져오기 (엑셀→CSV UTF-8)">⛳ CSV</button>
         <input type="file" id="golfCsvFile" accept=".csv,text/csv" style="display:none">
         <button class="btn ghost" id="adminBtn" title="관리자 모드 (PC)">⚙ 관리</button>
         <button class="btn ghost" id="themeBtn" title="테마 전환">◐ 테마</button>
@@ -899,7 +899,7 @@
         </div>
         <label for="thoughts">Reflection</label>
         <textarea id="thoughts" placeholder="오늘의 회고 · 마음에 남은 생각…"></textarea>
-        <label for="learning">학습 · 배운 것</label>
+        <label for="learning">Learning</label>
         <textarea id="learning" placeholder="새로 알게 된 것, 공부한 것…"></textarea>
       </div>
     </div>
@@ -1843,7 +1843,7 @@
     draft.exercise=readExercise();
     draft.thoughts=$("#thoughts").value.trim();
     draft.learning=$("#learning").value.trim();
-    if(!draft.people.length && !draft.schedule && !mealHasContent(draft.meals) && !draft.bizmeets.length && drinkTotal(draft.drinks)===0 && !exHasContent(draft.exercise) && !draft.thoughts && !draft.learning){ flash("기록할 내용을 입력해 주세요."); return; }
+    if(!draft.people.length && !draft.schedule && !mealHasContent(draft.meals) && !draft.bizmeets.length && drinkTotal(draft.drinks)===0 && !(draft.exercise.activity||draft.exercise.minutes) && !draft.thoughts && !draft.learning){ flash("기록할 내용을 입력해 주세요.(몸무게만으론 저장되지 않아요)"); return; }
     // upsert people global rel (직접 추가한 사람 + 식사/업무미팅 동행)
     draft.people.forEach(function(p){ state.people[p.name]={rel:p.rel}; });
     var withAll=mealPeople(draft.meals); draft.bizmeets.forEach(function(b){ (b.people||[]).forEach(function(n){ if(withAll.indexOf(n)<0) withAll.push(n); }); });
@@ -2713,13 +2713,14 @@
       if(e && e.meals){ var pls=[], spPl=[]; mealKeys(e).forEach(function(_k){ var m=e.meals[_k]; if(!m||!m.place) return;
           if(_k.indexOf("special")===0){ spPl.push(m.place); } else if(pls.indexOf(m.place)<0){ pls.push(m.place); }
           if(state.golf&&state.golf[m.place]&&!gseen){ pico2+='<span class="cv-pico">⛳</span>'; gseen=true; }
-          if(placeEmoji(m.place)&&!bseen){ pico2+='<span class="cv-pico" title="당구장">🎱</span>'; bseen=true; }
+          if(placeEmoji(m.place)) bseen=true;   // 당구장 → 우측하단 빨간 8볼
         });
         if(spPl.length){ pls.push(spPl[0] + (spPl.length>1? " · "+spPl.length+"차" : "")); }
         if(pls.length) place='<div class="cv-place">🍴 '+esc(pls.join(" · "))+'</div>'; }
       var title=e?' title="'+ds.slice(5).replace("-",".")+' · '+esc(calSummary(e))+'"':'';
       var cam=photoDates[ds]?'<span class="cv-cam">📷</span>':'';
-      html+='<button class="'+cls+'" data-date="'+ds+'"'+title+'><div class="cv-top"><span class="cv-d">'+d+'</span>'+dot+pico2+cam+'</div>'+holLbl+sched+ppl+place+'</button>';
+      var billHtml = bseen? '<span class="cv-ball8" title="당구장">8</span>' : '';
+      html+='<button class="'+cls+'" data-date="'+ds+'"'+title+'><div class="cv-top"><span class="cv-d">'+d+'</span>'+dot+pico2+cam+'</div>'+holLbl+sched+ppl+place+billHtml+'</button>';
     }
     grid.innerHTML=html;
   }
