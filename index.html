@@ -860,7 +860,7 @@
           <div id="specialExtra"></div>
           <div class="meal biz-meal">
             <div class="meal-h row"><span>💼 업무미팅</span><label class="same-chk sm"><input type="checkbox" class="meal-same" data-meal="__biz"> 동일</label></div>
-            <div class="meal-grid"><input type="text" id="bm-name" placeholder="업무미팅명" autocomplete="off"><input type="time" id="bm-time" step="600" title="미팅 시간 · 10분 단위"></div>
+            <div class="meal-grid"><input type="text" id="bm-name" placeholder="업무미팅명" autocomplete="off"><input type="time" id="bm-time" step="1800" title="미팅 시간 · 30분 단위"></div>
             <input type="text" id="bm-people" placeholder="누구와 · 쉼표로 구분" autocomplete="off">
           </div>
           <div id="bizExtra"></div>
@@ -1725,7 +1725,7 @@
     if(_hasBz(first) && rows.length<4) rows.push({name:"",time:"",people:[]});
     wrap.innerHTML = rows.map(function(v,idx){ return '<div class="meal biz-meal br-row">'+
       '<div class="meal-h row"><span>💼 업무미팅 '+(idx+2)+'</span></div>'+
-      '<div class="meal-grid"><input type="text" class="br-name" placeholder="업무미팅명" autocomplete="off" value="'+esc(v.name||"")+'"><input type="time" class="br-time" step="600" title="미팅 시간 · 10분 단위" value="'+esc(v.time||"")+'"></div>'+
+      '<div class="meal-grid"><input type="text" class="br-name" placeholder="업무미팅명" autocomplete="off" value="'+esc(v.name||"")+'"><input type="time" class="br-time" step="1800" title="미팅 시간 · 30분 단위" value="'+esc(v.time||"")+'"></div>'+
       '<input type="text" class="br-people" placeholder="누구와 · 쉼표로 구분" autocomplete="off" value="'+esc((v.people||[]).join(", "))+'"></div>'; }).join("");
   }
   function readExercise(){ var mn=document.getElementById("ex-minutes"); return { activity:mval("ex-activity"), minutes:mn?(+mn.value||0):0, weight:mval("ex-weight"), waist:mval("ex-waist") }; }
