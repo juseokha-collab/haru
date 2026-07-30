@@ -373,6 +373,8 @@
   .meal input[type=checkbox]{width:13px; height:13px; flex:none; padding:0; box-shadow:none}
   .meal input[type=time]{font-family:inherit; font-size:12.5px; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:6px 9px; outline:0; width:100%; transition:.15s}
   .meal input[type=time]:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft)}
+  .meal select{font-family:inherit; font-size:12.5px; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:6px 9px; outline:0; width:100%; transition:.15s; cursor:pointer}
+  .meal select:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft)}
   .biz-meal .meal-h.row>span{color:var(--accent-ink)}
 
   .drink-grid{display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:7px}
@@ -860,7 +862,7 @@
           <div id="specialExtra"></div>
           <div class="meal biz-meal">
             <div class="meal-h row"><span>💼 업무미팅</span><label class="same-chk sm"><input type="checkbox" class="meal-same" data-meal="__biz"> 동일</label></div>
-            <div class="meal-grid"><input type="text" id="bm-name" placeholder="업무미팅명" autocomplete="off"><input type="time" id="bm-time" step="1800" title="미팅 시간 · 30분 단위"></div>
+            <div class="meal-grid"><input type="text" id="bm-name" placeholder="업무미팅명" autocomplete="off"><select id="bm-time" title="미팅 시간 · 30분 단위"></select></div>
             <input type="text" id="bm-people" placeholder="누구와 · 쉼표로 구분" autocomplete="off">
           </div>
           <div id="bizExtra"></div>
@@ -1699,8 +1701,11 @@
     return m;
   }
   function loadMeals(meals){ MEALS.forEach(function(x){ var v=(meals&&meals[x.key])||{}; var p=document.getElementById("m-"+x.key+"-place"), f=document.getElementById("m-"+x.key+"-food"), w=document.getElementById("m-"+x.key+"-people"); if(p)p.value=v.place||""; if(f)f.value=v.food||""; if(w)w.value=(v.people||[]).join(", "); var chk=document.querySelector('.golf-chk[data-meal="'+x.key+'"]'); if(chk) chk.checked=!!(state.golf && v.place && state.golf[v.place]); }); renderSpecialExtras(); }
+  // 30분 단위 시간 드롭다운(오전/오후 라벨)
+  function roundTime30(v){ if(!/^\d{1,2}:\d{2}$/.test(v||"")) return v||""; var p=v.split(":"), h=+p[0], m=+p[1]; m=Math.round(m/30)*30; if(m===60){m=0; h=(h+1)%24;} return ("0"+h).slice(-2)+":"+("0"+m).slice(-2); }
+  function timeOptsHtml(sel){ sel=roundTime30(sel); var o='<option value="">시간</option>'; for(var h=0;h<24;h++){ for(var m=0;m<60;m+=30){ var v=("0"+h).slice(-2)+":"+("0"+m).slice(-2), ap=h<12?"오전":"오후", h12=h%12||12; o+='<option value="'+v+'"'+(v===sel?" selected":"")+'>'+ap+" "+h12+":"+("0"+m).slice(-2)+'</option>'; } } return o; }
   function readBiz(){ return { name:mval("bm-name"), time:mval("bm-time"), people:parseNames(mval("bm-people")) }; }
-  function loadBiz(b){ b=b||{}; var nm=document.getElementById("bm-name"), tm=document.getElementById("bm-time"), pp=document.getElementById("bm-people"); if(nm)nm.value=b.name||""; if(tm)tm.value=b.time||""; if(pp)pp.value=(b.people||[]).join(", "); }
+  function loadBiz(b){ b=b||{}; var nm=document.getElementById("bm-name"), tm=document.getElementById("bm-time"), pp=document.getElementById("bm-people"); if(nm)nm.value=b.name||""; if(tm)tm.innerHTML=timeOptsHtml(b.time); if(pp)pp.value=(b.people||[]).join(", "); }
   // 추가 업무미팅(첫 번째는 위 bm-* 고정, 나머지는 #bizExtra)
   function readBizmeets(){ var out=[readBiz()]; Array.prototype.forEach.call(document.querySelectorAll("#bizExtra .br-row"),function(row){ out.push({ name:(row.querySelector(".br-name").value||"").trim(), time:(row.querySelector(".br-time").value||"").trim(), people:parseNames(row.querySelector(".br-people").value) }); }); return out; }
   function _hasSp(v){ return !!(v && (v.place||v.food||(v.people&&v.people.length))); }
@@ -1725,7 +1730,7 @@
     if(_hasBz(first) && rows.length<4) rows.push({name:"",time:"",people:[]});
     wrap.innerHTML = rows.map(function(v,idx){ return '<div class="meal biz-meal br-row">'+
       '<div class="meal-h row"><span>💼 업무미팅 '+(idx+2)+'</span></div>'+
-      '<div class="meal-grid"><input type="text" class="br-name" placeholder="업무미팅명" autocomplete="off" value="'+esc(v.name||"")+'"><input type="time" class="br-time" step="1800" title="미팅 시간 · 30분 단위" value="'+esc(v.time||"")+'"></div>'+
+      '<div class="meal-grid"><input type="text" class="br-name" placeholder="업무미팅명" autocomplete="off" value="'+esc(v.name||"")+'"><select class="br-time" title="미팅 시간 · 30분 단위">'+timeOptsHtml(v.time)+'</select></div>'+
       '<input type="text" class="br-people" placeholder="누구와 · 쉼표로 구분" autocomplete="off" value="'+esc((v.people||[]).join(", "))+'"></div>'; }).join("");
   }
   function readExercise(){ var mn=document.getElementById("ex-minutes"); return { activity:mval("ex-activity"), minutes:mn?(+mn.value||0):0, weight:mval("ex-weight"), waist:mval("ex-waist") }; }
