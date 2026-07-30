@@ -1352,20 +1352,24 @@
       if(!visible(l.a)||!visible(l.b))return;
       var dx=l.b.x-l.a.x, dy=l.b.y-l.a.y, d=Math.sqrt(dx*dx+dy*dy)||0.01;
       // 만난/함께한 빈도가 높을수록 rest(적정거리)를 짧게 + 인력 강화 → 관련 있는 사람이 가까이 모임
-      var rest=l.me? (138 - Math.min(64,l.w*9)) : (78 - Math.min(50,l.w*9));
-      var f=(d-rest)*0.02*k*(l.me?0.28:1.55);
+      // 장소(식당·골프) 링크는 느슨하게·멀리 → 바깥 링으로 밀려나기 쉽게
+      var rest, str;
+      if(l.me){ rest=138-Math.min(64,l.w*9); str=0.28; }
+      else if(l.place){ rest=150-Math.min(40,l.w*6); str=0.5; }
+      else { rest=78-Math.min(50,l.w*9); str=1.55; }
+      var f=(d-rest)*0.02*k*str;
       var fx=dx/d*f, fy=dy/d*f;
       l.a.vx+=fx; l.a.vy+=fy; l.b.vx-=fx; l.b.vy-=fy;
     });
     // 방사형 레이어링: 사람은 안쪽 원(0~5), 식당·골프장은 바깥 링(5~10). 검색 중엔 앵커 우선이라 생략
     if(!searchFocus.length){
-      var Rvis=Math.min(W,H)*0.46, innerR=Rvis*0.5;
+      var Rvis=Math.min(W,H)*0.48, innerR=Rvis*0.46, placeInner=Rvis*0.66;
       nodes.forEach(function(n){
         if(n===dragging || !visible(n)) return;
-        var dx=n.x-me.x, dy=n.y-me.y, d=Math.sqrt(dx*dx+dy*dy)||0.01, target;
-        if(n.type==="place"){ target = d<innerR? innerR : (d>Rvis? Rvis : d); }   // 장소: [5,10]
-        else { target = d>innerR? innerR : d; }                                    // 사람: [0,5]
-        var f=(target-d)*0.04*k;
+        var dx=n.x-me.x, dy=n.y-me.y, d=Math.sqrt(dx*dx+dy*dy)||0.01, target, str;
+        if(n.type==="place"){ target = d<placeInner? placeInner : (d>Rvis? Rvis : d); str=0.06; }   // 장소: 바깥 링
+        else { target = d>innerR? innerR : d; str=0.035; }                                          // 사람: 안쪽 원
+        var f=(target-d)*str*k;
         n.vx+=dx/d*f; n.vy+=dy/d*f;
       });
     }
