@@ -897,8 +897,8 @@
           <label class="wt-wrap" title="허리둘레">📏<input type="number" min="0" step="0.1" inputmode="decimal" id="ex-waist" placeholder="cm"></label>
         </div>
         </div>
-        <label for="thoughts">고민 · 생각</label>
-        <textarea id="thoughts" placeholder="오늘 마음에 남은 고민이나 생각…"></textarea>
+        <label for="thoughts">Reflection</label>
+        <textarea id="thoughts" placeholder="오늘의 회고 · 마음에 남은 생각…"></textarea>
         <label for="learning">학습 · 배운 것</label>
         <textarea id="learning" placeholder="새로 알게 된 것, 공부한 것…"></textarea>
       </div>
@@ -1007,7 +1007,7 @@
   Object.keys(state.people||{}).forEach(function(n){ if(state.people[n] && state.people[n].rel==="acq") state.people[n].rel="etc"; });   // 거래처→기타 통합
   state.todos = state.todos || [];
   var draft = { date: todayStr(), people: [], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), drinks:emptyDrinks(), exercise:emptyExercise(), golfScore:{}, thoughts:"", learning:"" };
-  var hiddenRels = {fam:true}, hideRest=true, hideGolf=true, drinkPeriod="week", weightPeriod="month", view="graph", recapMonth="", minMeet=2, meetExact=false, calMonth="", searchQ="", graphYear=String(new Date().getFullYear());
+  var hiddenRels = {fam:true, work:true}, hideRest=true, hideGolf=true, drinkPeriod="week", weightPeriod="month", view="graph", recapMonth="", minMeet=2, meetExact=false, calMonth="", searchQ="", graphYear=String(new Date().getFullYear());
 
   function load(){
     try{ var s=JSON.parse(localStorage.getItem(KEY)); if(s&&s.entries) return s; }catch(e){}
@@ -1469,9 +1469,6 @@
       ctx.fillStyle=mg; ctx.beginPath(); ctx.arc(me.x,me.y,34,0,6.29); ctx.fill();
       ctx.beginPath(); ctx.arc(me.x,me.y,12,0,6.29); ctx.fillStyle="#FBEFC9"; ctx.fill();
       ctx.lineWidth=2; ctx.strokeStyle="#E7B24C"; ctx.stroke();
-      ctx.font="700 12px "+BODY_FONT;
-      ctx.textAlign="center"; ctx.textBaseline="top"; ctx.fillStyle="#FBEFC9";
-      ctx.fillText("나", me.x, me.y+16);
     }
   }
 
@@ -1866,7 +1863,9 @@
     var _ed=$("#editing"); _ed.textContent="수정완료"; _ed.className="sub saved";
     refresh(); rebuild();
   }
-  function resetDraft(){ draft={date:todayStr(), people:[], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), drinks:emptyDrinks(), exercise:emptyExercise(), golfScore:{}, thoughts:"", learning:""}; loadDraft(); }
+  // 직전 기록의 몸무게·허리둘레(새 기록 작성 시 미리 채워 수정)
+  function lastBody(){ var w="", ws="", arr=state.entries.slice().sort(byDateDesc); for(var i=0;i<arr.length;i++){ var x=arr[i].exercise||{}; if(w===""&&(x.weight===0||x.weight)) w=x.weight; if(ws===""&&(x.waist===0||x.waist)) ws=x.waist; if(w!==""&&ws!=="") break; } return {weight:w, waist:ws}; }
+  function resetDraft(){ var lb=lastBody(); draft={date:todayStr(), people:[], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), bizmeets:[emptyBiz()], drinks:emptyDrinks(), exercise:{activity:"", minutes:0, weight:lb.weight, waist:lb.waist}, golfScore:{}, golfScores:{}, thoughts:"", learning:""}; loadDraft(); }
   $("#saveBtn").onclick=saveEntry;
   $("#saveBtn2").onclick=saveEntry;
   // 저장 후 다시 편집하면 '수정완료' → '수정중'으로 되돌림
@@ -2711,7 +2710,13 @@
         ppl='<div class="cv-ppl">'+names+more+'</div>';
       }
       var place='', pico2='', gseen=false, bseen=false;
-      if(e && e.meals){ var pls=[]; mealKeys(e).forEach(function(_k){ var m=e.meals[_k]; if(!m||!m.place) return; if(pls.indexOf(m.place)<0) pls.push(m.place); if(state.golf&&state.golf[m.place]&&!gseen){ pico2+='<span class="cv-pico">⛳</span>'; gseen=true; } if(placeEmoji(m.place)&&!bseen){ pico2+='<span class="cv-pico cv-ball" title="당구장"></span>'; bseen=true; } }); if(pls.length) place='<div class="cv-place">🍴 '+esc(pls.join(" · "))+'</div>'; }
+      if(e && e.meals){ var pls=[], spPl=[]; mealKeys(e).forEach(function(_k){ var m=e.meals[_k]; if(!m||!m.place) return;
+          if(_k.indexOf("special")===0){ spPl.push(m.place); } else if(pls.indexOf(m.place)<0){ pls.push(m.place); }
+          if(state.golf&&state.golf[m.place]&&!gseen){ pico2+='<span class="cv-pico">⛳</span>'; gseen=true; }
+          if(placeEmoji(m.place)&&!bseen){ pico2+='<span class="cv-pico" title="당구장">🎱</span>'; bseen=true; }
+        });
+        if(spPl.length){ pls.push(spPl[0] + (spPl.length>1? " · "+spPl.length+"차" : "")); }
+        if(pls.length) place='<div class="cv-place">🍴 '+esc(pls.join(" · "))+'</div>'; }
       var title=e?' title="'+ds.slice(5).replace("-",".")+' · '+esc(calSummary(e))+'"':'';
       var cam=photoDates[ds]?'<span class="cv-cam">📷</span>':'';
       html+='<button class="'+cls+'" data-date="'+ds+'"'+title+'><div class="cv-top"><span class="cv-d">'+d+'</span>'+dot+pico2+cam+'</div>'+holLbl+sched+ppl+place+'</button>';
@@ -3040,7 +3045,7 @@
     else { if(home.nextElementSibling!==ex) home.parentNode.insertBefore(ex, home.nextElementSibling); }
   }
   placeExerciseForViewport();
-  loadPhotoDates().then(function(){ var te=existingFor(todayStr()); if(te) editEntry(te, true); else loadDraft(); refresh(); });
+  loadPhotoDates().then(function(){ var te=existingFor(todayStr()); if(te) editEntry(te, true); else { var _lb=lastBody(); draft.exercise=draft.exercise||emptyExercise(); if(draft.exercise.weight==null||draft.exercise.weight==="") draft.exercise.weight=_lb.weight; if(draft.exercise.waist==null||draft.exercise.waist==="") draft.exercise.waist=_lb.waist; loadDraft(); } refresh(); });
   resize(); rebuild();
   var _rzT=null;
   window.addEventListener("resize",function(){ resize(); wake(); placeExerciseForViewport(); if(_rzT)clearTimeout(_rzT); _rzT=setTimeout(function(){ syncTimelineHeight(); renderWeightChart(); renderStats(); },120); });
