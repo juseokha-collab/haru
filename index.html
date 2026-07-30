@@ -354,6 +354,8 @@
   label.same-chk.sm{font-size:11px}
   .same-chk input{cursor:pointer; accent-color:var(--accent); flex:none; margin:0; width:13px; height:13px}
   .meals{display:flex; flex-direction:column; gap:9px}
+  #specialExtra, #bizExtra{display:flex; flex-direction:column; gap:9px}
+  #specialExtra:empty, #bizExtra:empty{display:none}
   .meal{background:var(--surface-2); border:1px solid var(--border); border-radius:11px; padding:9px 10px}
   .meal-h{font-size:12px; font-weight:700; color:var(--ink-2); letter-spacing:.01em}
   .meal-h.row{display:flex; align-items:center; gap:8px; width:100%}
@@ -855,11 +857,13 @@
             <div class="meal-grid"><span class="place-wrap"><input type="text" id="m-special-place" placeholder="어디서 · 저녁 이후 만남" autocomplete="off"><input type="checkbox" class="golf-chk" data-meal="special" title="골프장이면 체크 → 성좌에 ⛳"></span><input type="text" id="m-special-food" placeholder="무엇을" autocomplete="off"></div>
             <input type="text" id="m-special-people" placeholder="누구와 · 쉼표로 구분" autocomplete="off">
           </div>
+          <div id="specialExtra"></div>
           <div class="meal biz-meal">
             <div class="meal-h row"><span>💼 업무미팅</span><label class="same-chk sm"><input type="checkbox" class="meal-same" data-meal="__biz"> 동일</label></div>
             <div class="meal-grid"><input type="text" id="bm-name" placeholder="업무미팅명" autocomplete="off"><input type="time" id="bm-time" step="600" title="미팅 시간 · 10분 단위"></div>
             <input type="text" id="bm-people" placeholder="누구와 · 쉼표로 구분" autocomplete="off">
           </div>
+          <div id="bizExtra"></div>
         </div>
         <div class="golf-score" id="golfScore" hidden></div>
       </div>
@@ -977,6 +981,10 @@
   function emptyExercise(){ return {activity:"", minutes:0, weight:"", waist:""}; }
   function emptyBiz(){ return {name:"", time:"", people:[]}; }
   function bizHasContent(b){ return !!b && (b.name || b.time || (b.people&&b.people.length)); }
+  // 다중 Special(e.meals.special2, special3…) · 다중 업무미팅(e.bizmeets 배열)
+  function mealKeys(e){ var ks=["breakfast","lunch","dinner","special"]; if(e&&e.meals){ var i=2; while(e.meals["special"+i]){ ks.push("special"+i); i++; } } return ks; }
+  function mealMeta(key){ var f=MEALS.filter(function(x){return x.key===key;})[0]; return f||{key:key, ico:"✨", label:"Special"}; }
+  function bizArr(e){ if(!e) return []; if(e.bizmeets && e.bizmeets.length) return e.bizmeets.filter(Boolean); return e.bizmeet? [e.bizmeet] : []; }
   var EX_MIN={0:"",30:"30분",60:"1시간",90:"1시간 30분",120:"2시간",150:"2시간 30분",180:"3시간",210:"3시간 30분",240:"4시간",300:"5시간+"};
   function exHasContent(x){ return !!x && (x.activity || +x.minutes>0 || (x.weight!=="" && x.weight!=null) || (x.waist!=="" && x.waist!=null)); }
   var PLACE_COLOR="#8C93A6";
@@ -1094,8 +1102,8 @@
     state.entries.forEach(function(e){
       if(!_inY(e.date)) return;
       _recs.push({date:e.date, people:e.people, noPair:true});   // 만난사람 리스트: 카운트만, 연관선 X
-      if(e.meals) MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m&&m.people&&m.people.length) _recs.push({date:e.date, people:m.people}); });
-      if(e.bizmeet && e.bizmeet.people && e.bizmeet.people.length) _recs.push({date:e.date, people:e.bizmeet.people});   // 업무미팅 동행: 연관선 O
+      if(e.meals) mealKeys(e).forEach(function(_k){ var m=e.meals[_k]; if(m&&m.people&&m.people.length) _recs.push({date:e.date, people:m.people}); });
+      bizArr(e).forEach(function(b){ if(b.people && b.people.length) _recs.push({date:e.date, people:b.people}); });   // 업무미팅 동행: 연관선 O
     });
     (state.events||[]).forEach(function(ev){ if(ev.attendees&&ev.attendees.length && _inY(ev.date)) _recs.push({date:ev.date, people:ev.attendees}); });
     var dateSeen={}, pairSeen={};
@@ -1116,8 +1124,8 @@
     var places={}, pplace={};
     state.entries.forEach(function(e){
       if(!e.meals || !_inY(e.date)) return;
-      MEALS.forEach(function(x){
-        var m=e.meals[x.key]; if(!m||!m.place) return;
+      mealKeys(e).forEach(function(_k){
+        var m=e.meals[_k]; if(!m||!m.place) return;
         var pl=m.place;
         places[pl]=places[pl]||{visits:0,last:"",withc:0};
         places[pl].visits++; if(e.date>places[pl].last) places[pl].last=e.date;
@@ -1156,8 +1164,8 @@
         state.entries.forEach(function(e){
           if(!_sInY(e.date)) return;
           var groups=[];
-          if(e.meals) MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m && (m.people||[]).length) groups.push({ppl:m.people, place:m.place||""}); });
-          if(e.bizmeet && (e.bizmeet.people||[]).length) groups.push({ppl:e.bizmeet.people, place:""});
+          if(e.meals) mealKeys(e).forEach(function(_k){ var m=e.meals[_k]; if(m && (m.people||[]).length) groups.push({ppl:m.people, place:m.place||""}); });
+          bizArr(e).forEach(function(b){ if((b.people||[]).length) groups.push({ppl:b.people, place:""}); });
           groups.forEach(function(gr){
             if(!_terms.every(function(t){ return gr.ppl.some(function(n){ return n.indexOf(t)>=0; }); })) return;
             gr.ppl.forEach(function(n){ keep[n]=1; });
@@ -1537,7 +1545,7 @@
   }
   function recSummary(e){
     if(e.schedule) return e.schedule;
-    if(e.meals){ var s=""; MEALS.forEach(function(x){ var m=e.meals[x.key]; if(!s&&m&&(m.place||m.food)) s=(m.place||"")+(m.place&&m.food?" · ":"")+(m.food||""); }); if(s) return s; }
+    if(e.meals){ var s=""; mealKeys(e).forEach(function(_k){ var m=e.meals[_k]; if(!s&&m&&(m.place||m.food)) s=(m.place||"")+(m.place&&m.food?" · ":"")+(m.food||""); }); if(s) return s; }
     var note=[e.thoughts,e.learning].filter(Boolean).join(" · ");
     return note||"기록";
   }
@@ -1556,27 +1564,27 @@
   }
   function placeCompanions(e, place){
     var out=[];
-    if(e.meals) MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m&&m.place===place) (m.people||[]).forEach(function(n){ if(out.indexOf(n)<0) out.push(n); }); });
+    if(e.meals) mealKeys(e).forEach(function(_k){ var m=e.meals[_k]; if(m&&m.place===place) (m.people||[]).forEach(function(n){ if(out.indexOf(n)<0) out.push(n); }); });
     return out;
   }
   // 그 기록에서 이 사람과 '함께 있었던' 사람들(같은 끼니/업무미팅 동석자, 본인 제외)
   function personCompanions(e, name){
     var out=[], add=function(arr){ (arr||[]).forEach(function(n){ if(n!==name && out.indexOf(n)<0) out.push(n); }); };
-    if(e.meals) MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m && (m.people||[]).indexOf(name)>=0) add(m.people); });
-    if(e.bizmeet && (e.bizmeet.people||[]).indexOf(name)>=0) add(e.bizmeet.people);
+    if(e.meals) mealKeys(e).forEach(function(_k){ var m=e.meals[_k]; if(m && (m.people||[]).indexOf(name)>=0) add(m.people); });
+    bizArr(e).forEach(function(b){ if((b.people||[]).indexOf(name)>=0) add(b.people); });
     return out;
   }
   // 장소 관련 기록의 라벨: 그 날 주요일정이 아니라 '그 장소' 기준으로 표시(먹은 것 있으면 함께)
   function placeSummary(e, place){
     var foods=[];
-    if(e.meals) MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m&&m.place===place && m.food && foods.indexOf(m.food)<0) foods.push(m.food); });
+    if(e.meals) mealKeys(e).forEach(function(_k){ var m=e.meals[_k]; if(m&&m.place===place && m.food && foods.indexOf(m.food)<0) foods.push(m.food); });
     return foods.length ? place+" · "+foods.join(" · ") : place;
   }
   // 사람 관련 기록의 라벨: 그 사람이 실제 함께한 끼니/업무미팅의 장소 기준(첫 끼니가 아니라)
   function personSummary(e, name){
     var parts=[];
-    if(e.meals) MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m && (m.people||[]).indexOf(name)>=0){ var lbl=(m.place||"")+(m.place&&m.food?" · ":"")+(m.food||""); if(lbl && parts.indexOf(lbl)<0) parts.push(lbl); } });
-    if(e.bizmeet && (e.bizmeet.people||[]).indexOf(name)>=0){ var bn=e.bizmeet.name||(e.bizmeet.time?"업무미팅":""); if(bn) parts.push("💼 "+bn); }
+    if(e.meals) mealKeys(e).forEach(function(_k){ var m=e.meals[_k]; if(m && (m.people||[]).indexOf(name)>=0){ var lbl=(m.place||"")+(m.place&&m.food?" · ":"")+(m.food||""); if(lbl && parts.indexOf(lbl)<0) parts.push(lbl); } });
+    bizArr(e).forEach(function(b){ if((b.people||[]).indexOf(name)>=0){ var bn=b.name||(b.time?"업무미팅":""); if(bn && parts.indexOf("💼 "+bn)<0) parts.push("💼 "+bn); } });
     if(parts.length) return parts.join(" · ");
     if(e.schedule) return e.schedule;   // 특정 장소 없이 만난사람 리스트에만 있으면 주요일정/메모
     var note=[e.thoughts,e.learning].filter(Boolean).join(" · ");
@@ -1687,10 +1695,42 @@
   function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
   function mval(id){ var el=document.getElementById(id); return el?(el.value||"").trim():""; }
   function parseNames(s){ return s? s.split(/[,，]/).map(function(x){return x.trim();}).filter(Boolean):[]; }
-  function readMeals(){ var m={}; MEALS.forEach(function(x){ m[x.key]={place:mval("m-"+x.key+"-place"), food:mval("m-"+x.key+"-food"), people:parseNames(mval("m-"+x.key+"-people"))}; }); return m; }
-  function loadMeals(meals){ MEALS.forEach(function(x){ var v=(meals&&meals[x.key])||{}; var p=document.getElementById("m-"+x.key+"-place"), f=document.getElementById("m-"+x.key+"-food"), w=document.getElementById("m-"+x.key+"-people"); if(p)p.value=v.place||""; if(f)f.value=v.food||""; if(w)w.value=(v.people||[]).join(", "); var chk=document.querySelector('.golf-chk[data-meal="'+x.key+'"]'); if(chk) chk.checked=!!(state.golf && v.place && state.golf[v.place]); }); }
+  function readMeals(){
+    var m={}; MEALS.forEach(function(x){ m[x.key]={place:mval("m-"+x.key+"-place"), food:mval("m-"+x.key+"-food"), people:parseNames(mval("m-"+x.key+"-people"))}; });
+    var ex=document.querySelectorAll("#specialExtra .sp-row");   // 추가 Special
+    Array.prototype.forEach.call(ex,function(row,i){ m["special"+(i+2)]={place:(row.querySelector(".sp-place").value||"").trim(), food:(row.querySelector(".sp-food").value||"").trim(), people:parseNames(row.querySelector(".sp-people").value)}; });
+    return m;
+  }
+  function loadMeals(meals){ MEALS.forEach(function(x){ var v=(meals&&meals[x.key])||{}; var p=document.getElementById("m-"+x.key+"-place"), f=document.getElementById("m-"+x.key+"-food"), w=document.getElementById("m-"+x.key+"-people"); if(p)p.value=v.place||""; if(f)f.value=v.food||""; if(w)w.value=(v.people||[]).join(", "); var chk=document.querySelector('.golf-chk[data-meal="'+x.key+'"]'); if(chk) chk.checked=!!(state.golf && v.place && state.golf[v.place]); }); renderSpecialExtras(); }
   function readBiz(){ return { name:mval("bm-name"), time:mval("bm-time"), people:parseNames(mval("bm-people")) }; }
   function loadBiz(b){ b=b||{}; var nm=document.getElementById("bm-name"), tm=document.getElementById("bm-time"), pp=document.getElementById("bm-people"); if(nm)nm.value=b.name||""; if(tm)tm.value=b.time||""; if(pp)pp.value=(b.people||[]).join(", "); }
+  // 추가 업무미팅(첫 번째는 위 bm-* 고정, 나머지는 #bizExtra)
+  function readBizmeets(){ var out=[readBiz()]; Array.prototype.forEach.call(document.querySelectorAll("#bizExtra .br-row"),function(row){ out.push({ name:(row.querySelector(".br-name").value||"").trim(), time:(row.querySelector(".br-time").value||"").trim(), people:parseNames(row.querySelector(".br-people").value) }); }); return out; }
+  function _hasSp(v){ return !!(v && (v.place||v.food||(v.people&&v.people.length))); }
+  function _hasBz(v){ return !!(v && (v.name||v.time||(v.people&&v.people.length))); }
+  // 추가 Special 행 렌더: 첫 Special이 채워지면 빈 행 하나 생성(최대 4개 추가)
+  function renderSpecialExtras(){
+    var wrap=$("#specialExtra"); if(!wrap) return;
+    var sp=draft.meals||{}, extras=[], i=2; while(sp["special"+i]){ if(_hasSp(sp["special"+i])) extras.push(sp["special"+i]); i++; }
+    var rows = _hasSp(sp.special) ? extras.slice(0,4) : [];
+    if(_hasSp(sp.special) && rows.length<4) rows.push({place:"",food:"",people:[]});
+    wrap.innerHTML = rows.map(function(v,idx){ var n=idx+2; return '<div class="meal sp-row">'+
+      '<div class="meal-h row"><span>✨ Special '+n+'</span></div>'+
+      '<div class="meal-grid"><span class="place-wrap"><input type="text" class="sp-place" placeholder="어디서 · 저녁 이후 만남" autocomplete="off" value="'+esc(v.place||"")+'"></span><input type="text" class="sp-food" placeholder="무엇을" autocomplete="off" value="'+esc(v.food||"")+'"></div>'+
+      '<input type="text" class="sp-people" placeholder="누구와 · 쉼표로 구분" autocomplete="off" value="'+esc((v.people||[]).join(", "))+'"></div>'; }).join("");
+  }
+  // 추가 업무미팅 행 렌더
+  function renderBizExtras(){
+    var wrap=$("#bizExtra"); if(!wrap) return;
+    var arr=(draft.bizmeets||[]).slice(1).filter(_hasBz);
+    var first=(draft.bizmeets&&draft.bizmeets[0])||draft.bizmeet;
+    var rows = _hasBz(first) ? arr.slice(0,4) : [];
+    if(_hasBz(first) && rows.length<4) rows.push({name:"",time:"",people:[]});
+    wrap.innerHTML = rows.map(function(v,idx){ return '<div class="meal biz-meal br-row">'+
+      '<div class="meal-h row"><span>💼 업무미팅 '+(idx+2)+'</span></div>'+
+      '<div class="meal-grid"><input type="text" class="br-name" placeholder="업무미팅명" autocomplete="off" value="'+esc(v.name||"")+'"><input type="time" class="br-time" step="600" title="미팅 시간 · 10분 단위" value="'+esc(v.time||"")+'"></div>'+
+      '<input type="text" class="br-people" placeholder="누구와 · 쉼표로 구분" autocomplete="off" value="'+esc((v.people||[]).join(", "))+'"></div>'; }).join("");
+  }
   function readExercise(){ var mn=document.getElementById("ex-minutes"); return { activity:mval("ex-activity"), minutes:mn?(+mn.value||0):0, weight:mval("ex-weight"), waist:mval("ex-waist") }; }
   function loadExercise(x){ x=x||{}; var a=document.getElementById("ex-activity"), mn=document.getElementById("ex-minutes"), w=document.getElementById("ex-weight"), ws=document.getElementById("ex-waist"); if(a)a.value=x.activity||""; if(mn)mn.value=String(+x.minutes||0); if(w)w.value=(x.weight===0||x.weight)?x.weight:""; if(ws)ws.value=(x.waist===0||x.waist)?x.waist:""; }
   // 골프 스코어: 현재 골프로 체크된 끼니(슬롯)들 → 각각 라운드 스코어 입력(하루 여러 라운드)
@@ -1748,7 +1788,7 @@
     var rounds=[]; state.entries.forEach(function(e){ roundsOf(e).forEach(function(r){ var mine=r.scores["나"], th=r.scores[name]; if(mine==null||mine===""||th==null||th==="") return; mine=+mine; th=+th; if(isNaN(mine)||isNaN(th)) return; rounds.push({date:e.date, place:r.place||"(장소)", mine:mine, th:th}); }); });
     rounds.sort(byDateDesc); return rounds;
   }
-  function mealPeople(m){ var out=[]; if(m) MEALS.forEach(function(x){ ((m[x.key]||{}).people||[]).forEach(function(n){ if(out.indexOf(n)<0)out.push(n); }); }); return out; }
+  function mealPeople(m){ var out=[]; if(m) Object.keys(m).forEach(function(k){ ((m[k]||{}).people||[]).forEach(function(n){ if(out.indexOf(n)<0)out.push(n); }); }); return out; }
   function readDrinks(){ var d={}; DRINKS.forEach(function(x){ var v=parseFloat(mval("d-"+x.key)); d[x.key]=(isNaN(v)||v<0)?0:v; }); return d; }
   function loadDrinks(dr){ DRINKS.forEach(function(x){ var el=document.getElementById("d-"+x.key); if(el){ var v=(dr&&+dr[x.key])||0; el.value=v?v:""; } }); }
 
@@ -1785,10 +1825,13 @@
       var mk=e.target.getAttribute("data-meal"), pl=mval("m-"+mk+"-place");
       if(pl){ state.golf=state.golf||{}; if(e.target.checked) state.golf[pl]=true; else delete state.golf[pl]; save(); rebuild(); }
     }
+    // Special/업무미팅이 채워지면 다음 빈 행 생성
+    draft.meals=readMeals(); renderSpecialExtras();
+    draft.bizmeets=readBizmeets(); renderBizExtras();
     renderGolfScore();
   });
 
-  function loadDraft(){ var scs=document.querySelectorAll(".meal-same"); for(var si=0;si<scs.length;si++) scs[si].checked=false; loadPhotoForDate(draft.date); $("#date").value=draft.date; $("#schedule").value=draft.schedule||""; $("#schedMark").checked=!!draft.mark; loadMeals(draft.meals); loadBiz(draft.bizmeet); loadDrinks(draft.drinks); loadExercise(draft.exercise); $("#thoughts").value=draft.thoughts; $("#learning").value=draft.learning; renderDraftChips(); renderGolfScore(); var _ed=$("#editing"); _ed.textContent = existingFor(draft.date)?"수정중":""; _ed.className="sub"; }
+  function loadDraft(){ var scs=document.querySelectorAll(".meal-same"); for(var si=0;si<scs.length;si++) scs[si].checked=false; loadPhotoForDate(draft.date); $("#date").value=draft.date; $("#schedule").value=draft.schedule||""; $("#schedMark").checked=!!draft.mark; loadMeals(draft.meals); draft.bizmeets=(draft.bizmeets&&draft.bizmeets.length)?draft.bizmeets:[draft.bizmeet||emptyBiz()]; loadBiz(draft.bizmeets[0]); renderBizExtras(); loadDrinks(draft.drinks); loadExercise(draft.exercise); $("#thoughts").value=draft.thoughts; $("#learning").value=draft.learning; renderDraftChips(); renderGolfScore(); var _ed=$("#editing"); _ed.textContent = existingFor(draft.date)?"수정중":""; _ed.className="sub"; }
   function existingFor(date){ return state.entries.filter(function(e){return e.date===date;})[0]; }
 
   function saveEntry(){
@@ -1798,15 +1841,15 @@
     draft.meals=readMeals();
     state.golf=state.golf||{};
     MEALS.forEach(function(x){ var pl=(draft.meals[x.key]||{}).place; var chk=document.querySelector('.golf-chk[data-meal="'+x.key+'"]'); if(pl){ if(chk&&chk.checked) state.golf[pl]=true; else if(chk) delete state.golf[pl]; } });
-    draft.bizmeet=readBiz();
+    draft.bizmeets=readBizmeets().filter(bizHasContent); draft.bizmeet=draft.bizmeets[0]||emptyBiz();
     draft.drinks=readDrinks();
     draft.exercise=readExercise();
     draft.thoughts=$("#thoughts").value.trim();
     draft.learning=$("#learning").value.trim();
-    if(!draft.people.length && !draft.schedule && !mealHasContent(draft.meals) && !bizHasContent(draft.bizmeet) && drinkTotal(draft.drinks)===0 && !exHasContent(draft.exercise) && !draft.thoughts && !draft.learning){ flash("기록할 내용을 입력해 주세요."); return; }
+    if(!draft.people.length && !draft.schedule && !mealHasContent(draft.meals) && !draft.bizmeets.length && drinkTotal(draft.drinks)===0 && !exHasContent(draft.exercise) && !draft.thoughts && !draft.learning){ flash("기록할 내용을 입력해 주세요."); return; }
     // upsert people global rel (직접 추가한 사람 + 식사/업무미팅 동행)
     draft.people.forEach(function(p){ state.people[p.name]={rel:p.rel}; });
-    var withAll=mealPeople(draft.meals).concat((draft.bizmeet&&draft.bizmeet.people)||[]);
+    var withAll=mealPeople(draft.meals); draft.bizmeets.forEach(function(b){ (b.people||[]).forEach(function(n){ if(withAll.indexOf(n)<0) withAll.push(n); }); });
     withAll.forEach(function(n){ if(!state.people[n]) state.people[n]={rel:"etc"}; });
     // 골프 스코어: 골프 체크된 각 라운드(슬롯)별로 나+동반자 것만 남김
     var gSlots=golfSlotsNow(), gScores={};
@@ -1815,8 +1858,8 @@
     var ex=existingFor(draft.date);
     var names=draft.people.map(function(p){return p.name;});
     withAll.forEach(function(n){ if(names.indexOf(n)<0) names.push(n); }); // 식사·업무미팅 동행도 만난 사람에 포함
-    if(ex){ ex.people=names; ex.schedule=draft.schedule; ex.mark=draft.mark; ex.meals=draft.meals; ex.bizmeet=draft.bizmeet; ex.drinks=draft.drinks; ex.exercise=draft.exercise; ex.golfScore={}; ex.golfScores=gScores; ex.thoughts=draft.thoughts; ex.learning=draft.learning; ex.ts=Date.now(); }
-    else state.entries.push({id:id(), date:draft.date, people:names, schedule:draft.schedule, mark:draft.mark, meals:draft.meals, bizmeet:draft.bizmeet, drinks:draft.drinks, exercise:draft.exercise, golfScore:{}, golfScores:gScores, thoughts:draft.thoughts, learning:draft.learning, ts:Date.now()});
+    if(ex){ ex.people=names; ex.schedule=draft.schedule; ex.mark=draft.mark; ex.meals=draft.meals; ex.bizmeet=draft.bizmeet; ex.bizmeets=draft.bizmeets; ex.drinks=draft.drinks; ex.exercise=draft.exercise; ex.golfScore={}; ex.golfScores=gScores; ex.thoughts=draft.thoughts; ex.learning=draft.learning; ex.ts=Date.now(); }
+    else state.entries.push({id:id(), date:draft.date, people:names, schedule:draft.schedule, mark:draft.mark, meals:draft.meals, bizmeet:draft.bizmeet, bizmeets:draft.bizmeets, drinks:draft.drinks, exercise:draft.exercise, golfScore:{}, golfScores:gScores, thoughts:draft.thoughts, learning:draft.learning, ts:Date.now()});
     save();
     flash("저장했어요 ✦");
     loadDraft();   // 저장 후에도 입력 내용을 비우지 않고 그대로 남김
@@ -1838,7 +1881,7 @@
 
   function scrollToComposer(){ var c=document.querySelector(".composer-wide"); if(c){ c.scrollIntoView({behavior:reduce?"auto":"smooth", block:"start"}); var f=document.getElementById("schedule"); } }
   function editEntry(e, noScroll){
-    draft={ date:e.date, people:e.people.map(function(n){return {name:n, rel:relOf(n)};}), schedule:e.schedule||"", mark:!!e.mark, meals:e.meals?JSON.parse(JSON.stringify(e.meals)):emptyMeals(), bizmeet:e.bizmeet?JSON.parse(JSON.stringify(e.bizmeet)):emptyBiz(), drinks:e.drinks?JSON.parse(JSON.stringify(e.drinks)):emptyDrinks(), exercise:e.exercise?JSON.parse(JSON.stringify(e.exercise)):emptyExercise(), golfScore:e.golfScore?JSON.parse(JSON.stringify(e.golfScore)):{}, golfScores:e.golfScores?JSON.parse(JSON.stringify(e.golfScores)):{}, thoughts:e.thoughts, learning:e.learning };
+    draft={ date:e.date, people:e.people.map(function(n){return {name:n, rel:relOf(n)};}), schedule:e.schedule||"", mark:!!e.mark, meals:e.meals?JSON.parse(JSON.stringify(e.meals)):emptyMeals(), bizmeet:e.bizmeet?JSON.parse(JSON.stringify(e.bizmeet)):emptyBiz(), bizmeets:(e.bizmeets&&e.bizmeets.length)?JSON.parse(JSON.stringify(e.bizmeets)):(e.bizmeet?[JSON.parse(JSON.stringify(e.bizmeet))]:[emptyBiz()]), drinks:e.drinks?JSON.parse(JSON.stringify(e.drinks)):emptyDrinks(), exercise:e.exercise?JSON.parse(JSON.stringify(e.exercise)):emptyExercise(), golfScore:e.golfScore?JSON.parse(JSON.stringify(e.golfScore)):{}, golfScores:e.golfScores?JSON.parse(JSON.stringify(e.golfScores)):{}, thoughts:e.thoughts, learning:e.learning };
     loadDraft(); if(!noScroll) scrollToComposer();
   }
   function delEntry(e){
@@ -1922,11 +1965,11 @@
   function mealsHtml(meals){
     if(!meals) return "";
     var rows=[];
-    MEALS.forEach(function(x){
-      var m=meals[x.key]; if(!m) return;
+    mealKeys({meals:meals}).forEach(function(key){
+      var m=meals[key]; if(!m) return; var meta=mealMeta(key);
       var parts=[]; if(m.place)parts.push(esc(m.place)); if(m.food)parts.push(esc(m.food));
       var who=(m.people&&m.people.length)?' <span class="m-who">('+m.people.map(esc).join(", ")+')</span>':'';
-      if(parts.length||who) rows.push('<div class="tl-meal">'+x.ico+' '+parts.join(" · ")+who+'</div>');
+      if(parts.length||who) rows.push('<div class="tl-meal">'+meta.ico+' '+parts.join(" · ")+who+'</div>');
     });
     return rows.length? '<div class="tl-meals">'+rows.join("")+'</div>' : "";
   }
@@ -1949,7 +1992,7 @@
           (e.schedule?'<div class="tl-sched"><span>📌</span>'+esc(e.schedule)+'</div>':'')+
           (ppl?'<div class="tl-people">'+ppl+'</div>':'')+
           mealsHtml(e.meals)+
-          bizHtml(e.bizmeet)+
+          bizArr(e).map(bizHtml).join("")+
           drinksHtml(e.drinks)+
           exerciseHtml(e.exercise)+
           (photoDates[e.date]?'<div class="tl-photo"><img data-date="'+e.date+'" alt=""></div>':'')+
@@ -2017,8 +2060,8 @@
     if(state.people) delete state.people[name];
     state.entries.forEach(function(e){
       if(e.people) e.people=e.people.filter(function(x){return x!==name;});
-      if(e.meals) MEALS.forEach(function(m){ var mm=e.meals[m.key]; if(mm&&mm.people) mm.people=mm.people.filter(function(x){return x!==name;}); });
-      if(e.bizmeet&&e.bizmeet.people) e.bizmeet.people=e.bizmeet.people.filter(function(x){return x!==name;});
+      if(e.meals) Object.keys(e.meals).forEach(function(mk){ var mm=e.meals[mk]; if(mm&&mm.people) mm.people=mm.people.filter(function(x){return x!==name;}); });
+      bizArr(e).forEach(function(b){ if(b.people) b.people=b.people.filter(function(x){return x!==name;}); });
     });
     (state.events||[]).forEach(function(ev){ if(ev.attendees) ev.attendees=ev.attendees.filter(function(x){return x!==name;}); });
     save(); rebuild(); refresh();
@@ -2289,8 +2332,7 @@
     e.golfScores[slot]=gsNew; e.golfScore={};
     e.golfHolesBy=e.golfHolesBy||{}; if(hSel){ var hv=+hSel.value; if(hv&&hv!==18) e.golfHolesBy[slot]=hv; else delete e.golfHolesBy[slot]; }
     people.forEach(function(n){ if(!state.people[n]) state.people[n]={rel:"etc"}; });
-    var np=[]; MEALS.forEach(function(x){ ((e.meals[x.key]||{}).people||[]).forEach(function(n){ if(np.indexOf(n)<0) np.push(n); }); });
-    if(e.bizmeet&&e.bizmeet.people) e.bizmeet.people.forEach(function(n){ if(np.indexOf(n)<0) np.push(n); });
+    var np=mealPeople(e.meals); bizArr(e).forEach(function(b){ (b.people||[]).forEach(function(n){ if(np.indexOf(n)<0) np.push(n); }); });
     e.people=np;
     e.ts=Date.now();
     return e;
@@ -2301,10 +2343,9 @@
     if(slot){ kill(slot); }
     else if(e.meals){ MEALS.forEach(function(x){ var m=e.meals[x.key]; if(m && m.place && (m.place===place || (state.golf&&state.golf[m.place]))) kill(x.key); }); }
     if(!e.golfScores || !Object.keys(e.golfScores).length) e.golfScore={};   // 남은 라운드 없으면 flat도 정리
-    var np=[]; if(e.meals) MEALS.forEach(function(x){ ((e.meals[x.key]||{}).people||[]).forEach(function(n){ if(np.indexOf(n)<0) np.push(n); }); });
-    if(e.bizmeet && e.bizmeet.people) e.bizmeet.people.forEach(function(n){ if(np.indexOf(n)<0) np.push(n); });
+    var np=mealPeople(e.meals); bizArr(e).forEach(function(b){ (b.people||[]).forEach(function(n){ if(np.indexOf(n)<0) np.push(n); }); });
     e.people=np;
-    var stillEmpty = !np.length && !e.schedule && !mealHasContent(e.meals) && !bizHasContent(e.bizmeet) && drinkTotal(e.drinks)===0 && !exHasContent(e.exercise) && !e.thoughts && !e.learning && !photoDates[e.date];
+    var stillEmpty = !np.length && !e.schedule && !mealHasContent(e.meals) && !bizArr(e).some(bizHasContent) && drinkTotal(e.drinks)===0 && !exHasContent(e.exercise) && !e.thoughts && !e.learning && !photoDates[e.date];
     if(stillEmpty){ state.entries=state.entries.filter(function(x){ return x.id!==e.id; }); }
     else e.ts=Date.now();
     save();
@@ -2584,7 +2625,7 @@
     ent.forEach(function(e){
       days[e.date]=1;
       e.people.forEach(function(n){ people[n]=(people[n]||0)+1; });
-      if(e.meals) MEALS.forEach(function(x){ var m=e.meals[x.key]; if(!m)return; if(m.place) places[m.place]=(places[m.place]||0)+1; (m.people||[]).forEach(function(n){ comp[n]=(comp[n]||0)+1; people[n]=(people[n]||0)+1; }); });
+      if(e.meals) mealKeys(e).forEach(function(_k){ var m=e.meals[_k]; if(!m)return; if(m.place) places[m.place]=(places[m.place]||0)+1; (m.people||[]).forEach(function(n){ comp[n]=(comp[n]||0)+1; people[n]=(people[n]||0)+1; }); });
       if(e.drinks) DRINKS.forEach(function(x){ drinks[x.key]+=(+e.drinks[x.key]||0); });
       if(e.learning) learns.push([e.date, e.learning]);
     });
@@ -2670,7 +2711,7 @@
         ppl='<div class="cv-ppl">'+names+more+'</div>';
       }
       var place='', pico2='', gseen=false, bseen=false;
-      if(e && e.meals){ var pls=[]; MEALS.forEach(function(x){ var m=e.meals[x.key]; if(!m||!m.place) return; if(pls.indexOf(m.place)<0) pls.push(m.place); if(state.golf&&state.golf[m.place]&&!gseen){ pico2+='<span class="cv-pico">⛳</span>'; gseen=true; } if(placeEmoji(m.place)&&!bseen){ pico2+='<span class="cv-pico cv-ball" title="당구장"></span>'; bseen=true; } }); if(pls.length) place='<div class="cv-place">🍴 '+esc(pls.join(" · "))+'</div>'; }
+      if(e && e.meals){ var pls=[]; mealKeys(e).forEach(function(_k){ var m=e.meals[_k]; if(!m||!m.place) return; if(pls.indexOf(m.place)<0) pls.push(m.place); if(state.golf&&state.golf[m.place]&&!gseen){ pico2+='<span class="cv-pico">⛳</span>'; gseen=true; } if(placeEmoji(m.place)&&!bseen){ pico2+='<span class="cv-pico cv-ball" title="당구장"></span>'; bseen=true; } }); if(pls.length) place='<div class="cv-place">🍴 '+esc(pls.join(" · "))+'</div>'; }
       var title=e?' title="'+ds.slice(5).replace("-",".")+' · '+esc(calSummary(e))+'"':'';
       var cam=photoDates[ds]?'<span class="cv-cam">📷</span>':'';
       html+='<button class="'+cls+'" data-date="'+ds+'"'+title+'><div class="cv-top"><span class="cv-d">'+d+'</span>'+dot+pico2+cam+'</div>'+holLbl+sched+ppl+place+'</button>';
@@ -2966,10 +3007,12 @@
           if(e2Scores[x.key]) base.golfScores[target]=e2Scores[x.key];
           if(e2.golfHolesBy && e2.golfHolesBy[x.key]){ base.golfHolesBy=base.golfHolesBy||{}; base.golfHolesBy[target]=e2.golfHolesBy[x.key]; }
         });
+        // 추가 Special(special2..) 이월
+        if(e2.meals){ var _si=2; while(e2.meals["special"+_si]){ var _sm=e2.meals["special"+_si]; if(_sm && (_sm.place||_sm.food||((_sm.people||[]).length))){ var _bi=2; while(base.meals["special"+_bi]) _bi++; base.meals["special"+_bi]=_sm; } _si++; } }
         (e2.people||[]).forEach(function(n){ if(base.people.indexOf(n)<0) base.people.push(n); });
         if(e2.schedule && (base.schedule||"").indexOf(e2.schedule)<0) base.schedule=(base.schedule?base.schedule+" · ":"")+e2.schedule;
         base.mark=base.mark||e2.mark;
-        if((!base.bizmeet || (!base.bizmeet.name && !((base.bizmeet.people||[]).length))) && e2.bizmeet) base.bizmeet=e2.bizmeet;
+        var _bz=bizArr(base).concat(bizArr(e2)).filter(bizHasContent); if(_bz.length){ base.bizmeets=_bz; base.bizmeet=_bz[0]; }
         if(e2.drinks){ base.drinks=base.drinks||emptyDrinks(); DRINKS.forEach(function(dk){ base.drinks[dk.key]=(+base.drinks[dk.key]||0)+(+e2.drinks[dk.key]||0); }); }
         if((!base.exercise || !exHasContent(base.exercise)) && e2.exercise && exHasContent(e2.exercise)) base.exercise=e2.exercise;
         if(e2.thoughts && (base.thoughts||"").indexOf(e2.thoughts)<0) base.thoughts=(base.thoughts?base.thoughts+" · ":"")+e2.thoughts;
