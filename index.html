@@ -1008,6 +1008,7 @@
   state.golf = state.golf || {};
   Object.keys(state.people||{}).forEach(function(n){ if(state.people[n] && state.people[n].rel==="acq") state.people[n].rel="etc"; });   // 거래처→기타 통합
   state.todos = state.todos || [];
+  state.subcats = state.subcats || [];
   var draft = { date: todayStr(), people: [], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), drinks:emptyDrinks(), exercise:emptyExercise(), golfScore:{}, thoughts:"", learning:"" };
   var hiddenRels = {fam:true, work:true}, hideRest=true, hideGolf=true, drinkPeriod="week", weightPeriod="month", view="graph", recapMonth="", minMeet=2, meetExact=false, calMonth="", searchQ="", graphYear=String(new Date().getFullYear());
 
@@ -1056,13 +1057,15 @@
     $("#modalMsg").textContent=o.message||"";
     ok.textContent=o.okText||"확인";
     ok.classList.toggle("danger", !!o.danger);
-    if(o.requireText){ inp.hidden=false; inp.value=""; inp.placeholder=o.placeholder||""; } else inp.hidden=true;
+    if(o.requireText || o.promptText){ inp.hidden=false; inp.value=o.initial||""; inp.placeholder=o.placeholder||""; } else inp.hidden=true;
     back.hidden=false;
-    setTimeout(function(){ (o.requireText?inp:ok).focus(); }, 30);
+    setTimeout(function(){ ((o.requireText||o.promptText)?inp:ok).focus(); }, 30);
     function close(){ back.hidden=true; ok.onclick=cancel.onclick=back.onclick=inp.onkeydown=null; document.onkeydown=null; }
     function go(){
       if(o.requireText && inp.value.trim()!==o.requireText){ inp.classList.add("shake"); setTimeout(function(){ inp.classList.remove("shake"); },380); inp.focus(); return; }
-      close(); if(o.onOk) o.onOk();
+      if(o.promptText && !inp.value.trim()){ inp.classList.add("shake"); setTimeout(function(){ inp.classList.remove("shake"); },380); inp.focus(); return; }
+      var _val=(o.requireText||o.promptText)? inp.value.trim() : undefined;
+      close(); if(o.onOk) o.onOk(_val);
     }
     ok.onclick=go;
     cancel.onclick=close;
@@ -1152,11 +1155,11 @@
     ctx.setTransform(DPR,0,0,DPR,0,0);
   }
 
-  var placeIndex={}, searchAnchors=[], anchorTargets={}, searchMeTarget=null, searchFocus=[];   // 인물 검색 시 앵커 배치
+  var placeIndex={}, searchAnchors=[], anchorTargets={}, searchMeTarget=null, searchFocus=[], searchSub="";   // 인물 검색 시 앵커 배치 · 서브그룹 검색
   function rebuild(){
     var g=buildGraph();
     var allNames=Object.keys(g.meetings);
-    var names, searchPlaceSet=null; searchAnchors=[]; anchorTargets={}; searchMeTarget=null; searchFocus=[];
+    var names, searchPlaceSet=null; searchAnchors=[]; anchorTargets={}; searchMeTarget=null; searchFocus=[]; searchSub="";
     if(searchQ){
       var _terms=searchQ.split(/[,，]/).map(function(s){return s.trim();}).filter(Boolean);
       var _sInY=inGraphYear;
@@ -1177,18 +1180,28 @@
         // 검색한 각 사람(용어) → 앵커. 우측에 상하로 배치
         var _seen={}; _terms.forEach(function(t){ var hit=Object.keys(keep).filter(function(n){ return n.indexOf(t)>=0; })[0]; if(hit && !_seen[hit]){ _seen[hit]=1; searchAnchors.push(hit); } });
       } else {
-        // 한 사람 검색: 그 사람(A) + 함께 만난 인맥(pairs). minMeet·관계·장소칩은 아래 공통 처리
-        var term=_terms[0]||"", matched={};
-        allNames.forEach(function(n){ if(n.indexOf(term)>=0) matched[n]=1; });
-        var _mk=Object.keys(matched), _a=(_mk.indexOf(term)>=0? term : (_mk[0]||null));
-        if(_a){ searchAnchors=[_a]; keep[_a]=1; Object.keys(g.pairs).forEach(function(k){ var ab=k.split(g.S1), a=ab[0], b=ab[1]; if(a===_a) keep[b]=1; else if(b===_a) keep[a]=1; }); }
-        Object.keys(g.places||{}).forEach(function(pl){ if(pl.indexOf(term)>=0) searchPlaceSet[pl]=1; });   // 장소명 검색
+        // 한 사람 검색 or 서브그룹 검색
+        var term=_terms[0]||"";
+        var _pMatch=allNames.filter(function(n){ return n.indexOf(term)>=0; });
+        var _exactSub=(state.subcats||[]).indexOf(term)>=0? term : null;
+        var _subMatch=_exactSub || (_pMatch.length? null : (state.subcats||[]).filter(function(sc){ return sc.indexOf(term)>=0; })[0]);
+        if(_subMatch){
+          // 서브그룹 검색: 그 그룹 멤버 표시(나 유지·관계칩/최소횟수 무시, 군집 배치)
+          searchSub=_subMatch;
+          allNames.forEach(function(n){ if((state.people[n]||{}).sub===_subMatch) keep[n]=1; });
+        } else {
+          // 한 사람 검색: 그 사람(A) + 함께 만난 인맥(pairs)
+          var _mk=_pMatch, matched={}; _mk.forEach(function(n){ matched[n]=1; });
+          var _a=(_mk.indexOf(term)>=0? term : (_mk[0]||null));
+          if(_a){ searchAnchors=[_a]; keep[_a]=1; Object.keys(g.pairs).forEach(function(k){ var ab=k.split(g.S1), a=ab[0], b=ab[1]; if(a===_a) keep[b]=1; else if(b===_a) keep[a]=1; }); }
+          Object.keys(g.places||{}).forEach(function(pl){ if(pl.indexOf(term)>=0) searchPlaceSet[pl]=1; });   // 장소명 검색
+        }
       }
-      // 공통: minMeet(1+/2+…) 적용 — 검색 인물은 항상 포함
-      names=allNames.filter(function(n){ return keep[n] && (searchAnchors.indexOf(n)>=0 || (meetExact? g.meetings[n]===minMeet : g.meetings[n]>=minMeet)); });
+      // 공통: minMeet(1+/2+…) 적용 — 검색 인물·서브그룹 멤버는 항상 포함
+      names=allNames.filter(function(n){ return keep[n] && (searchSub || searchAnchors.indexOf(n)>=0 || (meetExact? g.meetings[n]===minMeet : g.meetings[n]>=minMeet)); });
       searchAnchors=searchAnchors.filter(function(n){ return names.indexOf(n)>=0; });
-      // 한 명 검색: 표시되는(관계 보이는) 사람과 함께 간 식당·골프장 (식당/골프 칩은 visible에서 게이팅)
-      if(_terms.length<=1){ var _ns={}; names.forEach(function(n){ _ns[n]=1; }); Object.keys(g.pplace||{}).forEach(function(k){ var ab=k.split(g.S1), pl=ab[0], pn=ab[1]; if(_ns[pn] && (searchAnchors.indexOf(pn)>=0 || !hiddenRels[relOf(pn)])) searchPlaceSet[pl]=1; }); }
+      // 표시되는 사람과 함께 간 식당·골프장 (식당/골프 칩은 visible에서 게이팅)
+      if(_terms.length<=1){ var _ns={}; names.forEach(function(n){ _ns[n]=1; }); Object.keys(g.pplace||{}).forEach(function(k){ var ab=k.split(g.S1), pl=ab[0], pn=ab[1]; if(_ns[pn] && (searchSub || searchAnchors.indexOf(pn)>=0 || !hiddenRels[relOf(pn)])) searchPlaceSet[pl]=1; }); }
       // 나 제거 → 검색 인물이 중심 허브. 함께 만난 사람은 허브 링크로 주변에 자연 배치
       searchFocus = searchAnchors.slice(); searchMeTarget=null;
       if(searchAnchors.length===1){ anchorTargets[searchAnchors[0]]={fx:0.5,fy:0.5}; }
@@ -1275,7 +1288,7 @@
     if(_hubMode){
       names.forEach(function(n){ if(_aset[n]) return; searchAnchors.forEach(function(a){ if(a===n) return; var w=g.pairs[[a,n].sort().join(g.S1)]; if(w && nodeIndex[a] && nodeIndex[n]) links.push({a:nodeIndex[a], b:nodeIndex[n], w:w, me:true}); }); });
       if(searchAnchors.length===2 && nodeIndex[searchAnchors[0]] && nodeIndex[searchAnchors[1]]){ var _w2=g.pairs[searchAnchors.slice().sort().join(g.S1)]||1; links.push({a:nodeIndex[searchAnchors[0]], b:nodeIndex[searchAnchors[1]], w:_w2, me:true}); }
-    } else if(!searchQ)
+    } else if(!searchAnchors.length)
     names.forEach(function(n){ links.push({a:me, b:nodeIndex[n], w:g.meetings[n], me:true}); });
     Object.keys(g.pairs).forEach(function(k){
       var ab=k.split("");
@@ -1343,7 +1356,7 @@
   function visible(node){
     if(node.type==="place"){ return node.golf? !hideGolf : !hideRest; }   // 장소는 검색이든 아니든 식당/골프 칩 적용
     if(node.me) return true;
-    if(searchQ) return (searchAnchors.indexOf(node.name)>=0) || !hiddenRels[node.rel];   // 검색 인물은 항상, 나머지는 관계칩 반영
+    if(searchQ) return (searchAnchors.indexOf(node.name)>=0) || (searchSub && (state.people[node.name]||{}).sub===searchSub) || !hiddenRels[node.rel];   // 검색 인물·서브그룹 멤버는 항상, 나머지는 관계칩
     return !hiddenRels[node.rel];
   }
 
@@ -1464,8 +1477,8 @@
       }
     });
 
-    // me (인물 검색 중에는 '나' 제외 — 검색 인물이 중심 허브)
-    if(!searchQ){
+    // me (특정 인물 검색 중에는 '나' 제외 — 검색 인물이 중심 허브. 서브그룹/장소 검색은 '나' 유지)
+    if(!searchFocus.length){
       var mg=ctx.createRadialGradient(me.x,me.y,0,me.x,me.y,34);
       mg.addColorStop(0,"rgba(251,239,201,.55)"); mg.addColorStop(1,"rgba(251,239,201,0)");
       ctx.fillStyle=mg; ctx.beginPath(); ctx.arc(me.x,me.y,34,0,6.29); ctx.fill();
@@ -2051,9 +2064,19 @@
         var sel=document.createElement("select");
         REL_ORDER.forEach(function(k){ var o=document.createElement("option"); o.value=k; o.textContent=REL[k].name; if(k===cur)o.selected=true; sel.appendChild(o); });
         sel.onchange=function(){ if(state.people[n]){ state.people[n].rel=sel.value; save(); rebuild(); refresh(); build(); } };
+        // 서브카테고리(그룹) 선택 + 새로 만들기
+        var subSel=document.createElement("select"); subSel.className="rel-sub"; subSel.title="서브그룹";
+        var curSub=(state.people[n]||{}).sub||"";
+        var o0=document.createElement("option"); o0.value=""; o0.textContent="그룹 없음"; if(!curSub)o0.selected=true; subSel.appendChild(o0);
+        (state.subcats||[]).forEach(function(sc){ var o=document.createElement("option"); o.value=sc; o.textContent=sc; if(sc===curSub)o.selected=true; subSel.appendChild(o); });
+        var oN=document.createElement("option"); oN.value="__new"; oN.textContent="＋ 새 그룹…"; subSel.appendChild(oN);
+        subSel.onchange=function(){ var v=subSel.value;
+          if(v==="__new"){ subSel.value=curSub; askConfirm({ title:"새 서브그룹 만들기", message:"서브카테고리(그룹) 이름을 입력하세요.", okText:"만들기", promptText:true, placeholder:"예: 대학동기 · SK임원", onOk:function(nm){ nm=(nm||"").trim(); if(!nm) return; state.subcats=state.subcats||[]; if(state.subcats.indexOf(nm)<0) state.subcats.push(nm); if(state.people[n]) state.people[n].sub=nm; save(); build(); } }); return; }
+          if(state.people[n]){ state.people[n].sub=v||""; if(!v){} save(); build(); }
+        };
         var del=document.createElement("button"); del.className="rel-del"; del.setAttribute("aria-label","삭제"); del.title="모든 기록에서 삭제"; del.textContent="×";
         del.onclick=function(){ askConfirm({ title:"인맥 삭제", message:"‘"+n+"’ 님을 모든 기록에서 삭제할까요?\n되돌릴 수 없어요.", okText:"삭제", danger:true, onOk:function(){ deletePerson(n); build(); } }); };
-        row.appendChild(sel); row.appendChild(del);
+        row.appendChild(subSel); row.appendChild(sel); row.appendChild(del);
         list.appendChild(row);
       });
     }
@@ -3066,7 +3089,7 @@
     get:function(){ return state; },
     replace:function(s, keepDraft){
       if(!s || !Array.isArray(s.entries)) return;
-      state={ people:s.people||{}, entries:s.entries||[], events:s.events||[], golf:s.golf||{}, todos:s.todos||[] };
+      state={ people:s.people||{}, entries:s.entries||[], events:s.events||[], golf:s.golf||{}, todos:s.todos||[], subcats:s.subcats||[] };
       mergeDuplicateDates();
       save();
       if(!keepDraft) resetDraft();
