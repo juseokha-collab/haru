@@ -1155,16 +1155,21 @@
     ctx.setTransform(DPR,0,0,DPR,0,0);
   }
 
-  var placeIndex={}, searchAnchors=[], anchorTargets={}, searchMeTarget=null, searchFocus=[], searchSub="";   // 인물 검색 시 앵커 배치 · 서브그룹 검색
+  var placeIndex={}, searchAnchors=[], anchorTargets={}, searchMeTarget=null, searchFocus=[], searchSubs=[];   // 인물 검색 시 앵커 배치 · 서브그룹(복수) 검색
   function rebuild(){
     var g=buildGraph();
     var allNames=Object.keys(g.meetings);
-    var names, searchPlaceSet=null; searchAnchors=[]; anchorTargets={}; searchMeTarget=null; searchFocus=[]; searchSub="";
+    var names, searchPlaceSet=null; searchAnchors=[]; anchorTargets={}; searchMeTarget=null; searchFocus=[]; searchSubs=[];
     if(searchQ){
       var _terms=searchQ.split(/[,，]/).map(function(s){return s.trim();}).filter(Boolean);
       var _sInY=inGraphYear;
       searchPlaceSet={}; var keep={};
-      if(_terms.length>1){
+      // 서브그룹(들) 우선: 각 용어가 서브그룹이면 그 그룹들의 멤버 합집합
+      var _subs=[]; _terms.forEach(function(t){ var s=subGroupOf(t); if(s && _subs.indexOf(s)<0) _subs.push(s); });
+      if(_subs.length){
+        searchSubs=_subs;
+        allNames.forEach(function(n){ if(_subs.indexOf((state.people[n]||{}).sub)>=0) keep[n]=1; });
+      } else if(_terms.length>1){
         // 여러 사람 동시 검색: 그 사람들이 '같은 자리(끼니/미팅)'에 함께 있었던 경우만 → 그 자리의 사람 + 장소(식당·골프)
         state.entries.forEach(function(e){
           if(!_sInY(e.date)) return;
@@ -1180,28 +1185,18 @@
         // 검색한 각 사람(용어) → 앵커. 우측에 상하로 배치
         var _seen={}; _terms.forEach(function(t){ var hit=Object.keys(keep).filter(function(n){ return n.indexOf(t)>=0; })[0]; if(hit && !_seen[hit]){ _seen[hit]=1; searchAnchors.push(hit); } });
       } else {
-        // 한 사람 검색 or 서브그룹 검색
+        // 한 사람 검색: 그 사람(A) + 함께 만난 인맥(pairs). (서브그룹은 위에서 처리)
         var term=_terms[0]||"";
         var _pMatch=allNames.filter(function(n){ return n.indexOf(term)>=0; });
-        var _exactSub=(state.subcats||[]).indexOf(term)>=0? term : null;
-        var _subMatch=_exactSub || (_pMatch.length? null : (state.subcats||[]).filter(function(sc){ return sc.indexOf(term)>=0; })[0]);
-        if(_subMatch){
-          // 서브그룹 검색: 그 그룹 멤버 표시(나 유지·관계칩/최소횟수 무시, 군집 배치)
-          searchSub=_subMatch;
-          allNames.forEach(function(n){ if((state.people[n]||{}).sub===_subMatch) keep[n]=1; });
-        } else {
-          // 한 사람 검색: 그 사람(A) + 함께 만난 인맥(pairs)
-          var _mk=_pMatch, matched={}; _mk.forEach(function(n){ matched[n]=1; });
-          var _a=(_mk.indexOf(term)>=0? term : (_mk[0]||null));
-          if(_a){ searchAnchors=[_a]; keep[_a]=1; Object.keys(g.pairs).forEach(function(k){ var ab=k.split(g.S1), a=ab[0], b=ab[1]; if(a===_a) keep[b]=1; else if(b===_a) keep[a]=1; }); }
-          Object.keys(g.places||{}).forEach(function(pl){ if(pl.indexOf(term)>=0) searchPlaceSet[pl]=1; });   // 장소명 검색
-        }
+        var _a=(_pMatch.indexOf(term)>=0? term : (_pMatch[0]||null));
+        if(_a){ searchAnchors=[_a]; keep[_a]=1; Object.keys(g.pairs).forEach(function(k){ var ab=k.split(g.S1), a=ab[0], b=ab[1]; if(a===_a) keep[b]=1; else if(b===_a) keep[a]=1; }); }
+        Object.keys(g.places||{}).forEach(function(pl){ if(pl.indexOf(term)>=0) searchPlaceSet[pl]=1; });   // 장소명 검색
       }
       // 공통: minMeet(1+/2+…) 적용 — 검색 인물·서브그룹 멤버는 항상 포함
-      names=allNames.filter(function(n){ return keep[n] && (searchSub || searchAnchors.indexOf(n)>=0 || (meetExact? g.meetings[n]===minMeet : g.meetings[n]>=minMeet)); });
+      names=allNames.filter(function(n){ return keep[n] && (searchSubs.length || searchAnchors.indexOf(n)>=0 || (meetExact? g.meetings[n]===minMeet : g.meetings[n]>=minMeet)); });
       searchAnchors=searchAnchors.filter(function(n){ return names.indexOf(n)>=0; });
       // 표시되는 사람과 함께 간 식당·골프장 (식당/골프 칩은 visible에서 게이팅)
-      if(_terms.length<=1){ var _ns={}; names.forEach(function(n){ _ns[n]=1; }); Object.keys(g.pplace||{}).forEach(function(k){ var ab=k.split(g.S1), pl=ab[0], pn=ab[1]; if(_ns[pn] && (searchSub || searchAnchors.indexOf(pn)>=0 || !hiddenRels[relOf(pn)])) searchPlaceSet[pl]=1; }); }
+      if(_terms.length<=1 || searchSubs.length){ var _ns={}; names.forEach(function(n){ _ns[n]=1; }); Object.keys(g.pplace||{}).forEach(function(k){ var ab=k.split(g.S1), pl=ab[0], pn=ab[1]; if(_ns[pn] && (searchSubs.length || searchAnchors.indexOf(pn)>=0 || !hiddenRels[relOf(pn)])) searchPlaceSet[pl]=1; }); }
       // 나 제거 → 검색 인물이 중심 허브. 함께 만난 사람은 허브 링크로 주변에 자연 배치
       searchFocus = searchAnchors.slice(); searchMeTarget=null;
       if(searchAnchors.length===1){ anchorTargets[searchAnchors[0]]={fx:0.5,fy:0.5}; }
@@ -1356,7 +1351,7 @@
   function visible(node){
     if(node.type==="place"){ return node.golf? !hideGolf : !hideRest; }   // 장소는 검색이든 아니든 식당/골프 칩 적용
     if(node.me) return true;
-    if(searchQ) return (searchAnchors.indexOf(node.name)>=0) || (searchSub && (state.people[node.name]||{}).sub===searchSub) || !hiddenRels[node.rel];   // 검색 인물·서브그룹 멤버는 항상, 나머지는 관계칩
+    if(searchQ) return (searchAnchors.indexOf(node.name)>=0) || (searchSubs.length && searchSubs.indexOf((state.people[node.name]||{}).sub)>=0) || !hiddenRels[node.rel];   // 검색 인물·서브그룹 멤버는 항상, 나머지는 관계칩
     return !hiddenRels[node.rel];
   }
 
@@ -2426,8 +2421,9 @@
   $("#search").addEventListener("input",function(){
     searchQ=this.value.trim();
     closeDetail(); hover=null;
-    // 서브그룹 검색이면 만난횟수 1+ · 골프 · 연도 전체 자동
-    if(searchQ && subGroupOf(searchQ)){ if(minMeet!==1||meetExact){ minMeet=1; meetExact=false; updateMinMeetUI(); } if(hideGolf){ hideGolf=false; renderLegend(); } if(graphYear!=="all"){ graphYear="all"; renderGraphYearSel(); } }
+    // 서브그룹(들) 검색이면 만난횟수 1+ · 골프 · 연도 전체 자동
+    var _anySub = searchQ.split(/[,，]/).map(function(s){return s.trim();}).filter(Boolean).some(function(t){ return !!subGroupOf(t); });
+    if(_anySub){ if(minMeet!==1||meetExact){ minMeet=1; meetExact=false; updateMinMeetUI(); } if(hideGolf){ hideGolf=false; renderLegend(); } if(graphYear!=="all"){ graphYear="all"; renderGraphYearSel(); } }
     rebuild();
     if(searchQ){ var hit=nodes.filter(function(n){return !n.me && n.name.indexOf(searchQ)>=0;})[0]; if(hit) hover=hit; }
     alpha=Math.max(alpha,0.6);
