@@ -2426,8 +2426,8 @@
   $("#search").addEventListener("input",function(){
     searchQ=this.value.trim();
     closeDetail(); hover=null;
-    // 서브그룹 검색이면 만난횟수 1+ · 골프 자동 표시
-    if(searchQ && subGroupOf(searchQ)){ if(minMeet!==1||meetExact){ minMeet=1; meetExact=false; updateMinMeetUI(); } if(hideGolf){ hideGolf=false; renderLegend(); } }
+    // 서브그룹 검색이면 만난횟수 1+ · 골프 · 연도 전체 자동
+    if(searchQ && subGroupOf(searchQ)){ if(minMeet!==1||meetExact){ minMeet=1; meetExact=false; updateMinMeetUI(); } if(hideGolf){ hideGolf=false; renderLegend(); } if(graphYear!=="all"){ graphYear="all"; renderGraphYearSel(); } }
     rebuild();
     if(searchQ){ var hit=nodes.filter(function(n){return !n.me && n.name.indexOf(searchQ)>=0;})[0]; if(hit) hover=hit; }
     alpha=Math.max(alpha,0.6);
