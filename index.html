@@ -1716,7 +1716,7 @@
   function loadMeals(meals){ MEALS.forEach(function(x){ var v=(meals&&meals[x.key])||{}; var p=document.getElementById("m-"+x.key+"-place"), f=document.getElementById("m-"+x.key+"-food"), w=document.getElementById("m-"+x.key+"-people"); if(p)p.value=v.place||""; if(f)f.value=v.food||""; if(w)w.value=(v.people||[]).join(", "); var chk=document.querySelector('.golf-chk[data-meal="'+x.key+'"]'); if(chk) chk.checked=!!(state.golf && v.place && state.golf[v.place]); }); renderSpecialExtras(); }
   // 30분 단위 시간 드롭다운(오전/오후 라벨)
   function roundTime30(v){ if(!/^\d{1,2}:\d{2}$/.test(v||"")) return v||""; var p=v.split(":"), h=+p[0], m=+p[1]; m=Math.round(m/30)*30; if(m===60){m=0; h=(h+1)%24;} return ("0"+h).slice(-2)+":"+("0"+m).slice(-2); }
-  function timeOptsHtml(sel){ sel=roundTime30(sel); var o='<option value="">시간</option>'; for(var h=0;h<24;h++){ for(var m=0;m<60;m+=30){ var v=("0"+h).slice(-2)+":"+("0"+m).slice(-2), ap=h<12?"오전":"오후", h12=h%12||12; o+='<option value="'+v+'"'+(v===sel?" selected":"")+'>'+ap+" "+h12+":"+("0"+m).slice(-2)+'</option>'; } } return o; }
+  function timeOptsHtml(sel){ sel=roundTime30(sel); var o='<option value="">시간</option>'; for(var t=8*60; t<=17*60+30; t+=30){ var h=Math.floor(t/60), m=t%60, v=("0"+h).slice(-2)+":"+("0"+m).slice(-2), ap=h<12?"오전":"오후", h12=h%12||12; o+='<option value="'+v+'"'+(v===sel?" selected":"")+'>'+ap+" "+h12+":"+("0"+m).slice(-2)+'</option>'; } return o; }
   function readBiz(){ return { name:mval("bm-name"), time:mval("bm-time"), people:parseNames(mval("bm-people")) }; }
   function loadBiz(b){ b=b||{}; var nm=document.getElementById("bm-name"), tm=document.getElementById("bm-time"), pp=document.getElementById("bm-people"); if(nm)nm.value=b.name||""; if(tm)tm.innerHTML=timeOptsHtml(b.time); if(pp)pp.value=(b.people||[]).join(", "); }
   // 추가 업무미팅(첫 번째는 위 bm-* 고정, 나머지는 #bizExtra)
@@ -2053,7 +2053,7 @@
     var back=$("#relModalBack"), list=$("#relList");
     $("#relModalTitle").innerHTML='<span class="dot" style="background:'+REL[r].color+'"></span>'+REL[r].name+' 인맥 편집';
     function build(){
-      var names=Object.keys(state.people||{}).filter(function(n){ return ((state.people[n]||{}).rel||"etc")===r; }).sort(function(a,b){ return a.localeCompare(b,"ko"); });
+      var names=Object.keys(state.people||{}).filter(function(n){ return ((state.people[n]||{}).rel||"etc")===r; }).sort(function(a,b){ var sa=(state.people[a]||{}).sub||"", sb=(state.people[b]||{}).sub||""; if(!sa!==!sb) return sa? -1:1; if(sa!==sb) return sa.localeCompare(sb,"ko"); return a.localeCompare(b,"ko"); });
       list.innerHTML="";
       if(!names.length){ list.innerHTML='<div class="rel-empty">이 관계로 분류된 사람이 없어요.</div>'; return; }
       names.forEach(function(n){
