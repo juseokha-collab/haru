@@ -1366,6 +1366,9 @@
         var f=(5200)/d2*k;   // 반발↑ → 군집이 네모 공간을 넓게 채움
         var fx=dx/d*f, fy=dy/d*f;
         a.vx+=fx; a.vy+=fy; b.vx-=fx; b.vy-=fy;
+        // 겹침 방지: 두 노드가 반지름+여백보다 가까우면 밀어내 최소 간격 확보(큰 노드=자주 만난 사람에 특히 효과)
+        var minD=(a.r||8)+(b.r||8)+6;
+        if(d<minD){ var sep=(minD-d)*0.5*k; a.vx+=dx/d*sep; a.vy+=dy/d*sep; b.vx-=dx/d*sep; b.vy-=dy/d*sep; }
       }
     }
     // springs
