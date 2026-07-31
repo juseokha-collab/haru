@@ -2056,6 +2056,8 @@
       var names=Object.keys(state.people||{}).filter(function(n){ return ((state.people[n]||{}).rel||"etc")===r; }).sort(function(a,b){ var sa=(state.people[a]||{}).sub||"", sb=(state.people[b]||{}).sub||""; if(!sa!==!sb) return sa? -1:1; if(sa!==sb) return sa.localeCompare(sb,"ko"); return a.localeCompare(b,"ko"); });
       list.innerHTML="";
       if(!names.length){ list.innerHTML='<div class="rel-empty">이 관계로 분류된 사람이 없어요.</div>'; return; }
+      // 이 관계 안에서 이미 쓰이는 서브그룹만(다른 관계의 그룹은 숨김)
+      var _rs={}; Object.keys(state.people||{}).forEach(function(pn){ var p=state.people[pn]; if(((p.rel||"etc")===r) && p.sub) _rs[p.sub]=1; }); var subsList=Object.keys(_rs).sort(function(a,b){return a.localeCompare(b,"ko");});
       names.forEach(function(n){
         var cur=(state.people[n]||{}).rel||"etc";
         var row=document.createElement("div"); row.className="rel-row";
@@ -2068,7 +2070,8 @@
         var subSel=document.createElement("select"); subSel.className="rel-sub"; subSel.title="서브그룹";
         var curSub=(state.people[n]||{}).sub||"";
         var o0=document.createElement("option"); o0.value=""; o0.textContent="그룹 없음"; if(!curSub)o0.selected=true; subSel.appendChild(o0);
-        (state.subcats||[]).forEach(function(sc){ var o=document.createElement("option"); o.value=sc; o.textContent=sc; if(sc===curSub)o.selected=true; subSel.appendChild(o); });
+        subsList.forEach(function(sc){ var o=document.createElement("option"); o.value=sc; o.textContent=sc; if(sc===curSub)o.selected=true; subSel.appendChild(o); });
+        if(curSub && subsList.indexOf(curSub)<0){ var oc=document.createElement("option"); oc.value=curSub; oc.textContent=curSub; oc.selected=true; subSel.appendChild(oc); }
         var oN=document.createElement("option"); oN.value="__new"; oN.textContent="＋ 새 그룹…"; subSel.appendChild(oN);
         subSel.onchange=function(){ var v=subSel.value;
           if(v==="__new"){ subSel.value=curSub; askConfirm({ title:"새 서브그룹 만들기", message:"서브카테고리(그룹) 이름을 입력하세요.", okText:"만들기", promptText:true, placeholder:"예: 대학동기 · SK임원", onOk:function(nm){ nm=(nm||"").trim(); if(!nm) return; state.subcats=state.subcats||[]; if(state.subcats.indexOf(nm)<0) state.subcats.push(nm); if(state.people[n]) state.people[n].sub=nm; save(); build(); } }); return; }
@@ -2417,9 +2420,14 @@
   }
 
   // search
+  // 입력어가 서브그룹인지 판별(사람 이름과 겹치면 사람 우선)
+  function subGroupOf(term){ term=(term||"").trim(); if(!term || /[,，]/.test(term)) return null; var subs=state.subcats||[]; if(subs.indexOf(term)>=0) return term; if(Object.keys(state.people||{}).some(function(n){ return n.indexOf(term)>=0; })) return null; return subs.filter(function(s){ return s.indexOf(term)>=0; })[0]||null; }
+  function updateMinMeetUI(){ var seg=$("#minMeetSeg"); if(!seg) return; var kids=seg.children; for(var i=0;i<kids.length;i++){ var b=kids[i]; b.classList.toggle("on", (+b.getAttribute("data-m")===minMeet) && ((b.getAttribute("data-mode")==="exact")===meetExact)); } }
   $("#search").addEventListener("input",function(){
     searchQ=this.value.trim();
     closeDetail(); hover=null;
+    // 서브그룹 검색이면 만난횟수 1+ · 골프 자동 표시
+    if(searchQ && subGroupOf(searchQ)){ if(minMeet!==1||meetExact){ minMeet=1; meetExact=false; updateMinMeetUI(); } if(hideGolf){ hideGolf=false; renderLegend(); } }
     rebuild();
     if(searchQ){ var hit=nodes.filter(function(n){return !n.me && n.name.indexOf(searchQ)>=0;})[0]; if(hit) hover=hit; }
     alpha=Math.max(alpha,0.6);
