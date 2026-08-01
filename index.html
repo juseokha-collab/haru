@@ -1953,8 +1953,13 @@
     var labels='';
     if(ws){ labels+=lbl(ws.mx,2,Y(ws.mx,ws),'start',cW)+(ws.mn!==ws.mx?lbl(ws.mn,2,Y(ws.mn,ws),'start',cW):''); }
     if(as){ labels+=lbl(as.mx,W-2,Y(as.mx,as),'end',cA)+(as.mn!==as.mx?lbl(as.mn,W-2,Y(as.mn,as),'end',cA):''); }
+    // x축 날짜: 기간에 따라 주/달=월.일, 1년/전체=연.월
+    function fmtTick(t){ var d=new Date(t), mm=("0"+(d.getMonth()+1)).slice(-2), dd=("0"+d.getDate()).slice(-2), yy=(""+d.getFullYear()).slice(2); return (weightPeriod==="year"||weightPeriod==="all")? (yy+"."+mm) : (mm+"."+dd); }
+    var xlabels='';
+    if(d1>d0){ var nT=(W>360?4:3); for(var ti=0; ti<nT; ti++){ var tt=d0+spanD*ti/(nT-1), ax=(ti===0?"start":ti===nT-1?"end":"middle"), xx=padL+(tt-d0)/spanD*(W-padL-padR); xlabels+='<text x="'+xx.toFixed(1)+'" y="'+(H-1.5)+'" font-size="8" fill="#9AA3B2" text-anchor="'+ax+'">'+fmtTick(tt)+'</text>'; } }
+    else { xlabels+='<text x="'+(W/2)+'" y="'+(H-1.5)+'" font-size="8" fill="#9AA3B2" text-anchor="middle">'+fmtTick(d0)+'</text>'; }
     var svg='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">'
-      +series(wpts,ws,cW)+series(apts,as,cA)+labels
+      +series(wpts,ws,cW)+series(apts,as,cA)+labels+xlabels
       +'</svg>';
     el.innerHTML=svg;
   }
