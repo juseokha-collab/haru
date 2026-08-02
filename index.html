@@ -343,6 +343,10 @@
   .rv-chip{flex:1; min-width:64px; background:rgba(255,255,255,.05); border:1px solid rgba(150,166,210,.16); border-radius:10px; padding:8px 6px; text-align:center}
   .rv-chip b{display:block; font-size:18px; font-weight:800; color:var(--sky-ink); font-variant-numeric:tabular-nums; line-height:1.1}
   .rv-chip i{display:block; font-size:10.5px; font-style:normal; color:var(--sky-ink-2); margin-top:3px}
+  .rv-chip.rv-fchip{cursor:pointer; transition:.12s}
+  .rv-chip.rv-fchip:hover{border-color:rgba(143,224,172,.5)}
+  .rv-chip.rv-fchip.on{background:rgba(143,224,172,.16); border-color:#8FE0AC}
+  .rv-chip.rv-fchip.on b, .rv-chip.rv-fchip.on i{color:#8FE0AC}
   .rv-yh{font-size:11px; font-weight:800; letter-spacing:.05em; color:#8FE0AC; text-transform:uppercase; margin:14px 0 5px; padding-bottom:3px; border-bottom:1px solid rgba(143,224,172,.25)}
   .rv-row{padding:7px 4px; border-bottom:1px solid rgba(150,166,210,.1); cursor:pointer; border-radius:6px}
   .rv-row:hover{background:rgba(255,255,255,.05)}
@@ -2750,6 +2754,7 @@
   }
 
   // 골프 라운딩 로그: 기존 골프 기록(골프 체크된 장소)을 연도별로 예쁘게 나열
+  var rvFilter=null;   // null | "best" | "singles" (칩 토글)
   function renderRoundingView(){
     var el=$("#roundingView"); if(!el) return;
     var rounds=[];
@@ -2772,12 +2777,16 @@
     var avg=convs.length? (convs.reduce(function(s,v){return s+v;},0)/convs.length) : null;
     var best=convs.length? Math.min.apply(null,convs) : null;
     var singles=convs.filter(function(v){return v<=79;}).length;
-    var chip=function(v,lbl){ return '<div class="rv-chip"><b>'+v+'</b><i>'+lbl+'</i></div>'; };
+    var chip=function(v,lbl,fk){ return '<div class="rv-chip'+(fk?" rv-fchip":"")+(fk&&rvFilter===fk?" on":"")+'"'+(fk?' data-f="'+fk+'"':"")+'><b>'+v+'</b><i>'+lbl+'</i></div>'; };
     var html='<div class="pv-h"><h3>⛳ 나의 골프 라운딩</h3><b style="color:var(--sky-ink-2);font-size:12px;font-weight:600">'+rounds.length+' 라운딩</b></div>';
     html+='<div class="rv-stats">'+chip(rounds.length,"라운딩")+chip(Object.keys(courseSet).length,"골프장")+
-      (avg!=null?chip(avg.toFixed(1),"평균"):"")+(best!=null?chip(best,"베스트"):"")+chip(singles,"싱글")+'</div>';
+      (avg!=null?chip(avg.toFixed(1),"평균"):"")+(best!=null?chip(best,"베스트","best"):"")+chip(singles,"싱글","singles")+'</div>';
+    var list=rounds;
+    if(rvFilter==="best" && best!=null) list=rounds.filter(function(r){ return r.conv===best; });
+    else if(rvFilter==="singles") list=rounds.filter(function(r){ return r.conv!=null && r.conv<=79; });
+    if(!list.length){ html+='<div class="pv-empty" style="height:auto;padding:24px 0">해당 기록이 없어요</div>'; }
     var prevY=null;
-    rounds.forEach(function(r){
+    list.forEach(function(r){
       var y=(r.date||"").slice(0,4);
       if(y!==prevY){ html+='<div class="rv-yh">'+y+'년</div>'; prevY=y; }
       var iWon=(r.mine!=null&&r.mine===r.minV);
@@ -2790,6 +2799,7 @@
       '</div>';
     });
     el.innerHTML=html;
+    Array.prototype.forEach.call(el.querySelectorAll(".rv-fchip"), function(c){ c.onclick=function(){ var f=c.getAttribute("data-f"); rvFilter=(rvFilter===f)?null:f; renderRoundingView(); }; });
     Array.prototype.forEach.call(el.querySelectorAll(".gs-click"), function(row){ row.onclick=function(){ var e=existingFor(row.getAttribute("data-date")); if(e) editEntry(e); }; });
   }
 
