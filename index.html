@@ -1587,6 +1587,9 @@
       else {   // 사람 = 원
         ctx.fillStyle=hexA(col, a); ctx.lineWidth=1.5; ctx.strokeStyle=hexA("#0C0F1A",a*0.5);
         ctx.beginPath(); ctx.arc(n.x,n.y,n.r,0,6.29); ctx.fill(); ctx.stroke();
+        // 서브그룹 멤버: 원 안에 서브그룹 이니셜(예: GUCCI→G)
+        var _sub=(state.people[n.name]||{}).sub;
+        if(_sub && n.r>=8){ var _ch=_sub.charAt(0); if(/[a-z]/i.test(_ch)) _ch=_ch.toUpperCase(); ctx.font="800 "+Math.round(n.r*1.15)+"px "+BODY_FONT; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillStyle=hexA("#FFFFFF", a*0.96); ctx.fillText(_ch, n.x, n.y+0.5); }
       }
       // label (사람은 모두 표시 · 2회만 만난 사람은 절반 크기)
       var showLabel = isPlace || n.type==="person" || focus===n || neigh[n.name];
@@ -3221,8 +3224,8 @@
     var filled=sortTodos((state.todos||[]).filter(function(x){ return (x.task||"").trim(); }));
     var rowCount=Math.max(5, Math.min(10, filled.length+1));   // 다 채우면 빈칸 하나씩 추가(최대 10)
     for(var i=0;i<rowCount;i++){
-      var it=filled[i]||{done:false,task:"",due:""};
-      var row=document.createElement("div"); row.className="todo-row"+(it.done?" done":"");
+      var it=filled[i]||{done:false,task:"",due:"",id:""};
+      var row=document.createElement("div"); row.className="todo-row"+(it.done?" done":""); row.setAttribute("data-id", it.id||"");
       var chk=document.createElement("input"); chk.type="checkbox"; chk.className="td-chk"; chk.checked=!!it.done;
       var task=document.createElement("input"); task.type="text"; task.className="td-task"; task.placeholder="할 일"; task.autocomplete="off"; task.value=it.task||"";
       var del=document.createElement("button"); del.type="button"; del.className="td-del"; del.setAttribute("aria-label","삭제"); del.textContent="×";
@@ -3235,22 +3238,31 @@
       task.onchange=function(){ saveTodos(); renderTodos(); };   // 마지막 칸을 채우면 새 빈칸 생성
       dlabel.onclick=function(inp){ return function(){ try{ inp.showPicker(); }catch(e){ try{ inp.focus(); inp.click(); }catch(_){} } }; }(due);
       due.onchange=function(){ saveTodos(); renderTodos(); };   // 기한 바뀌면 월.일 라벨·날짜순 재정렬
-      del.onclick=function(tk,dz,ck){ return function(){ var tv=tk.value.trim(); if(tv) archivePlan(tv, dz.value, ck.checked); tk.value=""; dz.value=""; ck.checked=false; saveTodos(); renderTodos(); }; }(task,due,chk);
+      del.onclick=function(rw,tk,dz){ return function(){ var tv=tk.value.trim(); if(tv) completePlanFor(rw.getAttribute("data-id"), tv, dz.value); tk.value=""; dz.value=""; rw.querySelector(".td-chk").checked=false; rw.removeAttribute("data-id"); saveTodos(); renderTodos(); }; }(row,task,due);
       row.appendChild(chk); row.appendChild(task); row.appendChild(del); row.appendChild(dwrap);
       el.appendChild(row);
     }
   }
+  function genPid(){ return "p"+Date.now().toString(36)+Math.floor(Math.random()*1e5).toString(36); }
   function saveTodos(){
     var rows=document.querySelectorAll("#todoList .todo-row"), arr=[];
-    Array.prototype.forEach.call(rows,function(r){ var task=r.querySelector(".td-task").value.trim(), due=r.querySelector(".td-due").value; if(task||due) arr.push({ done:r.querySelector(".td-chk").checked, task:task, due:due }); });
-    state.todos=sortTodos(arr); save();
+    Array.prototype.forEach.call(rows,function(r){ var task=r.querySelector(".td-task").value.trim(), due=r.querySelector(".td-due").value; if(task||due){ var id=r.getAttribute("data-id"); if(!id && task){ id=genPid(); r.setAttribute("data-id",id); } arr.push({ id:id||"", done:r.querySelector(".td-chk").checked, task:task, due:due }); } });
+    state.todos=sortTodos(arr);
+    syncPlansFromTodos();
+    save();
   }
 
-  // ---------- 일정관리 (Things to do 아카이브 + 반복일정) ----------
-  function archivePlan(task, due, done){   // Things to do에서 삭제될 때 여기로 보관(완료 여부 기록)
+  // ---------- 일정관리 (Things to do 미러 + 반복일정) ----------
+  // 할 일을 적으면 일정관리에 함께 남고(srcId로 연결), Things to do에서 ×로 지우면 '완료'로 기록
+  function syncPlansFromTodos(){
     state.plans=state.plans||[];
-    state.plans.unshift({ id:"p"+Date.now()+Math.floor(Math.random()*1e4), task:task, due:due||"", done:!!done, result:"", repeat:null, ts:Date.now() });
-    save();
+    (state.todos||[]).forEach(function(t){ if(!t.task||!t.id) return; var pl=state.plans.filter(function(p){return p.srcId===t.id;})[0]; if(pl){ pl.task=t.task; pl.due=t.due||""; if(!pl.done) pl.done=!!t.done; } else { state.plans.unshift({ id:genPid(), srcId:t.id, task:t.task, due:t.due||"", done:!!t.done, result:"", repeat:null, ts:Date.now() }); } });
+  }
+  function completePlanFor(id, task, due){   // Things to do에서 삭제 → 연결된 일정을 '완료'로
+    state.plans=state.plans||[];
+    var pl=id? state.plans.filter(function(p){return p.srcId===id;})[0] : null;
+    if(pl){ pl.done=true; if(task) pl.task=task; if(due) pl.due=due; }
+    else { state.plans.unshift({ id:genPid(), srcId:id||"", task:task, due:due||"", done:true, result:"", repeat:null, ts:Date.now() }); }
   }
   function planRepeatDesc(rp){
     if(!rp) return "";
@@ -3367,6 +3379,7 @@
   // ---------- boot ----------
   mergeDuplicateDates();
   updateSkyDate();
+  (function(){ if((state.todos||[]).some(function(t){return t.task&&!t.id;})){ (state.todos||[]).forEach(function(t){ if(t.task&&!t.id) t.id=genPid(); }); syncPlansFromTodos(); save(); } })();   // 기존 할 일 1회 마이그레이션(일정관리 미러)
   renderTodos();
   renderLegend();
   // 모바일(≤640px)에선 '운동' 입력을 '오늘의 사진' 앞으로 이동, PC는 원위치 유지
