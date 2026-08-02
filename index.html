@@ -250,6 +250,8 @@
   .search-info .si-outs-h{font-size:10px; font-weight:700; letter-spacing:.03em; color:var(--sky-ink-2); text-transform:uppercase; margin-bottom:2px}
   .search-info .si-out{font-size:11.5px; color:var(--sky-ink); font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .search-info .si-out .si-od{color:var(--sky-ink-2); margin-right:5px}
+  .search-info .si-out.gs-click{cursor:pointer; border-radius:5px; margin:0 -4px; padding:1px 4px}
+  .search-info .si-out.gs-click:hover{background:rgba(255,255,255,.08)}
   .sky-tip .st-v{font-size:12px; font-weight:700; color:var(--sky-ink)}
   .sky-tip .st-b{font-size:11.5px; color:#8FE0AC; margin-top:1px; font-variant-numeric:tabular-nums}
   .sky-tip .st-b .st-nm{color:var(--sky-ink)}
@@ -317,6 +319,9 @@
   .seg.on-sky button{color:#CDD3E4; font-weight:600}
   .seg.on-sky button.on{background:rgba(255,255,255,.22); color:#fff; box-shadow:0 1px 2px rgba(0,0,0,.35)}
   .seg.on-sky button:hover:not(.on){color:#fff}
+  .seg.tabs{gap:3px}
+  .seg.tabs button{white-space:nowrap; padding:5px 11px}
+  @media (max-width:980px){ .seg.tabs button{padding:5px 12px} }
 
   /* places / recap panels (same dark sky ground as the graph) */
   .panel-view{background:radial-gradient(120% 90% at 50% 0%, var(--sky-1), var(--sky-0) 70%); color:var(--sky-ink); height:560px; overflow-y:auto; padding:16px}
@@ -654,7 +659,7 @@
   .gc-periods button{font-family:inherit; font-size:11.5px; font-weight:600; color:var(--ink-2); background:var(--surface); border:1px solid var(--border); border-radius:999px; padding:3px 11px; cursor:pointer}
   .gc-periods button.on{background:var(--accent); border-color:var(--accent); color:#fff}
   .gc-chart{margin-top:2px; position:relative; overflow-x:auto; overflow-y:hidden}
-  .gc-svg{display:block; height:150px}
+  .gc-svg{display:block; height:225px}
   .gc-hit{fill:transparent; cursor:pointer}
   .gc-tip{position:absolute; transform:translate(-50%,-100%); background:#222733; color:#fff; font-size:11px; font-weight:600; white-space:nowrap; padding:4px 9px; border-radius:7px; box-shadow:0 4px 14px rgba(0,0,0,.25); pointer-events:none; z-index:6}
   .gc-tip[hidden]{display:none}
@@ -738,7 +743,7 @@
         <div class="sky-row a">
           <span class="k" id="skyDate"></span>
           <div class="seg on-sky tabs" id="viewTabs">
-            <button type="button" data-v="graph" class="on">성좌</button><button type="button" data-v="places">장소</button><button type="button" data-v="rounding">라운딩</button><button type="button" data-v="recap">회고</button><button type="button" data-v="photo">사진</button>
+            <button type="button" data-v="graph" class="on">성좌</button><button type="button" data-v="places">장소</button><button type="button" data-v="rounding">운동</button><button type="button" data-v="recap">회고</button><button type="button" data-v="photo">사진</button>
           </div>
         </div>
         <div class="sky-row b">
@@ -1047,7 +1052,7 @@
   state.todos = state.todos || [];
   state.subcats = state.subcats || [];
   var draft = { date: todayStr(), people: [], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), drinks:emptyDrinks(), exercise:emptyExercise(), golfScore:{}, thoughts:"", learning:"" };
-  var hiddenRels = {fam:true, work:true}, hideRest=true, hideGolf=true, drinkPeriod="week", weightPeriod="month", view="graph", recapMonth="", minMeet=2, meetExact=false, calMonth="", searchQ="", graphYear=String(new Date().getFullYear());
+  var hiddenRels = {fam:true, work:true}, hideRest=true, hideGolf=true, drinkPeriod="week", weightPeriod="month", view="graph", recapMonth="", minMeet=2, minMeetIdx=1, meetExact=false, calMonth="", searchQ="", graphYear=String(new Date().getFullYear());
 
   function load(){
     try{ var s=JSON.parse(localStorage.getItem(KEY)); if(s&&s.entries) return s; }catch(e){}
@@ -1387,11 +1392,12 @@
       '<div class="si-years">'+yrHtml+'</div>';
     if(noScore.length){
       noScore.sort(byDateDesc);
-      html+='<div class="si-outs"><div class="si-outs-h">기록 없는 라운딩</div>'+noScore.map(function(o){ return '<div class="si-out"><span class="si-od">'+(o.date?o.date.slice(2).replace(/-/g,"."):"")+'</span> '+esc(o.place)+'</div>'; }).join("")+'</div>';
+      html+='<div class="si-outs"><div class="si-outs-h">기록 없는 라운딩</div>'+noScore.map(function(o){ return '<div class="si-out gs-click" data-date="'+o.date+'" title="이 날짜 기록 수정"><span class="si-od">'+(o.date?o.date.slice(2).replace(/-/g,"."):"")+'</span> '+esc(o.place)+'</div>'; }).join("")+'</div>';
     }
     el.innerHTML=html;
     el.hidden=false;
     var _xb=el.querySelector(".si-close"); if(_xb) _xb.onclick=function(){ siHideFor=searchQ; el.hidden=true; };
+    Array.prototype.forEach.call(el.querySelectorAll(".gs-click"), function(row){ row.onclick=function(){ var e=existingFor(row.getAttribute("data-date")); if(e) editEntry(e); }; });
   }
   // 골프 전용 뷰 좌측 패널: 방문한 골프장 수 + 싱글(18홀 환산 ≤79) 기록 리스트
   var gsDismissed=false;   // 닫기(×) 상태 — 골프 뷰를 벗어나면 초기화
@@ -2298,7 +2304,7 @@
     if(golfCompare){ var clr=document.createElement("button"); clr.type="button"; clr.className="gc-cmp-x"; clr.textContent="×"; clr.title="비교 지우기"; clr.onclick=function(){ golfCompare=""; renderAdminGolf(); }; cmpWrap.appendChild(clr); }
     line1.appendChild(cmpWrap);
     stats.appendChild(line1);
-    if(golfCompare && cmpPts.length){ var line2=document.createElement("div"); line2.className="gc-stat-line gc-cmp-line"; line2.innerHTML='<span class="gc-swatch"></span><b>'+esc(golfCompare)+'</b> '+cmpPts.length+'R · 평균 '+cavg.toFixed(1)+'타'; stats.appendChild(line2); }
+    if(golfCompare && cmpPts.length){ var line2=document.createElement("div"); line2.className="gc-stat-line gc-cmp-line"; var _rec=golfRecordVs(golfCompare); var _wlTxt=_rec.n? ' · <b style="color:#3FA35A">'+_rec.w+'승 '+_rec.l+'패</b>'+(_rec.d?' '+_rec.d+'무':'')+' ('+_rec.n+'게임)' : ''; line2.innerHTML='<span class="gc-swatch"></span><b>'+esc(golfCompare)+'</b> '+cmpPts.length+'R · 평균 '+cavg.toFixed(1)+'타'+_wlTxt; stats.appendChild(line2); }
     var periods=document.createElement("div"); periods.className="gc-periods";
     [["6m","6개월"],["1y","1년"],["all","전체"]].forEach(function(p){ var b=document.createElement("button"); b.type="button"; b.textContent=p[1]; if(golfChartPeriod===p[0]) b.className="on"; b.onclick=function(){ golfChartPeriod=p[0]; renderAdminGolf(); }; periods.appendChild(b); });
     top.appendChild(stats); top.appendChild(periods);
@@ -2317,12 +2323,16 @@
   // 선 그래프 SVG (타수 큰 값이 위 = 일반 축 방향). cmpPts 있으면 비교선 추가
   function golfChartSvg(myPts, avg, cmpPts, cmpName){
     cmpPts=cmpPts||[];
-    var H=150, pl=30, pr=18, ptop=16, pb=24;
+    var H=225, pl=30, pr=18, ptop=16, pb=24;   // 세로 1.5배(150→225) → 등락 잘 보이게
     if(!myPts.length && !cmpPts.length) return '<svg viewBox="0 0 560 '+H+'" class="gc-svg" width="560" height="'+H+'"><text x="280" y="'+(H/2)+'" text-anchor="middle" class="gc-empty-t">기록이 쌓이면 스코어 등락이 여기에 그려져요</text></svg>';
     function tip(who,p){ var t=p.date.slice(5).replace("-",".")+" · "+who+" "+(p.raw!=null?p.raw:p.score)+"타"; if(p.holes&&p.holes!==18) t+=" ("+p.holes+"홀·환산 "+p.score+")"; return t; }
     var dset={}; myPts.concat(cmpPts).forEach(function(p){ dset[p.date]=1; });
     var dates=Object.keys(dset).sort(), nd=dates.length, xIdx={}; dates.forEach(function(d,i){ xIdx[d]=i; });
     var myMap={}, cmpMap={}; myPts.forEach(function(p){ myMap[p.date]=p.score; }); cmpPts.forEach(function(p){ cmpMap[p.date]=p.score; });
+    var myRaw={}, cmpRaw={}; myPts.forEach(function(p){ myRaw[p.date]=(p.raw!=null?p.raw:p.score); }); cmpPts.forEach(function(p){ cmpRaw[p.date]=(p.raw!=null?p.raw:p.score); });
+    var yearWL={};   // 연도별 승패(같은 라운드 raw 비교)
+    if(cmpPts.length){ Object.keys(dset).forEach(function(d){ var mr=myRaw[d], cr=cmpRaw[d]; if(mr!=null&&cr!=null){ var y=d.slice(0,4); yearWL[y]=yearWL[y]||{w:0,l:0,d:0}; if(mr<cr)yearWL[y].w++; else if(mr>cr)yearWL[y].l++; else yearWL[y].d++; } }); }
+    function _wl(y){ var o=yearWL[y]; return o? '  '+o.w+'승 '+o.l+'패'+(o.d?' '+o.d+'무':'') : ''; }
     // 점 간격 고정(스크롤). 1년 그래프의 약 1/2 밀도(간격 2배) 수준 → 한 화면에 절반쯤 보이고 나머지는 스크롤
     var GAP=11, W=Math.max(600, pl+pr+GAP*Math.max(1,nd-1)), iw=W-pl-pr, ih=H-ptop-pb;
     function xOf(dt){ return nd===1? pl+iw/2 : pl+iw*(xIdx[dt]/(nd-1)); }
@@ -2334,12 +2344,15 @@
     // y축 min/max 라벨
     s+='<text x="'+(pl-4)+'" y="'+(ptop+3)+'" text-anchor="end" class="gc-axl">'+Math.ceil(mx)+'</text>';
     s+='<text x="'+(pl-4)+'" y="'+(ptop+ih+3)+'" text-anchor="end" class="gc-axl">'+Math.floor(mn)+'</text>';
-    // 연도 구분 세로 점선
+    // 연도 구분 세로 점선 + 연도 라벨(비교인물 있으면 해당 연도 승패 표기)
     var prevY=null;
     for(var yi=0; yi<dates.length; yi++){ var yy=dates[yi].slice(0,4);
-      if(prevY!==null && yy!==prevY){ var xl=(xOf(dates[yi-1])+xOf(dates[yi]))/2;
-        s+='<line x1="'+xl.toFixed(1)+'" y1="'+ptop+'" x2="'+xl.toFixed(1)+'" y2="'+(ptop+ih)+'" class="gc-yearline"/><text x="'+(xl+3).toFixed(1)+'" y="'+(ptop+9)+'" class="gc-yearlbl">'+yy+'</text>'; }
-      prevY=yy; }
+      if(yy!==prevY){
+        if(prevY===null){ s+='<text x="'+xOf(dates[yi]).toFixed(1)+'" y="'+(ptop+9)+'" text-anchor="start" class="gc-yearlbl">'+yy+_wl(yy)+'</text>'; }
+        else { var xl=(xOf(dates[yi-1])+xOf(dates[yi]))/2;
+          s+='<line x1="'+xl.toFixed(1)+'" y1="'+ptop+'" x2="'+xl.toFixed(1)+'" y2="'+(ptop+ih)+'" class="gc-yearline"/><text x="'+(xl+3).toFixed(1)+'" y="'+(ptop+9)+'" class="gc-yearlbl">'+yy+_wl(yy)+'</text>'; }
+        prevY=yy;
+      } }
     // 나의 평균 점선
     if(myPts.length){ var ay=yOf(avg); s+='<line x1="'+pl+'" y1="'+ay.toFixed(1)+'" x2="'+(W-pr)+'" y2="'+ay.toFixed(1)+'" class="gc-avgline"/><text x="'+(pl-4)+'" y="'+(ay+3).toFixed(1)+'" text-anchor="end" class="gc-axl">'+avg.toFixed(0)+'</text>'; }
     // 비교선(면 없음)
@@ -2506,13 +2519,15 @@
   // search
   // 입력어가 서브그룹인지 판별(사람 이름과 겹치면 사람 우선)
   function subGroupOf(term){ term=(term||"").trim(); if(!term || /[,，]/.test(term)) return null; var subs=state.subcats||[]; if(subs.indexOf(term)>=0) return term; if(Object.keys(state.people||{}).some(function(n){ return n.indexOf(term)>=0; })) return null; return subs.filter(function(s){ return s.indexOf(term)>=0; })[0]||null; }
-  function updateMinMeetUI(){ var seg=$("#minMeetSeg"); if(!seg) return; var kids=seg.children; for(var i=0;i<kids.length;i++){ var b=kids[i]; b.classList.toggle("on", (+b.getAttribute("data-m")===minMeet) && ((b.getAttribute("data-mode")==="exact")===meetExact)); } }
+  var MEET_ALL=[3,5,8,13], MEET_NORM=[1,2,3,5];   // 연도=전체면 임계값을 동적으로 상향(3/5/8/13)
+  function meetSet(){ return graphYear==="all"? MEET_ALL : MEET_NORM; }
+  function renderMinMeetSeg(){ var seg=$("#minMeetSeg"); if(!seg) return; var set=meetSet(), kids=seg.children; for(var i=0;i<kids.length && i<set.length;i++){ kids[i].setAttribute("data-m", set[i]); kids[i].textContent=set[i]+"+"; kids[i].classList.toggle("on", i===minMeetIdx); } minMeet=set[minMeetIdx]; meetExact=false; }
   $("#search").addEventListener("input",function(){
     searchQ=this.value.trim();
     closeDetail(); hover=null;
     // 서브그룹(들) 검색이면 만난횟수 1+ · 골프 · 연도 전체 자동
     var _anySub = searchQ.split(/[,，]/).map(function(s){return s.trim();}).filter(Boolean).some(function(t){ return !!subGroupOf(t); });
-    if(_anySub){ if(minMeet!==1||meetExact){ minMeet=1; meetExact=false; updateMinMeetUI(); } if(hideGolf){ hideGolf=false; renderLegend(); } if(graphYear!=="all"){ graphYear="all"; renderGraphYearSel(); } }
+    if(_anySub){ minMeetIdx=0; if(hideGolf){ hideGolf=false; renderLegend(); } if(graphYear!=="all"){ graphYear="all"; renderGraphYearSel(); } renderMinMeetSeg(); }
     rebuild();
     if(searchQ){ var hit=nodes.filter(function(n){return !n.me && n.name.indexOf(searchQ)>=0;})[0]; if(hit) hover=hit; }
     alpha=Math.max(alpha,0.6);
@@ -2692,10 +2707,10 @@
   $("#viewTabs").addEventListener("click",function(e){ var b=e.target.closest("button"); if(b) setView(b.getAttribute("data-v")); });
   $("#minMeetSeg").addEventListener("click",function(e){
     var b=e.target.closest("button"); if(!b) return;
-    minMeet=+b.getAttribute("data-m");
-    meetExact=b.getAttribute("data-mode")==="exact";   // '1'=정확히 1회, '1+'~='이상'
+    var kids=this.children, idx=0; for(var i=0;i<kids.length;i++){ if(kids[i]===b) idx=i; }
+    minMeetIdx=idx; minMeet=meetSet()[idx]; meetExact=false;
     capOn=false;   // 필터를 직접 누르면 40명 제한 해제 → 해당 조건 전원 표시
-    var kids=this.children; for(var i=0;i<kids.length;i++) kids[i].classList.toggle("on", kids[i]===b);
+    for(var j=0;j<kids.length;j++) kids[j].classList.toggle("on", kids[j]===b);
     rebuild();
   });
   // 연도 필터(성좌 만난횟수 기준 기간): 전체 + 데이터에 있는 연도, 기본=올해
@@ -2708,8 +2723,9 @@
     var html='<option value="all">전체</option><option value="r2">최근 2년</option><option value="r3">최근 3년</option><option value="r5">최근 5년</option>'+list.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join("");
     if(sel.innerHTML!==html) sel.innerHTML=html;
     sel.value=graphYear;
+    renderMinMeetSeg();
   }
-  $("#graphYearSel").addEventListener("change",function(){ graphYear=this.value; capOn=false; rebuild(); refresh(); });
+  $("#graphYearSel").addEventListener("change",function(){ graphYear=this.value; renderMinMeetSeg(); capOn=false; rebuild(); refresh(); });
 
   function renderPlacesView(){
     var g=buildGraph(), S1=g.S1, el=$("#placesView");
