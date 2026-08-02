@@ -226,6 +226,9 @@
   .golf-stats .gs-none{font-size:11.5px; color:var(--sky-ink-2)}
   .yr-sep{height:0; border-top:1px solid rgba(150,166,210,.22); margin:5px 2px}
   .search-info{position:absolute; left:16px; top:14px; z-index:4; width:186px; background:rgba(19,24,38,.55); border:1px solid rgba(150,166,210,.2); border-radius:10px; padding:10px 12px}
+  .search-info .si-x{position:absolute; top:4px; right:5px; width:18px; height:18px; padding:0; border:0; background:transparent; color:var(--sky-ink-2); font-size:16px; line-height:16px; text-align:center; cursor:pointer; z-index:1}
+  .search-info .si-x:hover{color:var(--sky-ink)}
+  .search-info .si-h{padding-right:14px}
   .search-info[hidden]{display:none}
   .search-info .si-h{font-size:11.5px; color:var(--sky-ink-2); margin-bottom:5px}
   .search-info .si-h b{color:var(--sky-ink); font-weight:800; font-size:13px}
@@ -1338,9 +1341,10 @@
     wake();
   }
   // 한 명 검색 시 좌측: 그 인물과의 골프 승패(연도 필터 반영)
+  var siHideFor=null;   // 닫기(×) 누른 검색어 — 검색어가 바뀌면 다시 표시
   function renderSearchInfo(){
     var el=$("#searchInfo"); if(!el) return;
-    if(!(searchQ && searchAnchors.length===1)){ el.hidden=true; el.innerHTML=""; return; }
+    if(!(searchQ && searchAnchors.length===1) || siHideFor===searchQ){ el.hidden=true; el.innerHTML=""; return; }
     var name=searchAnchors[0], w=0,l=0,d=0,x=0,sc=0,myTot=0,thTot=0, byYear={}, noScore=[];
     state.entries.forEach(function(e){ roundsOf(e).forEach(function(r){
       var mine=r.scores["나"], th=r.scores[name], hasScore=!(mine==null||mine===""||th==null||th==="");
@@ -1355,7 +1359,8 @@
     if(!total){ el.hidden=true; el.innerHTML=""; return; }
     var yrs=Object.keys(byYear).sort().reverse();
     var yrHtml=yrs.map(function(y){ var b=byYear[y]; return '<div class="si-year">'+y.slice(2)+'년 <b class="si-w">'+b.w+'승</b> <b class="si-l">'+b.l+'패</b>'+(b.d?' '+b.d+'무':'')+(b.x?' <b class="si-x">'+b.x+'X</b>':'')+'</div>'; }).join("");
-    var html='<div class="si-h"><b>'+esc(name)+'</b> 와의 '+total+' 전적</div>'+
+    var html='<button class="si-x" aria-label="닫기">&times;</button>'+
+      '<div class="si-h"><b>'+esc(name)+'</b> 와의 '+total+' 전적</div>'+
       '<div class="si-rec"><b class="si-w">'+w+'승</b><b class="si-l">'+l+'패</b>'+(d?'<b>'+d+'무</b>':'')+(x?'<b class="si-x">'+x+'X</b>':'')+'</div>'+
       (sc?'<div class="si-sub">평균 나 '+(myTot/sc).toFixed(1)+' · '+esc(name)+' '+(thTot/sc).toFixed(1)+'</div>':'')+
       '<div class="si-years">'+yrHtml+'</div>';
@@ -1365,6 +1370,7 @@
     }
     el.innerHTML=html;
     el.hidden=false;
+    var _xb=el.querySelector(".si-x"); if(_xb) _xb.onclick=function(){ siHideFor=searchQ; el.hidden=true; };
   }
   // 골프 전용 뷰 좌측 패널: 방문한 골프장 수 + 싱글(18홀 환산 ≤79) 기록 리스트
   function renderGolfStatsPanel(show, g){
