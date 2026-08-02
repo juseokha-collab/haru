@@ -207,7 +207,9 @@
     background:rgba(19,24,38,.92); backdrop-filter:blur(8px); border:1px solid rgba(150,166,210,.28);
     border-radius:12px; padding:14px; color:var(--sky-ink); box-shadow:0 12px 40px rgba(0,0,0,.5); display:none}
   .detail.show{display:block}
-  .sky-tip{position:absolute; z-index:6; pointer-events:none; transform:translate(-50%,-100%); background:rgba(20,26,40,.96); border:1px solid rgba(150,166,210,.28); border-radius:9px; padding:7px 11px; box-shadow:0 8px 22px rgba(0,0,0,.4); white-space:nowrap; line-height:1.4}
+  .sky-tip{position:absolute; z-index:6; pointer-events:auto; transform:translate(-50%,-100%); background:rgba(20,26,40,.96); border:1px solid rgba(150,166,210,.28); border-radius:9px; padding:7px 22px 7px 11px; box-shadow:0 8px 22px rgba(0,0,0,.4); white-space:nowrap; line-height:1.4}
+  .sky-tip .st-x{position:absolute; top:1px; right:3px; width:17px; height:17px; padding:0; border:0; background:transparent; color:var(--sky-ink-2); font-size:15px; line-height:15px; text-align:center; cursor:pointer}
+  .sky-tip .st-x:hover{color:var(--sky-ink)}
   .sky-tip[hidden]{display:none}
   .golf-stats{position:absolute; left:16px; top:14px; z-index:4; width:176px; max-height:calc(100% - 28px); overflow-y:auto; background:rgba(19,24,38,.5); border:1px solid rgba(150,166,210,.18); border-radius:10px; padding:10px 12px}
   .golf-stats[hidden]{display:none}
@@ -1170,7 +1172,7 @@
   function rebuild(){
     var g=buildGraph();
     var allNames=Object.keys(g.meetings);
-    var names, searchPlaceSet=null, anchorCo=null; searchAnchors=[]; anchorTargets={}; searchMeTarget=null; searchFocus=[]; searchSubs=[];
+    var names, searchPlaceSet=null, anchorCo=null, anchorPl=null; searchAnchors=[]; anchorTargets={}; searchMeTarget=null; searchFocus=[]; searchSubs=[];
     if(searchQ){
       var _terms=searchQ.split(/[,，]/).map(function(s){return s.trim();}).filter(Boolean);
       var _sInY=inGraphYear;
@@ -1211,10 +1213,11 @@
       // 공통: minMeet(1+/2+…) 적용 — 검색 인물·서브그룹 멤버는 항상 포함. 단일 앵커면 '함께 만난 횟수' 기준
       names=allNames.filter(function(n){ if(!keep[n]) return false; if(searchSubs.length || searchAnchors.indexOf(n)>=0) return true; var mv=anchorCo?(anchorCo[n]||0):g.meetings[n]; return meetExact? mv===minMeet : mv>=minMeet; });
       searchAnchors=searchAnchors.filter(function(n){ return names.indexOf(n)>=0; });
-      // 장소: 단일 앵커면 '그 사람과 함께 간 곳'만 · 서브그룹이면 표시 멤버들이 간 곳 (식당/골프 칩은 visible에서 게이팅)
+      // 장소: 단일 앵커면 '그 사람과 함께 간 곳'만 + 함께 간 횟수(minMeet) 적용 · 서브그룹이면 표시 멤버들이 간 곳 (식당/골프 칩은 visible에서 게이팅)
       if(searchAnchors.length===1 && !searchSubs.length){
-        var _pa=searchAnchors[0];
-        Object.keys(g.pplace||{}).forEach(function(k){ var ab=k.split(g.S1); if(ab[1]===_pa) searchPlaceSet[ab[0]]=1; });
+        var _pa=searchAnchors[0]; anchorPl={};
+        Object.keys(g.pplace||{}).forEach(function(k){ var ab=k.split(g.S1); if(ab[1]===_pa) anchorPl[ab[0]]=(anchorPl[ab[0]]||0)+g.pplace[k]; });
+        Object.keys(anchorPl).forEach(function(pl){ var c=anchorPl[pl]; if(meetExact? c===minMeet : c>=minMeet) searchPlaceSet[pl]=1; });
       } else if(searchSubs.length){
         var _ns={}; names.forEach(function(n){ _ns[n]=1; }); Object.keys(g.pplace||{}).forEach(function(k){ var ab=k.split(g.S1); if(_ns[ab[1]]) searchPlaceSet[ab[0]]=1; });
       }
@@ -1276,7 +1279,8 @@
     }
 
     // 종류별 최대 방문수(같은 종류끼리 크기 변별)
-    var maxGolfV=1, maxRestV=1; pnames.forEach(function(pl){ var v=g.places[pl].visits; if(state.golf&&state.golf[pl]) maxGolfV=Math.max(maxGolfV,v); else if(!placeEmoji(pl)) maxRestV=Math.max(maxRestV,v); });
+    var _visOf=function(pl){ return anchorPl? (anchorPl[pl]||0) : g.places[pl].visits; };   // 단일 앵커면 '그 사람과 함께 간 횟수'로 크기 결정
+    var maxGolfV=1, maxRestV=1; pnames.forEach(function(pl){ var v=_visOf(pl); if(state.golf&&state.golf[pl]) maxGolfV=Math.max(maxGolfV,v); else if(!placeEmoji(pl)) maxRestV=Math.max(maxRestV,v); });
     pnames.forEach(function(pl,i){
       var p=prev["§"+pl];
       var ang=(i/Math.max(1,pnames.length))*Math.PI*2+0.6;
@@ -1285,7 +1289,7 @@
       node.golf=!!(state.golf && state.golf[pl]);
       node.visits=g.places[pl].visits;
       node.last=g.places[pl].last;
-      var _vis=g.places[pl].visits;
+      var _vis=_visOf(pl);
       if(node.golf){
         var vs=Math.sqrt(_vis/maxGolfV);                 // 0..1
         node.r=Math.min(18, 7+Math.sqrt(Math.max(0,_vis-1))*3);   // 1회=7, 방문 늘수록 완만히(√) 증가, 최대 18
@@ -1554,10 +1558,10 @@
     var pk=pick(p), prev=hover;
     hover=pk;
     canvas.style.cursor=pk?"pointer":"default";
-    if(pk && pk.type==="place" && pk.golf) showSkyTip(pk, ev); else hideSkyTip();
+    if(pk && pk.type==="place" && pk.golf) showSkyTip(pk, ev); else if(pk) hideSkyTip();   // 빈 곳으로 이동해도 유지(닫기 × 로 삭제) · 다른 노드 위에선 숨김
     if(hover!==prev) wake();
   });
-  canvas.addEventListener("mouseleave",function(){ hideSkyTip(); if(hover){ hover=null; wake(); } });
+  canvas.addEventListener("mouseleave",function(ev){ var rt=ev&&ev.relatedTarget; if(!(rt&&rt.closest&&rt.closest("#skyTip"))) hideSkyTip(); if(hover){ hover=null; wake(); } });
   // 골프장 위 호버 → 방문횟수·최고기록 플로팅(PC)
   function showSkyTip(node, ev){
     var tip=$("#skyTip"), gv=$("#graphView"); if(!tip||!gv) return;
@@ -1565,16 +1569,17 @@
     var lines = info.top.length
       ? info.top.map(function(b,i){ return '<div class="st-b">'+medals[i]+' '+b.date.slice(2).replace(/-/g,".")+' <span class="st-nm">'+esc(b.name)+'</span>('+b.score+')</div>'; }).join("")
       : '<div class="st-b">기록 없음</div>';
-    tip.innerHTML='<div class="st-v">'+info.visits+'회 방문</div>'+lines;
+    tip.innerHTML='<button class="st-x" aria-label="닫기">&times;</button><div class="st-v">'+info.visits+'회 방문</div>'+lines;
     var r=gv.getBoundingClientRect();
     tip.style.left=(ev.clientX-r.left)+"px";
     tip.style.top=(ev.clientY-r.top-14)+"px";
     tip.hidden=false;
+    var _xb=tip.querySelector(".st-x"); if(_xb) _xb.onclick=function(e){ e.stopPropagation(); hideSkyTip(); };
   }
   function hideSkyTip(){ var tip=$("#skyTip"); if(tip&&!tip.hidden) tip.hidden=true; }
   canvas.addEventListener("mousedown",function(ev){ var p=pos(ev); dragging=pick(p); if(dragging&&!dragging.me){ selectNode(dragging); } wake(); });
   window.addEventListener("mouseup",function(){ if(dragging){ dragging=null; wake(); } });
-  canvas.addEventListener("click",function(ev){ var p=pos(ev); var n=pick(p); if(n&&!n.me) selectNode(n); else if(!n) closeDetail(); wake(); });
+  canvas.addEventListener("click",function(ev){ var p=pos(ev); var n=pick(p); if(n&&!n.me) selectNode(n); else if(!n){ closeDetail(); hideSkyTip(); } wake(); });
   // touch
   canvas.addEventListener("touchstart",function(ev){ var p=pos(ev); dragging=pick(p); if(dragging&&!dragging.me) selectNode(dragging); wake(); },{passive:true});
   canvas.addEventListener("touchmove",function(ev){ if(dragging){ var p=pos(ev); dragging.x=p.x; dragging.y=p.y; alpha=Math.max(alpha,0.5); wake(); ev.preventDefault(); } },{passive:false});
