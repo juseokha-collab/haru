@@ -377,6 +377,18 @@
   .learn-item{font-size:12.5px; color:var(--sky-ink); padding:6px 0; border-bottom:1px solid rgba(150,166,210,.1); line-height:1.5}
   .learn-item .dt{color:var(--sky-ink-2); font-variant-numeric:tabular-nums; margin-right:7px; font-size:11.5px}
   .ch-right{display:flex; align-items:center; gap:9px}
+  .card-h .rec-find{position:relative; margin-left:auto; flex:0 1 240px; min-width:120px}
+  .card-h .rec-find>input{width:100%; font-family:inherit; font-size:12.5px; padding:6px 11px; border:1px solid var(--border); border-radius:8px; background:var(--surface-2); color:var(--ink); outline:0; box-sizing:border-box}
+  .card-h .rec-find>input:focus{border-color:var(--accent)}
+  .rec-find-res{position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:30; background:var(--surface); border:1px solid var(--border); border-radius:10px; box-shadow:0 12px 30px rgba(0,0,0,.18); max-height:340px; overflow-y:auto; padding:4px}
+  .rec-find-res[hidden]{display:none}
+  .rfr-item{padding:7px 9px; border-radius:7px; cursor:pointer}
+  .rfr-item:hover{background:var(--surface-2)}
+  .rfr-d{font-size:11px; color:var(--ink-3); font-weight:700}
+  .rfr-t{font-size:12.5px; color:var(--ink); margin-top:1px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .rfr-t b{background:rgba(255,205,60,.4); color:var(--ink); font-weight:700; border-radius:2px}
+  .rfr-none{padding:11px; font-size:12px; color:var(--ink-3); text-align:center}
+  @media (max-width:700px){ .card-h .rec-find{flex-basis:150px} }
 
   /* ---- Sidebar ---- */
   .side{display:flex; flex-direction:column; gap:18px}
@@ -853,7 +865,7 @@
 
   <!-- ===== 오늘 기록 (전체 폭) ===== -->
   <section class="card composer-wide">
-    <div class="card-h"><h2>✦ 오늘 기록</h2><div class="ch-right"><span class="sub" id="editing"></span><button class="btn primary mini-btn" id="saveBtn2">저장</button></div></div>
+    <div class="card-h"><h2>✦ 오늘 기록</h2><div class="rec-find"><input type="text" id="recFind" placeholder="🔍 주요일정·회고·배움 찾기" autocomplete="off"><div class="rec-find-res" id="recFindRes" hidden></div></div><div class="ch-right"><span class="sub" id="editing"></span><button class="btn primary mini-btn" id="saveBtn2">저장</button></div></div>
     <div class="field cfields">
       <div class="cgroup">
         <label for="date">날짜</label>
@@ -2505,6 +2517,30 @@
     $("#adminTabs").addEventListener("click",function(e){ var b=e.target.closest("button"); if(!b) return; var at=b.getAttribute("data-at");
       var tabs=this.children; for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle("on", tabs[i]===b);
       $("#adminPeople").hidden = (at!=="people"); $("#adminGolf").hidden = (at!=="golf"); });
+  })();
+
+  // 오늘 기록 찾기: 주요일정·회고(Reflection)·배움(Learning) 텍스트 검색 → 해당 기록으로 이동
+  (function(){
+    var input=$("#recFind"), box=$("#recFindRes"); if(!input||!box) return;
+    function hl(text,q){ var i=text.toLowerCase().indexOf(q.toLowerCase()); if(i<0) return esc(text); return esc(text.slice(0,i))+'<b>'+esc(text.slice(i,i+q.length))+'</b>'+esc(text.slice(i+q.length)); }
+    function run(){
+      var q=(input.value||"").trim();
+      if(!q){ box.hidden=true; box.innerHTML=""; return; }
+      var ql=q.toLowerCase(), hits=[];
+      state.entries.forEach(function(e){
+        var fs=[["주요일정",e.schedule],["Reflection",e.thoughts],["Learning",e.learning]], m=null;
+        for(var i=0;i<fs.length;i++){ var v=fs[i][1]||""; if(v.toLowerCase().indexOf(ql)>=0){ m=fs[i]; break; } }
+        if(m) hits.push({date:e.date||"", label:m[0], text:m[1]});
+      });
+      hits.sort(byDateDesc);
+      if(!hits.length){ box.innerHTML='<div class="rfr-none">일치하는 기록이 없어요</div>'; box.hidden=false; return; }
+      box.innerHTML=hits.slice(0,40).map(function(h){ return '<div class="rfr-item" data-date="'+h.date+'"><div class="rfr-d">'+(h.date?h.date.slice(2).replace(/-/g,"."):"")+' · '+h.label+'</div><div class="rfr-t">'+hl(h.text,q)+'</div></div>'; }).join("");
+      box.hidden=false;
+      Array.prototype.forEach.call(box.querySelectorAll(".rfr-item"), function(it){ it.onclick=function(){ var e=existingFor(it.getAttribute("data-date")); if(e){ editEntry(e); box.hidden=true; } }; });
+    }
+    input.addEventListener("input", run);
+    input.addEventListener("focus", function(){ if(this.value.trim()) run(); });
+    document.addEventListener("click", function(e){ if(e.target!==input && !box.contains(e.target)) box.hidden=true; });
   })();
 
   function renderStats(){
