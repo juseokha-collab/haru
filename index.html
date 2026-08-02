@@ -213,7 +213,9 @@
   .sky-tip[hidden]{display:none}
   .golf-stats{position:absolute; left:16px; top:14px; z-index:4; width:176px; max-height:calc(100% - 28px); overflow-y:auto; background:rgba(19,24,38,.5); border:1px solid rgba(150,166,210,.18); border-radius:10px; padding:10px 12px}
   .golf-stats[hidden]{display:none}
-  .golf-stats .gs-courses{font-size:12.5px; color:var(--sky-ink-2); margin-bottom:8px; white-space:nowrap}
+  .golf-stats .gs-x{position:absolute; top:4px; right:5px; width:18px; height:18px; padding:0; border:0; background:transparent; color:var(--sky-ink-2); font-size:16px; line-height:16px; text-align:center; cursor:pointer; z-index:1}
+  .golf-stats .gs-x:hover{color:var(--sky-ink)}
+  .golf-stats .gs-courses{font-size:12.5px; color:var(--sky-ink-2); margin-bottom:8px; white-space:nowrap; padding-right:14px}
   .golf-stats .gs-courses b{font-size:16px; font-weight:800; color:var(--sky-ink); margin:0 1px}
   .golf-stats .gs-sub{font-size:10.5px; font-weight:700; letter-spacing:.04em; color:#8FE0AC; text-transform:uppercase; margin-bottom:4px}
   .golf-stats .gs-single{font-size:11.5px; color:var(--sky-ink-2); font-variant-numeric:tabular-nums; padding:1.5px 0; display:flex; align-items:center; gap:6px}
@@ -1373,9 +1375,11 @@
     var _xb=el.querySelector(".si-x"); if(_xb) _xb.onclick=function(){ siHideFor=searchQ; el.hidden=true; };
   }
   // 골프 전용 뷰 좌측 패널: 방문한 골프장 수 + 싱글(18홀 환산 ≤79) 기록 리스트
+  var gsDismissed=false;   // 닫기(×) 상태 — 골프 뷰를 벗어나면 초기화
   function renderGolfStatsPanel(show, g){
     var el=$("#golfStats"); if(!el) return;
-    if(!show){ el.hidden=true; el.innerHTML=""; return; }
+    if(!show){ gsDismissed=false; el.hidden=true; el.innerHTML=""; return; }
+    if(gsDismissed){ el.hidden=true; el.innerHTML=""; return; }
     var courseSet={}, rounds=0, singles=[];
     state.entries.forEach(function(e){
       if(!inGraphYear(e.date)) return;
@@ -1388,13 +1392,14 @@
     var courses=Object.keys(courseSet).length;
     singles.sort(function(a,b){ return a.date<b.date?1:-1; });
     var minS=singles.length? Math.min.apply(null, singles.map(function(s){return s.score;})) : null;   // 싱글 중 최저타
-    var html='<div class="gs-courses"><b>'+rounds+'</b> 라운딩 · <b>'+courses+'</b> 골프장</div>';
+    var html='<button class="gs-x" aria-label="닫기">&times;</button><div class="gs-courses"><b>'+rounds+'</b> 라운딩 · <b>'+courses+'</b> 골프장</div>';
     html+='<div class="gs-sub">싱글 기록 '+singles.length+'회</div>';
     var _psY=null;
     html+= singles.length
       ? singles.map(function(s){ var _y=s.date.slice(0,4), _sep=(_psY&&_y!==_psY)?'<div class="yr-sep"></div>':''; _psY=_y; return _sep+'<div class="gs-single gs-click" data-date="'+s.date+'" title="이 날짜 기록 수정"><span class="gsd">'+s.date.slice(2).replace(/-/g,".")+'</span><span class="gsp">'+esc(s.place)+'</span><span class="gss'+(s.score===minS?" win":"")+'">'+s.score+'</span></div>'; }).join("")
       : '<div class="gs-none">아직 없어요</div>';
     el.innerHTML=html; el.hidden=false;
+    var _gx=el.querySelector(".gs-x"); if(_gx) _gx.onclick=function(){ gsDismissed=true; el.hidden=true; };
     Array.prototype.forEach.call(el.querySelectorAll(".gs-click"), function(row){ row.onclick=function(){ var e=existingFor(row.getAttribute("data-date")); if(e) editEntry(e); }; });
   }
 
