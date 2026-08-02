@@ -350,6 +350,7 @@
   .rv-top .rv-date{flex:none; width:58px; font-size:12px; color:var(--sky-ink-2); font-variant-numeric:tabular-nums}
   .rv-top .rv-course{flex:1; min-width:0; font-size:14px; font-weight:700; color:var(--sky-ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:6px}
   .rv-top .rv-holes{flex:none; font-style:normal; font-size:10px; font-weight:700; color:var(--sky-ink-2); background:rgba(150,166,210,.16); border-radius:5px; padding:1px 5px}
+  .rv-top .rv-note{flex:none; font-size:11.5px; font-weight:600; color:#F0C674; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:150px}
   .rv-top .rv-my{flex:none; font-size:17px; font-weight:800; color:var(--sky-ink); font-variant-numeric:tabular-nums}
   .rv-top .rv-my.win{color:#6FD69A}
   .rv-comps{display:flex; flex-wrap:wrap; gap:5px 8px; margin:5px 0 1px 68px}
@@ -1798,7 +1799,8 @@
     Array.prototype.forEach.call(ex,function(row,i){ m["special"+(i+2)]={place:(row.querySelector(".sp-place").value||"").trim(), food:(row.querySelector(".sp-food").value||"").trim(), people:parseNames(row.querySelector(".sp-people").value)}; });
     return m;
   }
-  function loadMeals(meals){ MEALS.forEach(function(x){ var v=(meals&&meals[x.key])||{}; var p=document.getElementById("m-"+x.key+"-place"), f=document.getElementById("m-"+x.key+"-food"), w=document.getElementById("m-"+x.key+"-people"); if(p)p.value=v.place||""; if(f)f.value=v.food||""; if(w)w.value=(v.people||[]).join(", "); var chk=document.querySelector('.golf-chk[data-meal="'+x.key+'"]'); if(chk) chk.checked=!!(state.golf && v.place && state.golf[v.place]); }); renderSpecialExtras(); }
+  function setGolfFoodPh(mk, isGolf){ var f=document.getElementById("m-"+mk+"-food"); if(f) f.placeholder = isGolf? "🏆 이글·홀인원 등 특이사항" : "무엇을"; }
+  function loadMeals(meals){ MEALS.forEach(function(x){ var v=(meals&&meals[x.key])||{}; var p=document.getElementById("m-"+x.key+"-place"), f=document.getElementById("m-"+x.key+"-food"), w=document.getElementById("m-"+x.key+"-people"); if(p)p.value=v.place||""; if(f)f.value=v.food||""; if(w)w.value=(v.people||[]).join(", "); var chk=document.querySelector('.golf-chk[data-meal="'+x.key+'"]'); if(chk) chk.checked=!!(state.golf && v.place && state.golf[v.place]); setGolfFoodPh(x.key, !!(chk&&chk.checked)); }); renderSpecialExtras(); }
   // 30분 단위 시간 드롭다운(오전/오후 라벨)
   function roundTime30(v){ if(!/^\d{1,2}:\d{2}$/.test(v||"")) return v||""; var p=v.split(":"), h=+p[0], m=+p[1]; m=Math.round(m/30)*30; if(m===60){m=0; h=(h+1)%24;} return ("0"+h).slice(-2)+":"+("0"+m).slice(-2); }
   function timeOptsHtml(sel){ sel=roundTime30(sel); var o='<option value="">시간</option>'; for(var t=8*60; t<=17*60+30; t+=30){ var h=Math.floor(t/60), m=t%60, v=("0"+h).slice(-2)+":"+("0"+m).slice(-2), ap=h<12?"오전":"오후", h12=h%12||12; o+='<option value="'+v+'"'+(v===sel?" selected":"")+'>'+ap+" "+h12+":"+("0"+m).slice(-2)+'</option>'; } return o; }
@@ -1923,6 +1925,7 @@
     if(e.target.classList.contains("meal-same") && e.target.checked){ applyMealSame(); }
     else if(e.target.classList.contains("golf-chk")){
       var mk=e.target.getAttribute("data-meal"), pl=mval("m-"+mk+"-place");
+      setGolfFoodPh(mk, e.target.checked);
       if(pl){ state.golf=state.golf||{}; if(e.target.checked) state.golf[pl]=true; else delete state.golf[pl]; save(); rebuild(); }
     }
     // Special/업무미팅이 채워지면 다음 빈 행 생성
@@ -2755,10 +2758,12 @@
         if(!(state.golf && state.golf[r.place])) return;
         var mine=r.scores["나"], mineN=(mine!=null&&mine!==""&&!isNaN(+mine))?+mine:null, holes=r.holes||18;
         var conv=mineN!=null? Math.round(mineN*18/holes) : null;
-        var mp=(r.slot!=null && e.meals && e.meals[r.slot] && e.meals[r.slot].people) || e.people || [];
+        var slotM=(r.slot!=null && e.meals && e.meals[r.slot]) || null;
+        var mp=(slotM && slotM.people) || e.people || [];
+        var note=(slotM && slotM.food) || "";   // 골프 체크 시 '무엇을'=특이사항(이글·홀인원 등)
         var comps=[], vals=[]; if(mineN!=null) vals.push(mineN);
         mp.forEach(function(n){ if(!n||n==="나")return; var sv=r.scores[n], svN=(sv!=null&&sv!==""&&!isNaN(+sv))?+sv:null; comps.push({name:n,score:svN}); if(svN!=null) vals.push(svN); });
-        rounds.push({date:e.date||"", place:r.place, holes:holes, mine:mineN, conv:conv, comps:comps, minV:vals.length?Math.min.apply(null,vals):null});
+        rounds.push({date:e.date||"", place:r.place, holes:holes, mine:mineN, conv:conv, comps:comps, note:note, minV:vals.length?Math.min.apply(null,vals):null});
       });
     });
     if(!rounds.length){ el.innerHTML='<div class="pv-empty">식사 장소에 <b>⛳ 골프</b>를 체크하면<br>라운딩이 여기에 기록돼요.</div>'; return; }
@@ -2779,7 +2784,7 @@
       var compHtml=r.comps.map(function(c){ var w=(c.score!=null&&c.score===r.minV); return '<span class="rv-c'+(w?" win":"")+'">'+esc(c.name)+(c.score!=null?' <b>'+c.score+'</b>':'')+'</span>'; }).join("");
       html+='<div class="rv-row gs-click" data-date="'+r.date+'" title="이 날짜 기록 수정">'+
         '<div class="rv-top"><span class="rv-date">'+r.date.slice(2).replace(/-/g,".")+'</span>'+
-        '<span class="rv-course">'+esc(r.place)+(r.holes!==18?'<i class="rv-holes">'+r.holes+'H</i>':'')+'</span>'+
+        '<span class="rv-course">'+esc(r.place)+(r.holes!==18?'<i class="rv-holes">'+r.holes+'H</i>':'')+(r.note?'<span class="rv-note">🏆 '+esc(r.note)+'</span>':'')+'</span>'+
         '<span class="rv-my'+(iWon?" win":"")+'">'+(r.mine!=null?r.mine:"–")+'</span></div>'+
         (compHtml?'<div class="rv-comps">'+compHtml+'</div>':'')+
       '</div>';
