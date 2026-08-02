@@ -483,6 +483,28 @@
   .todo-row .td-date.soon{color:#E06B6B; font-weight:700; border-color:color-mix(in srgb, #E06B6B 55%, transparent); background:color-mix(in srgb, #E06B6B 13%, transparent)}
   .todo-row .td-date:hover{border-color:var(--accent)}
   .todo-row.done .td-task{text-decoration:line-through; color:var(--ink-3)}
+  /* 일정관리 */
+  .plan-head{display:flex; align-items:baseline; gap:10px; margin-bottom:10px; flex-wrap:wrap}
+  .plan-head h3{margin:0; font-size:15px; font-weight:800; color:var(--ink)}
+  .plan-sub{font-size:11.5px; color:var(--ink-3)}
+  .plan-empty{padding:30px 10px; text-align:center; color:var(--ink-3); font-size:13px; line-height:1.8}
+  .plan-row{background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:9px 11px; margin-bottom:8px}
+  .pl-top{display:flex; align-items:center; gap:8px}
+  .pl-status{flex:none; font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:20px; cursor:pointer; background:var(--surface); border:1px solid var(--border); color:var(--ink-3)}
+  .pl-status.done{background:color-mix(in srgb,#3FA35A 15%,transparent); border-color:color-mix(in srgb,#3FA35A 45%,transparent); color:#3FA35A}
+  .pl-task{flex:1; min-width:0; font-size:13.5px; font-weight:600; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .pl-due{flex:none; font-size:11px; color:var(--ink-2); font-variant-numeric:tabular-nums; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:2px 6px}
+  .pl-repbadge{flex:none; font-size:10.5px; color:var(--accent-ink); background:color-mix(in srgb,var(--accent) 14%,transparent); border-radius:6px; padding:2px 6px; white-space:nowrap}
+  .pl-x{flex:none; width:22px; height:22px; border:0; background:none; color:var(--ink-3); font-size:17px; line-height:1; cursor:pointer; border-radius:6px}
+  .pl-x:hover{color:var(--c-fam); background:var(--surface)}
+  .pl-result{width:100%; box-sizing:border-box; margin-top:7px; font-family:inherit; font-size:12px; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:5px 8px; outline:0}
+  .pl-result:focus{border-color:var(--accent)}
+  .pl-rep{display:flex; align-items:center; gap:8px; margin-top:7px; flex-wrap:wrap}
+  .pl-rep-lbl{display:inline-flex; align-items:center; gap:4px; font-size:11.5px; color:var(--ink-2); cursor:pointer}
+  .pl-rep-lbl input{accent-color:var(--accent); cursor:pointer}
+  .pl-rep-ctrls{display:inline-flex; gap:6px; flex-wrap:wrap}
+  .pl-sel, .pl-date{font-family:inherit; font-size:11.5px; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:3px 6px; outline:0; cursor:pointer}
+  .sky-rep{color:#F0C674; font-style:normal; text-transform:none; letter-spacing:0; font-size:14px; font-weight:700; margin-left:7px}
   .dk-top{display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin:8px 0 12px; flex-wrap:wrap}
   .dk-nums{display:flex; gap:16px; align-items:baseline; flex:none}
   .dk-stat{display:inline-flex; align-items:baseline; gap:5px; font-size:15px}
@@ -1013,12 +1035,13 @@
   <div class="modal admin-modal" role="dialog" aria-modal="true">
     <div class="admin-head">
       <div class="admin-tabs" id="adminTabs">
-        <button type="button" class="on" data-at="golf">골프 스코어</button><button type="button" data-at="people">인맥 관리</button>
+        <button type="button" class="on" data-at="golf">골프 스코어</button><button type="button" data-at="people">인맥 관리</button><button type="button" data-at="plan">일정관리</button>
       </div>
       <button class="x" id="adminClose" aria-label="닫기">&times;</button>
     </div>
     <div class="admin-body" id="adminGolf"></div>
     <div class="admin-body" id="adminPeople" hidden></div>
+    <div class="admin-body" id="adminPlan" hidden></div>
     <div class="admin-toast" id="adminToast" hidden></div>
   </div>
 </div>
@@ -1067,6 +1090,7 @@
   state.golf = state.golf || {};
   Object.keys(state.people||{}).forEach(function(n){ if(state.people[n] && state.people[n].rel==="acq") state.people[n].rel="etc"; });   // 거래처→기타 통합
   state.todos = state.todos || [];
+  state.plans = state.plans || [];   // 일정관리(Things to do 아카이브 + 반복일정)
   state.subcats = state.subcats || [];
   var draft = { date: todayStr(), people: [], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), drinks:emptyDrinks(), exercise:emptyExercise(), golfScore:{}, thoughts:"", learning:"" };
   var hiddenRels = {fam:true, work:true}, hideRest=true, hideGolf=true, drinkPeriod="week", weightPeriod="month", view="graph", recapMonth="", minMeet=2, minMeetIdx=1, meetExact=false, calMonth="", searchQ="", graphYear=String(new Date().getFullYear());
@@ -2501,11 +2525,12 @@
   }
   function openAdmin(tab){
     tab=tab||"golf";
-    renderAdminPeople(); renderAdminGolf();
+    renderAdminPeople(); renderAdminGolf(); renderAdminPlan();
     var tabs=$("#adminTabs").children;
     for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle("on", tabs[i].getAttribute("data-at")===tab);
     $("#adminPeople").hidden = (tab!=="people");
     $("#adminGolf").hidden = (tab!=="golf");
+    $("#adminPlan").hidden = (tab!=="plan");
     $("#adminModal").hidden=false;
   }
   if($("#adminBtn")) $("#adminBtn").onclick=function(){ openAdmin("golf"); };
@@ -2516,7 +2541,7 @@
     back.addEventListener("click",function(e){ if(e.target===back) close(); });
     $("#adminTabs").addEventListener("click",function(e){ var b=e.target.closest("button"); if(!b) return; var at=b.getAttribute("data-at");
       var tabs=this.children; for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle("on", tabs[i]===b);
-      $("#adminPeople").hidden = (at!=="people"); $("#adminGolf").hidden = (at!=="golf"); });
+      $("#adminPeople").hidden = (at!=="people"); $("#adminGolf").hidden = (at!=="golf"); $("#adminPlan").hidden = (at!=="plan"); if(at==="plan") renderAdminPlan(); });
   })();
 
   // 오늘 기록 찾기: 주요일정·회고(Reflection)·배움(Learning) 텍스트 검색 → 해당 기록으로 이동
@@ -2713,7 +2738,7 @@
     });
   }
 
-  function refresh(){ renderGraphYearSel(); renderTimeline(); renderStats(); renderDrinkStats(); renderWeightChart(); renderCalendar(); if(view==="places") renderPlacesView(); if(view==="rounding") renderRoundingView(); if(view==="recap") renderRecapView(); if(view==="photo") renderPhotoGallery(); loadTimelinePhotos(); syncTimelineHeight(); }
+  function refresh(){ updateSkyDate(); renderGraphYearSel(); renderTimeline(); renderStats(); renderDrinkStats(); renderWeightChart(); renderCalendar(); if(view==="places") renderPlacesView(); if(view==="rounding") renderRoundingView(); if(view==="recap") renderRecapView(); if(view==="photo") renderPhotoGallery(); loadTimelinePhotos(); syncTimelineHeight(); }
   $("#drinkSeg").addEventListener("click",function(e){
     var b=e.target.closest("button"); if(!b)return;
     drinkPeriod=b.getAttribute("data-p");
@@ -3210,7 +3235,7 @@
       task.onchange=function(){ saveTodos(); renderTodos(); };   // 마지막 칸을 채우면 새 빈칸 생성
       dlabel.onclick=function(inp){ return function(){ try{ inp.showPicker(); }catch(e){ try{ inp.focus(); inp.click(); }catch(_){} } }; }(due);
       due.onchange=function(){ saveTodos(); renderTodos(); };   // 기한 바뀌면 월.일 라벨·날짜순 재정렬
-      del.onclick=function(tk,dz,ck){ return function(){ tk.value=""; dz.value=""; ck.checked=false; saveTodos(); renderTodos(); }; }(task,due,chk);
+      del.onclick=function(tk,dz,ck){ return function(){ var tv=tk.value.trim(); if(tv) archivePlan(tv, dz.value, ck.checked); tk.value=""; dz.value=""; ck.checked=false; saveTodos(); renderTodos(); }; }(task,due,chk);
       row.appendChild(chk); row.appendChild(task); row.appendChild(del); row.appendChild(dwrap);
       el.appendChild(row);
     }
@@ -3219,6 +3244,82 @@
     var rows=document.querySelectorAll("#todoList .todo-row"), arr=[];
     Array.prototype.forEach.call(rows,function(r){ var task=r.querySelector(".td-task").value.trim(), due=r.querySelector(".td-due").value; if(task||due) arr.push({ done:r.querySelector(".td-chk").checked, task:task, due:due }); });
     state.todos=sortTodos(arr); save();
+  }
+
+  // ---------- 일정관리 (Things to do 아카이브 + 반복일정) ----------
+  function archivePlan(task, due, done){   // Things to do에서 삭제될 때 여기로 보관(완료 여부 기록)
+    state.plans=state.plans||[];
+    state.plans.unshift({ id:"p"+Date.now()+Math.floor(Math.random()*1e4), task:task, due:due||"", done:!!done, result:"", repeat:null, ts:Date.now() });
+    save();
+  }
+  function planRepeatDesc(rp){
+    if(!rp) return "";
+    if(rp.type==="weekly") return "매주 "+(DOW[rp.wd]||"?")+"요일";
+    if(rp.type==="monthly") return "매월 "+(rp.day||"?")+"일";
+    if(rp.type==="yearly"){ var mm=(rp.md||"").split("-"); return "매년 "+(+mm[0]||"?")+"월 "+(+mm[1]||"?")+"일"; }
+    return "";
+  }
+  function repeatOccursOn(rp, d){   // d=Date, rp 반복이 그 날 발생하는가
+    if(!rp) return false;
+    if(rp.type==="weekly") return d.getDay()===rp.wd;
+    if(rp.type==="monthly") return d.getDate()===rp.day;
+    if(rp.type==="yearly") return rp.md && (pad(d.getMonth()+1)+"-"+pad(d.getDate()))===rp.md;
+    return false;
+  }
+  function updateSkyDate(){   // 성좌 날짜 + '내일'이 반복일정이면 옆에 다른 색으로 표시(전날 알림)
+    var st=$("#skyDate"); if(!st) return;
+    var d=new Date();
+    var base=d.getFullYear()+". "+pad(d.getMonth()+1)+". "+pad(d.getDate())+". ("+DOW[d.getDay()]+")";
+    var tmr=new Date(d.getFullYear(), d.getMonth(), d.getDate()+1);
+    var hits=(state.plans||[]).filter(function(p){ return repeatOccursOn(p.repeat, tmr); }).map(function(p){ return p.task; });
+    st.innerHTML=esc(base)+(hits.length? ' <span class="sky-rep">'+esc(hits.join(" · "))+'</span>' : "");
+  }
+  function renderAdminPlan(){
+    var el=$("#adminPlan"); if(!el) return;
+    var plans=state.plans||[];
+    el.innerHTML="";
+    var head=document.createElement("div"); head.className="plan-head";
+    head.innerHTML='<h3>일정관리</h3><span class="plan-sub">'+plans.length+'건 · Things to do에서 삭제하면 여기 보관돼요</span>';
+    el.appendChild(head);
+    if(!plans.length){ var emp=document.createElement("div"); emp.className="plan-empty"; emp.innerHTML="아직 없어요.<br>‘오늘 기록’의 Things to do에서 항목을 ×로 지우면 여기에 보관돼요."; el.appendChild(emp); return; }
+    plans.forEach(function(p){
+      var row=document.createElement("div"); row.className="plan-row";
+      var top=document.createElement("div"); top.className="pl-top";
+      var st=document.createElement("span"); st.className="pl-status"+(p.done?" done":""); st.textContent=p.done?"완료":"미완"; st.title="클릭 → 완료/미완 전환";
+      st.onclick=function(){ p.done=!p.done; save(); renderAdminPlan(); };
+      var task=document.createElement("span"); task.className="pl-task"; task.textContent=p.task||"";
+      top.appendChild(st); top.appendChild(task);
+      if(p.due){ var due=document.createElement("span"); due.className="pl-due"; due.textContent=p.due.slice(5).replace("-","."); top.appendChild(due); }
+      var repd=planRepeatDesc(p.repeat); if(repd){ var rb=document.createElement("span"); rb.className="pl-repbadge"; rb.textContent="🔁 "+repd; top.appendChild(rb); }
+      var x=document.createElement("button"); x.type="button"; x.className="pl-x"; x.textContent="×"; x.title="완전 삭제";
+      x.onclick=function(){ askConfirm({ title:"일정 완전 삭제", message:"‘"+(p.task||"")+"’ 을(를) 완전히 삭제할까요?\n되돌릴 수 없어요.", okText:"삭제", danger:true, onOk:function(){ state.plans=state.plans.filter(function(q){return q!==p;}); save(); renderAdminPlan(); updateSkyDate(); } }); };
+      top.appendChild(x);
+      row.appendChild(top);
+      var res=document.createElement("input"); res.type="text"; res.className="pl-result"; res.placeholder="결과·메모 기록"; res.value=p.result||"";
+      res.onchange=function(){ p.result=res.value.trim(); save(); };
+      row.appendChild(res);
+      var repWrap=document.createElement("div"); repWrap.className="pl-rep";
+      var lbl=document.createElement("label"); lbl.className="pl-rep-lbl";
+      var chk=document.createElement("input"); chk.type="checkbox"; chk.checked=!!p.repeat;
+      lbl.appendChild(chk); lbl.appendChild(document.createTextNode(" 반복"));
+      var ctrls=document.createElement("span"); ctrls.className="pl-rep-ctrls";
+      function buildCtrls(){
+        ctrls.innerHTML="";
+        if(!p.repeat) return;
+        var typeSel=document.createElement("select"); typeSel.className="pl-sel";
+        [["weekly","매주"],["monthly","매월"],["yearly","매년"]].forEach(function(t){ var o=document.createElement("option"); o.value=t[0]; o.textContent=t[1]; if(p.repeat.type===t[0]) o.selected=true; typeSel.appendChild(o); });
+        typeSel.onchange=function(){ p.repeat.type=typeSel.value; if(p.repeat.type==="weekly"&&p.repeat.wd==null)p.repeat.wd=new Date().getDay(); if(p.repeat.type==="monthly"&&p.repeat.day==null)p.repeat.day=new Date().getDate(); if(p.repeat.type==="yearly"&&!p.repeat.md)p.repeat.md=(p.due?p.due.slice(5):todayStr().slice(5)); save(); buildCtrls(); updateSkyDate(); };
+        ctrls.appendChild(typeSel);
+        if(p.repeat.type==="weekly"){ var ws=document.createElement("select"); ws.className="pl-sel"; DOW.forEach(function(dn,i){ var o=document.createElement("option"); o.value=i; o.textContent=dn+"요일"; if(p.repeat.wd===i)o.selected=true; ws.appendChild(o); }); ws.onchange=function(){ p.repeat.wd=+ws.value; save(); updateSkyDate(); }; ctrls.appendChild(ws); }
+        else if(p.repeat.type==="monthly"){ var ms=document.createElement("select"); ms.className="pl-sel"; for(var dd=1;dd<=31;dd++){ var o=document.createElement("option"); o.value=dd; o.textContent=dd+"일"; if(p.repeat.day===dd)o.selected=true; ms.appendChild(o); } ms.onchange=function(){ p.repeat.day=+ms.value; save(); updateSkyDate(); }; ctrls.appendChild(ms); }
+        else if(p.repeat.type==="yearly"){ var yi=document.createElement("input"); yi.type="date"; yi.className="pl-date"; yi.value=(p.repeat.md?"2000-"+p.repeat.md:""); yi.onchange=function(){ p.repeat.md=yi.value?yi.value.slice(5):""; save(); updateSkyDate(); }; ctrls.appendChild(yi); }
+      }
+      chk.onchange=function(){ p.repeat = chk.checked? {type:"yearly", md:(p.due?p.due.slice(5):todayStr().slice(5))} : null; save(); buildCtrls(); updateSkyDate(); };
+      buildCtrls();
+      repWrap.appendChild(lbl); repWrap.appendChild(ctrls);
+      row.appendChild(repWrap);
+      el.appendChild(row);
+    });
   }
 
   // 같은 날짜에 기록이 둘 이상이면 하나로 병합(끼니는 빈 슬롯으로 이동, 골프 라운드는 슬롯별 스코어로 보존)
@@ -3265,10 +3366,7 @@
 
   // ---------- boot ----------
   mergeDuplicateDates();
-  (function(){
-    var d=new Date();
-    var st=$("#skyDate"); if(st) st.textContent = d.getFullYear()+". "+pad(d.getMonth()+1)+". "+pad(d.getDate())+". ("+DOW[d.getDay()]+")";
-  })();
+  updateSkyDate();
   renderTodos();
   renderLegend();
   // 모바일(≤640px)에선 '운동' 입력을 '오늘의 사진' 앞으로 이동, PC는 원위치 유지
@@ -3293,7 +3391,7 @@
     get:function(){ return state; },
     replace:function(s, keepDraft){
       if(!s || !Array.isArray(s.entries)) return;
-      state={ people:s.people||{}, entries:s.entries||[], events:s.events||[], golf:s.golf||{}, todos:s.todos||[], subcats:s.subcats||[] };
+      state={ people:s.people||{}, entries:s.entries||[], events:s.events||[], golf:s.golf||{}, todos:s.todos||[], plans:s.plans||[], subcats:s.subcats||[] };
       mergeDuplicateDates();
       save();
       if(!keepDraft) resetDraft();
