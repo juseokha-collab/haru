@@ -228,8 +228,8 @@
   .golf-stats .gs-none{font-size:11.5px; color:var(--sky-ink-2)}
   .yr-sep{height:0; border-top:1px solid rgba(150,166,210,.22); margin:5px 2px}
   .search-info{position:absolute; left:16px; top:14px; z-index:4; width:186px; background:rgba(19,24,38,.55); border:1px solid rgba(150,166,210,.2); border-radius:10px; padding:10px 12px}
-  .search-info .si-x{position:absolute; top:4px; right:5px; width:18px; height:18px; padding:0; border:0; background:transparent; color:var(--sky-ink-2); font-size:16px; line-height:16px; text-align:center; cursor:pointer; z-index:1}
-  .search-info .si-x:hover{color:var(--sky-ink)}
+  .search-info .si-close{position:absolute; top:6px; right:7px; cursor:pointer; color:var(--sky-ink-2); border:0; background:none; font-size:18px; line-height:1; padding:2px; z-index:1}
+  .search-info .si-close:hover{color:var(--sky-ink)}
   .search-info .si-h{padding-right:14px}
   .search-info[hidden]{display:none}
   .search-info .si-h{font-size:11.5px; color:var(--sky-ink-2); margin-bottom:5px}
@@ -1361,7 +1361,7 @@
     if(!total){ el.hidden=true; el.innerHTML=""; return; }
     var yrs=Object.keys(byYear).sort().reverse();
     var yrHtml=yrs.map(function(y){ var b=byYear[y]; return '<div class="si-year">'+y.slice(2)+'년 <b class="si-w">'+b.w+'승</b> <b class="si-l">'+b.l+'패</b>'+(b.d?' '+b.d+'무':'')+(b.x?' <b class="si-x">'+b.x+'X</b>':'')+'</div>'; }).join("");
-    var html='<button class="si-x" aria-label="닫기">&times;</button>'+
+    var html='<button class="si-close" aria-label="닫기">&times;</button>'+
       '<div class="si-h"><b>'+esc(name)+'</b> 와의 '+total+' 전적</div>'+
       '<div class="si-rec"><b class="si-w">'+w+'승</b><b class="si-l">'+l+'패</b>'+(d?'<b>'+d+'무</b>':'')+(x?'<b class="si-x">'+x+'X</b>':'')+'</div>'+
       (sc?'<div class="si-sub">평균 나 '+(myTot/sc).toFixed(1)+' · '+esc(name)+' '+(thTot/sc).toFixed(1)+'</div>':'')+
@@ -1372,7 +1372,7 @@
     }
     el.innerHTML=html;
     el.hidden=false;
-    var _xb=el.querySelector(".si-x"); if(_xb) _xb.onclick=function(){ siHideFor=searchQ; el.hidden=true; };
+    var _xb=el.querySelector(".si-close"); if(_xb) _xb.onclick=function(){ siHideFor=searchQ; el.hidden=true; };
   }
   // 골프 전용 뷰 좌측 패널: 방문한 골프장 수 + 싱글(18홀 환산 ≤79) 기록 리스트
   var gsDismissed=false;   // 닫기(×) 상태 — 골프 뷰를 벗어나면 초기화
@@ -1427,6 +1427,7 @@
       }
     }
     // springs
+    var _anchor = (searchFocus.length===1)? nodeIndex[searchFocus[0]] : null;   // 단일 인물 검색: 그 사람 주위에 최소거리 확보
     links.forEach(function(l){
       if(!visible(l.a)||!visible(l.b))return;
       var dx=l.b.x-l.a.x, dy=l.b.y-l.a.y, d=Math.sqrt(dx*dx+dy*dy)||0.01;
@@ -1435,6 +1436,9 @@
       var rest, str;
       if(l.me){ rest=150; str=0.10; }                        // 나 링크는 약한 테더(거리로 빈도 표현 안 함 — 빈도는 노드 크기)
       else if(l.place){ rest=150-Math.min(40,l.w*6); str=0.5; }
+      else if(_anchor && (l.a===_anchor||l.b===_anchor)){     // 앵커-동반자: 나 주위처럼 최소거리 링 확보(너무 몰리지 않게)
+        var _other=(l.a===_anchor? l.b : l.a); rest=_anchor.r+_other.r+46; str=0.9;
+      }
       else { rest=64-Math.min(44,l.w*9); str=1.9; }          // 사람-사람: 강하게 → 관계 군집 형성
       var f=(d-rest)*0.02*k*str;
       var fx=dx/d*f, fy=dy/d*f;
