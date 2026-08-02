@@ -1170,7 +1170,7 @@
   function rebuild(){
     var g=buildGraph();
     var allNames=Object.keys(g.meetings);
-    var names, searchPlaceSet=null; searchAnchors=[]; anchorTargets={}; searchMeTarget=null; searchFocus=[]; searchSubs=[];
+    var names, searchPlaceSet=null, anchorCo=null; searchAnchors=[]; anchorTargets={}; searchMeTarget=null; searchFocus=[]; searchSubs=[];
     if(searchQ){
       var _terms=searchQ.split(/[,，]/).map(function(s){return s.trim();}).filter(Boolean);
       var _sInY=inGraphYear;
@@ -1203,11 +1203,21 @@
         if(_a){ searchAnchors=[_a]; keep[_a]=1; Object.keys(g.pairs).forEach(function(k){ var ab=k.split(g.S1), a=ab[0], b=ab[1]; if(a===_a) keep[b]=1; else if(b===_a) keep[a]=1; }); }
         Object.keys(g.places||{}).forEach(function(pl){ if(pl.indexOf(term)>=0) searchPlaceSet[pl]=1; });   // 장소명 검색
       }
-      // 공통: minMeet(1+/2+…) 적용 — 검색 인물·서브그룹 멤버는 항상 포함
-      names=allNames.filter(function(n){ return keep[n] && (searchSubs.length || searchAnchors.indexOf(n)>=0 || (meetExact? g.meetings[n]===minMeet : g.meetings[n]>=minMeet)); });
+      // 단일 인물 검색: 크기·필터·횟수·장소를 모두 '그 사람과 함께 만난' 기준으로 통일
+      if(searchAnchors.length===1 && !searchSubs.length){
+        var _ca=searchAnchors[0]; anchorCo={};
+        Object.keys(g.pairs).forEach(function(k){ var ab=k.split(g.S1); if(ab[0]===_ca) anchorCo[ab[1]]=g.pairs[k]; else if(ab[1]===_ca) anchorCo[ab[0]]=g.pairs[k]; });
+      }
+      // 공통: minMeet(1+/2+…) 적용 — 검색 인물·서브그룹 멤버는 항상 포함. 단일 앵커면 '함께 만난 횟수' 기준
+      names=allNames.filter(function(n){ if(!keep[n]) return false; if(searchSubs.length || searchAnchors.indexOf(n)>=0) return true; var mv=anchorCo?(anchorCo[n]||0):g.meetings[n]; return meetExact? mv===minMeet : mv>=minMeet; });
       searchAnchors=searchAnchors.filter(function(n){ return names.indexOf(n)>=0; });
-      // 표시되는 사람과 함께 간 식당·골프장 (식당/골프 칩은 visible에서 게이팅)
-      if(_terms.length<=1 || searchSubs.length){ var _ns={}; names.forEach(function(n){ _ns[n]=1; }); Object.keys(g.pplace||{}).forEach(function(k){ var ab=k.split(g.S1), pl=ab[0], pn=ab[1]; if(_ns[pn] && (searchSubs.length || searchAnchors.indexOf(pn)>=0 || !hiddenRels[relOf(pn)])) searchPlaceSet[pl]=1; }); }
+      // 장소: 단일 앵커면 '그 사람과 함께 간 곳'만 · 서브그룹이면 표시 멤버들이 간 곳 (식당/골프 칩은 visible에서 게이팅)
+      if(searchAnchors.length===1 && !searchSubs.length){
+        var _pa=searchAnchors[0];
+        Object.keys(g.pplace||{}).forEach(function(k){ var ab=k.split(g.S1); if(ab[1]===_pa) searchPlaceSet[ab[0]]=1; });
+      } else if(searchSubs.length){
+        var _ns={}; names.forEach(function(n){ _ns[n]=1; }); Object.keys(g.pplace||{}).forEach(function(k){ var ab=k.split(g.S1); if(_ns[ab[1]]) searchPlaceSet[ab[0]]=1; });
+      }
       // 나 제거 → 검색 인물이 중심 허브. 함께 만난 사람은 허브 링크로 주변에 자연 배치
       searchFocus = searchAnchors.slice(); searchMeTarget=null;
       if(searchAnchors.length===1){ anchorTargets[searchAnchors[0]]={fx:0.5,fy:0.5}; }
@@ -1228,16 +1238,18 @@
     me = prev["★me"] || {name:"★me", me:true, x:W/2, y:H/2, vx:0, vy:0};
     me.x=me.x||W/2; me.y=me.y||H/2;
 
-    var maxM=1; names.forEach(function(n){ maxM=Math.max(maxM,g.meetings[n]); });
+    var _anc=anchorCo?searchAnchors[0]:null;   // 단일 앵커: 크기·횟수는 그 사람과 함께 만난 기준(앵커 본인은 최대 크기)
+    var maxM=1; names.forEach(function(n){ var v=anchorCo? (n===_anc?0:(anchorCo[n]||0)) : g.meetings[n]; maxM=Math.max(maxM,v); });
     names.forEach(function(n,i){
       var p=prev[n];
       var ang=(i/Math.max(1,names.length))*Math.PI*2;
       var node = p || { name:n, x:W/2+Math.cos(ang)*(W*0.30)+ (Math.random()*40-20), y:H/2+Math.sin(ang)*(H*0.32)+(Math.random()*40-20), vx:0, vy:0 };
       node.type="person";
-      node.meet=g.meetings[n];
+      var _sz = anchorCo? (n===_anc? maxM : (anchorCo[n]||0)) : g.meetings[n];
+      node.meet = anchorCo? (n===_anc? g.meetings[n] : (anchorCo[n]||0)) : g.meetings[n];
       node.last=g.last[n];
       node.rel=relOf(n);
-      node.r=7+Math.sqrt(g.meetings[n]/maxM)*15;
+      node.r=7+Math.sqrt(_sz/maxM)*15;
       node.phase=node.phase!=null?node.phase:Math.random()*6.28;
       nodes.push(node); nodeIndex[n]=node;
     });
