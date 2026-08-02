@@ -334,6 +334,24 @@
   .rank .barwrap i{display:block; height:100%; border-radius:4px; background:var(--me-ring)}
   .rank .cnt{flex:none; text-align:right; font-variant-numeric:tabular-nums; font-weight:800; font-size:16px; color:var(--sky-ink)}
   .rank .cnt small{display:block; font-size:10px; font-weight:500; color:var(--sky-ink-2)}
+  .rv-stats{display:flex; gap:8px; margin:0 0 14px; flex-wrap:wrap}
+  .rv-chip{flex:1; min-width:64px; background:rgba(255,255,255,.05); border:1px solid rgba(150,166,210,.16); border-radius:10px; padding:8px 6px; text-align:center}
+  .rv-chip b{display:block; font-size:18px; font-weight:800; color:var(--sky-ink); font-variant-numeric:tabular-nums; line-height:1.1}
+  .rv-chip i{display:block; font-size:10.5px; font-style:normal; color:var(--sky-ink-2); margin-top:3px}
+  .rv-yh{font-size:11px; font-weight:800; letter-spacing:.05em; color:#8FE0AC; text-transform:uppercase; margin:14px 0 5px; padding-bottom:3px; border-bottom:1px solid rgba(143,224,172,.25)}
+  .rv-row{padding:7px 4px; border-bottom:1px solid rgba(150,166,210,.1); cursor:pointer; border-radius:6px}
+  .rv-row:hover{background:rgba(255,255,255,.05)}
+  .rv-top{display:flex; align-items:center; gap:10px}
+  .rv-top .rv-date{flex:none; width:58px; font-size:12px; color:var(--sky-ink-2); font-variant-numeric:tabular-nums}
+  .rv-top .rv-course{flex:1; min-width:0; font-size:14px; font-weight:700; color:var(--sky-ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:6px}
+  .rv-top .rv-holes{flex:none; font-style:normal; font-size:10px; font-weight:700; color:var(--sky-ink-2); background:rgba(150,166,210,.16); border-radius:5px; padding:1px 5px}
+  .rv-top .rv-my{flex:none; font-size:17px; font-weight:800; color:var(--sky-ink); font-variant-numeric:tabular-nums}
+  .rv-top .rv-my.win{color:#6FD69A}
+  .rv-comps{display:flex; flex-wrap:wrap; gap:5px 8px; margin:5px 0 1px 68px}
+  .rv-comps .rv-c{font-size:11.5px; color:var(--sky-ink-2); font-variant-numeric:tabular-nums}
+  .rv-comps .rv-c b{color:var(--sky-ink); font-weight:700}
+  .rv-comps .rv-c.win{color:#6FD69A}
+  .rv-comps .rv-c.win b{color:#6FD69A}
   .pv-h{display:flex; align-items:center; justify-content:space-between; margin:2px 0 10px}
   .pv-h h3{margin:0; font-size:14px; font-weight:700; color:var(--sky-ink)}
   .pv-h .navm{display:flex; align-items:center; gap:8px}
@@ -720,7 +738,7 @@
         <div class="sky-row a">
           <span class="k" id="skyDate"></span>
           <div class="seg on-sky tabs" id="viewTabs">
-            <button type="button" data-v="graph" class="on">성좌</button><button type="button" data-v="places">장소</button><button type="button" data-v="recap">회고</button><button type="button" data-v="photo">사진</button>
+            <button type="button" data-v="graph" class="on">성좌</button><button type="button" data-v="places">장소</button><button type="button" data-v="rounding">라운딩</button><button type="button" data-v="recap">회고</button><button type="button" data-v="photo">사진</button>
           </div>
         </div>
         <div class="sky-row b">
@@ -744,6 +762,7 @@
         <div class="detail" id="detail"></div>
       </div>
       <div class="panel-view" id="placesView" hidden></div>
+      <div class="panel-view" id="roundingView" hidden></div>
       <div class="panel-view" id="recapView" hidden></div>
       <div class="panel-view" id="photoView" hidden></div>
       <div class="stat-row">
@@ -1351,11 +1370,11 @@
     state.entries.forEach(function(e){ roundsOf(e).forEach(function(r){
       var mine=r.scores["나"], th=r.scores[name], hasScore=!(mine==null||mine===""||th==null||th==="");
       if(hasScore){ mine=+mine; th=+th; hasScore=!(isNaN(mine)||isNaN(th)); }
-      var y=(e.date||"").slice(0,4); byYear[y]=byYear[y]||{w:0,l:0,d:0,x:0};
-      if(hasScore){ sc++; myTot+=mine; thTot+=th; var res=mine<th?"w":(mine>th?"l":"d"); if(res==="w")w++; else if(res==="l")l++; else d++; byYear[y][res]++; return; }
+      var y=(e.date||"").slice(0,4);
+      if(hasScore){ sc++; myTot+=mine; thTot+=th; var res=mine<th?"w":(mine>th?"l":"d"); if(res==="w")w++; else if(res==="l")l++; else d++; (byYear[y]=byYear[y]||{w:0,l:0,d:0,x:0})[res]++; return; }
       // 스코어 없는 라운딩: 같은 골프장에 함께 간 기록만(승패 X = 기록없음)
       var mp=(r.slot!=null && e.meals && e.meals[r.slot] && e.meals[r.slot].people) || [];
-      if(mp.indexOf(name)>=0 || (e.people||[]).indexOf(name)>=0){ x++; byYear[y].x++; noScore.push({date:e.date||"", place:r.place||"(장소)"}); }
+      if(mp.indexOf(name)>=0 || (e.people||[]).indexOf(name)>=0){ x++; (byYear[y]=byYear[y]||{w:0,l:0,d:0,x:0}).x++; noScore.push({date:e.date||"", place:r.place||"(장소)"}); }
     }); });
     var total=sc+x;
     if(!total){ el.hidden=true; el.innerHTML=""; return; }
@@ -2636,7 +2655,7 @@
     });
   }
 
-  function refresh(){ renderGraphYearSel(); renderTimeline(); renderStats(); renderDrinkStats(); renderWeightChart(); renderCalendar(); if(view==="places") renderPlacesView(); if(view==="recap") renderRecapView(); if(view==="photo") renderPhotoGallery(); loadTimelinePhotos(); syncTimelineHeight(); }
+  function refresh(){ renderGraphYearSel(); renderTimeline(); renderStats(); renderDrinkStats(); renderWeightChart(); renderCalendar(); if(view==="places") renderPlacesView(); if(view==="rounding") renderRoundingView(); if(view==="recap") renderRecapView(); if(view==="photo") renderPhotoGallery(); loadTimelinePhotos(); syncTimelineHeight(); }
   $("#drinkSeg").addEventListener("click",function(e){
     var b=e.target.closest("button"); if(!b)return;
     drinkPeriod=b.getAttribute("data-p");
@@ -2655,15 +2674,17 @@
     view=v;
     $("#graphView").hidden = v!=="graph";
     $("#placesView").hidden = v!=="places";
+    $("#roundingView").hidden = v!=="rounding";
     $("#recapView").hidden = v!=="recap";
     $("#photoView").hidden = v!=="photo";
     $("#legend").style.display = v==="graph"?"":"none";
     $("#searchWrap").style.display = v==="graph"?"":"none";
     $("#minMeetSeg").style.display = v==="graph"?"":"none";
     var _gy=$("#graphYearSel"); if(_gy) _gy.style.display = v==="graph"?"":"none";
-    var _st=$("#skyTitle"); if(_st) _st.textContent = {graph:"인맥 성좌", places:"자주 가는 곳", recap:"회고", photo:"Today's Photo"}[v];
+    var _st=$("#skyTitle"); if(_st) _st.textContent = {graph:"인맥 성좌", places:"자주 가는 곳", rounding:"골프 라운딩", recap:"회고", photo:"Today's Photo"}[v];
     var tabs=$("#viewTabs").children; for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle("on", tabs[i].getAttribute("data-v")===v);
     if(v==="places") renderPlacesView();
+    else if(v==="rounding") renderRoundingView();
     else if(v==="recap") renderRecapView();
     else if(v==="photo") renderPhotoGallery();
     else { alpha=Math.max(alpha,0.5); wake(); }
@@ -2707,6 +2728,48 @@
         '<div class="cnt">'+p.visits+'<small>회</small></div></div>';
     });
     el.innerHTML=html;
+  }
+
+  // 골프 라운딩 로그: 기존 골프 기록(골프 체크된 장소)을 연도별로 예쁘게 나열
+  function renderRoundingView(){
+    var el=$("#roundingView"); if(!el) return;
+    var rounds=[];
+    state.entries.forEach(function(e){
+      roundsOf(e).forEach(function(r){
+        if(!(state.golf && state.golf[r.place])) return;
+        var mine=r.scores["나"], mineN=(mine!=null&&mine!==""&&!isNaN(+mine))?+mine:null, holes=r.holes||18;
+        var conv=mineN!=null? Math.round(mineN*18/holes) : null;
+        var mp=(r.slot!=null && e.meals && e.meals[r.slot] && e.meals[r.slot].people) || e.people || [];
+        var comps=[], vals=[]; if(mineN!=null) vals.push(mineN);
+        mp.forEach(function(n){ if(!n||n==="나")return; var sv=r.scores[n], svN=(sv!=null&&sv!==""&&!isNaN(+sv))?+sv:null; comps.push({name:n,score:svN}); if(svN!=null) vals.push(svN); });
+        rounds.push({date:e.date||"", place:r.place, holes:holes, mine:mineN, conv:conv, comps:comps, minV:vals.length?Math.min.apply(null,vals):null});
+      });
+    });
+    if(!rounds.length){ el.innerHTML='<div class="pv-empty">식사 장소에 <b>⛳ 골프</b>를 체크하면<br>라운딩이 여기에 기록돼요.</div>'; return; }
+    rounds.sort(byDateDesc);
+    var courseSet={}, convs=[]; rounds.forEach(function(r){ courseSet[r.place]=1; if(r.conv!=null) convs.push(r.conv); });
+    var avg=convs.length? (convs.reduce(function(s,v){return s+v;},0)/convs.length) : null;
+    var best=convs.length? Math.min.apply(null,convs) : null;
+    var singles=convs.filter(function(v){return v<=79;}).length;
+    var chip=function(v,lbl){ return '<div class="rv-chip"><b>'+v+'</b><i>'+lbl+'</i></div>'; };
+    var html='<div class="pv-h"><h3>⛳ 나의 골프 라운딩</h3><b style="color:var(--sky-ink-2);font-size:12px;font-weight:600">'+rounds.length+' 라운딩</b></div>';
+    html+='<div class="rv-stats">'+chip(rounds.length,"라운딩")+chip(Object.keys(courseSet).length,"골프장")+
+      (avg!=null?chip(avg.toFixed(1),"평균"):"")+(best!=null?chip(best,"베스트"):"")+chip(singles,"싱글")+'</div>';
+    var prevY=null;
+    rounds.forEach(function(r){
+      var y=(r.date||"").slice(0,4);
+      if(y!==prevY){ html+='<div class="rv-yh">'+y+'년</div>'; prevY=y; }
+      var iWon=(r.mine!=null&&r.mine===r.minV);
+      var compHtml=r.comps.map(function(c){ var w=(c.score!=null&&c.score===r.minV); return '<span class="rv-c'+(w?" win":"")+'">'+esc(c.name)+(c.score!=null?' <b>'+c.score+'</b>':'')+'</span>'; }).join("");
+      html+='<div class="rv-row gs-click" data-date="'+r.date+'" title="이 날짜 기록 수정">'+
+        '<div class="rv-top"><span class="rv-date">'+r.date.slice(2).replace(/-/g,".")+'</span>'+
+        '<span class="rv-course">'+esc(r.place)+(r.holes!==18?'<i class="rv-holes">'+r.holes+'H</i>':'')+'</span>'+
+        '<span class="rv-my'+(iWon?" win":"")+'">'+(r.mine!=null?r.mine:"–")+'</span></div>'+
+        (compHtml?'<div class="rv-comps">'+compHtml+'</div>':'')+
+      '</div>';
+    });
+    el.innerHTML=html;
+    Array.prototype.forEach.call(el.querySelectorAll(".gs-click"), function(row){ row.onclick=function(){ var e=existingFor(row.getAttribute("data-date")); if(e) editEntry(e); }; });
   }
 
   function monthStr(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1); }
