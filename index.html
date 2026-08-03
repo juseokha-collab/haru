@@ -489,7 +489,12 @@
   .plan-head h3{margin:0; font-size:15px; font-weight:800; color:var(--ink)}
   .plan-sub{font-size:11.5px; color:var(--ink-3)}
   .plan-empty{padding:30px 10px; text-align:center; color:var(--ink-3); font-size:13px; line-height:1.8}
+  .plan-div{font-size:11px; font-weight:800; letter-spacing:.03em; color:var(--ink-3); text-transform:uppercase; margin:16px 0 7px; padding-bottom:4px; border-bottom:1px solid var(--border)}
   .plan-row{background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:9px 11px; margin-bottom:8px}
+  .plan-row.flagged{background:color-mix(in srgb,#E6A23C 13%,var(--surface-2)); border-color:color-mix(in srgb,#E6A23C 48%,transparent)}
+  .pl-top .pl-flag{width:14px; height:14px; flex:none; margin:0 0 0 2px; accent-color:#E6A23C; cursor:pointer}
+  .pl-save{margin-left:auto; font-family:inherit; font-size:11.5px; font-weight:700; border:1px solid var(--accent); background:var(--accent); color:#fff; border-radius:7px; padding:4px 13px; cursor:pointer}
+  .pl-save.done{background:#3FA35A; border-color:#3FA35A}
   .pl-top{display:flex; align-items:center; gap:8px}
   .pl-status{flex:none; font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:20px; cursor:pointer; background:var(--surface); border:1px solid var(--border); color:var(--ink-3)}
   .pl-status.done{background:color-mix(in srgb,#3FA35A 15%,transparent); border-color:color-mix(in srgb,#3FA35A 45%,transparent); color:#3FA35A}
@@ -782,11 +787,8 @@
   /* 좁은 화면(폰)에선 백업/초기화 버튼 숨김 — 테마·로그인만 유지 */
   @media (max-width:640px){
     #exportBtn, #importBtn, #resetBtn, #golfCsvBtn, #adminBtn, #themeBtn{ display:none; }
-    .admin-m{display:inline-flex; padding:6px 12px; font-size:12px}   /* 로그아웃과 같은 줄(2번째 줄) */
-    /* 우측 헤더: 좌측(로고/날씨)처럼 2줄로 — 1줄 사용자, 2줄 로그아웃·관리 */
-    .auth{flex-wrap:wrap; justify-content:flex-end; align-items:flex-end; row-gap:6px}
-    .auth-user{flex-basis:100%; justify-content:flex-end; max-width:none}
-    .auth-actions{display:flex; gap:6px}
+    .admin-m{display:inline-flex; padding:6px 12px; font-size:12px}   /* 모바일: 싸강쥐 옆에 관리 */
+    .logout-btn{display:none}   /* 모바일에선 로그아웃 숨김(불필요) */
     /* 달력 헤더: 만난사람(좌) / Today·연월 이동(우) 2줄로 */
     .calcard .card-h{ flex-direction:column; align-items:stretch; gap:8px; }
     .calcard .card-h .cv-nav{ justify-content:flex-end; }
@@ -3379,8 +3381,8 @@
   function completePlanFor(id, task, due){   // Things to do에서 삭제 → 연결된 일정을 '완료'로
     state.plans=state.plans||[];
     var pl=id? state.plans.filter(function(p){return p.srcId===id;})[0] : null;
-    if(pl){ pl.done=true; if(task) pl.task=task; if(due) pl.due=due; }
-    else { state.plans.unshift({ id:genPid(), srcId:id||"", task:task, due:due||"", done:true, result:"", repeat:null, ts:Date.now() }); }
+    if(pl){ pl.done=true; pl.doneAt=Date.now(); if(task) pl.task=task; if(due) pl.due=due; }
+    else { state.plans.unshift({ id:genPid(), srcId:id||"", task:task, due:due||"", done:true, doneAt:Date.now(), result:"", repeat:null, ts:Date.now() }); }
   }
   function planRepeatDesc(rp){
     if(!rp) return "";
@@ -3413,13 +3415,23 @@
     head.innerHTML='<h3>일정관리</h3><span class="plan-sub">'+(adminYear==="all"?"전체":adminYear+"년")+' · '+plans.length+'건 · Things to do에서 삭제하면 여기 보관돼요</span>';
     el.appendChild(head);
     if(!plans.length){ var emp=document.createElement("div"); emp.className="plan-empty"; emp.innerHTML="아직 없어요.<br>‘오늘 기록’의 Things to do에서 항목을 ×로 지우면 여기에 보관돼요."; el.appendChild(emp); return; }
-    plans.forEach(function(p){
-      var row=document.createElement("div"); row.className="plan-row";
+    var today=todayStr();
+    function daysTo(due){ return Math.round((parseD(due)-parseD(today))/864e5); }
+    var s1=[], s2=[], s3=[];   // 1) 7일 이내 미완 2) 그 외 미완 3) 완료
+    plans.forEach(function(p){ if(p.done) s3.push(p); else if(p.due && daysTo(p.due)<=7) s1.push(p); else s2.push(p); });
+    var byDueAsc=function(a,b){ var ad=a.due||"9999", bd=b.due||"9999"; return ad<bd?-1:ad>bd?1:0; };
+    s1.sort(byDueAsc); s2.sort(byDueAsc);
+    s3.sort(function(a,b){ return (b.doneAt||b.ts||0)-(a.doneAt||a.ts||0); });
+    function buildPlanRow(p){
+      var row=document.createElement("div"); row.className="plan-row"+(p.flag?" flagged":"");
       var top=document.createElement("div"); top.className="pl-top";
       var st=document.createElement("span"); st.className="pl-status"+(p.done?" done":""); st.textContent=p.done?"완료":"미완"; st.title="클릭 → 완료/미완 전환";
-      st.onclick=function(){ p.done=!p.done; save(); renderAdminPlan(); };
+      st.onclick=function(){ p.done=!p.done; if(p.done) p.doneAt=Date.now(); save(); renderAdminPlan(); updateSkyDate(); };
       var task=document.createElement("span"); task.className="pl-task"; task.textContent=p.task||"";
       top.appendChild(st); top.appendChild(task);
+      var flag=document.createElement("input"); flag.type="checkbox"; flag.className="pl-flag"; flag.checked=!!p.flag; flag.title="색상 표시(구분)";   // 납기 앞 체크 → 행 색상
+      flag.onchange=function(){ p.flag=flag.checked; row.classList.toggle("flagged", p.flag); save(); };
+      top.appendChild(flag);
       if(p.due){ var due=document.createElement("span"); due.className="pl-due"; due.textContent=p.due.slice(5).replace("-","."); top.appendChild(due); }
       var repd=planRepeatDesc(p.repeat); if(repd){ var rb=document.createElement("span"); rb.className="pl-repbadge"; rb.textContent="🔁 "+repd; top.appendChild(rb); }
       var x=document.createElement("button"); x.type="button"; x.className="pl-x"; x.textContent="×"; x.title="완전 삭제";
@@ -3434,23 +3446,30 @@
       var chk=document.createElement("input"); chk.type="checkbox"; chk.checked=!!p.repeat;
       lbl.appendChild(chk); lbl.appendChild(document.createTextNode(" 반복"));
       var ctrls=document.createElement("span"); ctrls.className="pl-rep-ctrls";
+      var saveB=document.createElement("button"); saveB.type="button"; saveB.className="pl-save"; saveB.textContent="저장"; saveB.style.display="none";
+      function showSave(){ saveB.style.display=""; saveB.classList.remove("done"); saveB.textContent="저장"; }
+      saveB.onclick=function(){ save(); updateSkyDate(); saveB.textContent="저장됨 ✓"; saveB.classList.add("done"); setTimeout(function(){ saveB.style.display="none"; saveB.classList.remove("done"); saveB.textContent="저장"; }, 1500); };
       function buildCtrls(){
         ctrls.innerHTML="";
         if(!p.repeat) return;
         var typeSel=document.createElement("select"); typeSel.className="pl-sel";
         [["weekly","매주"],["monthly","매월"],["yearly","매년"]].forEach(function(t){ var o=document.createElement("option"); o.value=t[0]; o.textContent=t[1]; if(p.repeat.type===t[0]) o.selected=true; typeSel.appendChild(o); });
-        typeSel.onchange=function(){ p.repeat.type=typeSel.value; if(p.repeat.type==="weekly"&&p.repeat.wd==null)p.repeat.wd=new Date().getDay(); if(p.repeat.type==="monthly"&&p.repeat.day==null)p.repeat.day=new Date().getDate(); if(p.repeat.type==="yearly"&&!p.repeat.md)p.repeat.md=(p.due?p.due.slice(5):todayStr().slice(5)); save(); buildCtrls(); updateSkyDate(); };
+        typeSel.onchange=function(){ p.repeat.type=typeSel.value; if(p.repeat.type==="weekly"&&p.repeat.wd==null)p.repeat.wd=new Date().getDay(); if(p.repeat.type==="monthly"&&p.repeat.day==null)p.repeat.day=new Date().getDate(); if(p.repeat.type==="yearly"&&!p.repeat.md)p.repeat.md=(p.due?p.due.slice(5):todayStr().slice(5)); buildCtrls(); showSave(); };
         ctrls.appendChild(typeSel);
-        if(p.repeat.type==="weekly"){ var ws=document.createElement("select"); ws.className="pl-sel"; DOW.forEach(function(dn,i){ var o=document.createElement("option"); o.value=i; o.textContent=dn+"요일"; if(p.repeat.wd===i)o.selected=true; ws.appendChild(o); }); ws.onchange=function(){ p.repeat.wd=+ws.value; save(); updateSkyDate(); }; ctrls.appendChild(ws); }
-        else if(p.repeat.type==="monthly"){ var ms=document.createElement("select"); ms.className="pl-sel"; for(var dd=1;dd<=31;dd++){ var o=document.createElement("option"); o.value=dd; o.textContent=dd+"일"; if(p.repeat.day===dd)o.selected=true; ms.appendChild(o); } ms.onchange=function(){ p.repeat.day=+ms.value; save(); updateSkyDate(); }; ctrls.appendChild(ms); }
-        else if(p.repeat.type==="yearly"){ var yi=document.createElement("input"); yi.type="date"; yi.className="pl-date"; yi.value=(p.repeat.md?"2000-"+p.repeat.md:""); yi.onchange=function(){ p.repeat.md=yi.value?yi.value.slice(5):""; save(); updateSkyDate(); }; ctrls.appendChild(yi); }
+        if(p.repeat.type==="weekly"){ var ws=document.createElement("select"); ws.className="pl-sel"; DOW.forEach(function(dn,i){ var o=document.createElement("option"); o.value=i; o.textContent=dn+"요일"; if(p.repeat.wd===i)o.selected=true; ws.appendChild(o); }); ws.onchange=function(){ p.repeat.wd=+ws.value; showSave(); }; ctrls.appendChild(ws); }
+        else if(p.repeat.type==="monthly"){ var ms=document.createElement("select"); ms.className="pl-sel"; for(var dd=1;dd<=31;dd++){ var o=document.createElement("option"); o.value=dd; o.textContent=dd+"일"; if(p.repeat.day===dd)o.selected=true; ms.appendChild(o); } ms.onchange=function(){ p.repeat.day=+ms.value; showSave(); }; ctrls.appendChild(ms); }
+        else if(p.repeat.type==="yearly"){ var yi=document.createElement("input"); yi.type="date"; yi.className="pl-date"; yi.value=(p.repeat.md?"2000-"+p.repeat.md:""); yi.onchange=function(){ p.repeat.md=yi.value?yi.value.slice(5):""; showSave(); }; ctrls.appendChild(yi); }
       }
-      chk.onchange=function(){ p.repeat = chk.checked? {type:"yearly", md:(p.due?p.due.slice(5):todayStr().slice(5))} : null; save(); buildCtrls(); updateSkyDate(); };
+      chk.onchange=function(){ p.repeat = chk.checked? {type:"yearly", md:(p.due?p.due.slice(5):todayStr().slice(5))} : null; buildCtrls(); showSave(); };
       buildCtrls();
-      repWrap.appendChild(lbl); repWrap.appendChild(ctrls);
+      repWrap.appendChild(lbl); repWrap.appendChild(ctrls); repWrap.appendChild(saveB);
       row.appendChild(repWrap);
-      el.appendChild(row);
-    });
+      return row;
+    }
+    function stageBlock(label, arr){ if(!arr.length) return; var d=document.createElement("div"); d.className="plan-div"; d.textContent=label+" · "+arr.length; el.appendChild(d); arr.forEach(function(p){ el.appendChild(buildPlanRow(p)); }); }
+    stageBlock("이번 주 (7일 이내)", s1);
+    stageBlock("예정", s2);
+    stageBlock("완료", s3);
   }
 
   // 같은 날짜에 기록이 둘 이상이면 하나로 병합(끼니는 빈 슬롯으로 이동, 골프 라운드는 슬롯별 스코어로 보존)
@@ -3554,7 +3573,7 @@
   function renderAuth(user, syncing){
     if(!area) return;
     if(user){
-      area.innerHTML='<span class="auth-user"><span class="auth-dot"></span>'+short(user)+'</span><span class="auth-actions"><button class="btn ghost" id="hSignOut">로그아웃</button><button class="btn ghost admin-m" id="adminBtnM" title="관리">⚙ 관리</button></span>';
+      area.innerHTML='<span class="auth-user"><span class="auth-dot"></span>'+short(user)+'</span><span class="auth-actions"><button class="btn ghost logout-btn" id="hSignOut">로그아웃</button><button class="btn ghost admin-m" id="adminBtnM" title="관리">⚙ 관리</button></span>';
       document.getElementById("hSignOut").onclick=function(){ if(unsub){unsub();unsub=null;} auth.signOut(); };
     }else{
       area.innerHTML='<span class="auth-actions"><button class="btn primary" id="hSignIn">Google 로그인 · 동기화</button><button class="btn ghost admin-m" id="adminBtnM" title="관리">⚙ 관리</button></span>';
