@@ -499,6 +499,7 @@
   .pl-status{flex:none; font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:20px; cursor:pointer; background:var(--surface); border:1px solid var(--border); color:var(--ink-3)}
   .pl-status.done{background:color-mix(in srgb,#3FA35A 15%,transparent); border-color:color-mix(in srgb,#3FA35A 45%,transparent); color:#3FA35A}
   .pl-task{flex:1; min-width:0; font-size:13.5px; font-weight:600; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .pl-task .pl-created{font-size:10px; font-weight:500; color:var(--ink-3)}
   .pl-due{flex:none; font-size:11px; color:var(--ink-2); font-variant-numeric:tabular-nums; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:2px 6px}
   .pl-repbadge{flex:none; font-size:10.5px; color:var(--accent-ink); background:color-mix(in srgb,var(--accent) 14%,transparent); border-radius:6px; padding:2px 6px; white-space:nowrap}
   .pl-x{flex:none; width:22px; height:22px; border:0; background:none; color:var(--ink-3); font-size:17px; line-height:1; cursor:pointer; border-radius:6px}
@@ -3448,6 +3449,7 @@
       var st=document.createElement("span"); st.className="pl-status"+(p.done?" done":""); st.textContent=p.done?"완료":"미완"; st.title="클릭 → 완료/미완 전환";
       st.onclick=function(){ p.done=!p.done; if(p.done) p.doneAt=Date.now(); save(); renderAdminPlan(); updateSkyDate(); };
       var task=document.createElement("span"); task.className="pl-task"; task.textContent=p.task||"";
+      if(p.ts){ var cd=new Date(p.ts); var cr=document.createElement("span"); cr.className="pl-created"; cr.textContent=String(cd.getFullYear()).slice(2)+"."+pad(cd.getMonth()+1)+"."+pad(cd.getDate())+" 기록"; task.appendChild(document.createTextNode(" ")); task.appendChild(cr); }
       top.appendChild(st); top.appendChild(task);
       var flag=document.createElement("input"); flag.type="checkbox"; flag.className="pl-flag"; flag.checked=!!p.flag; flag.title="색상 표시(구분)";   // 납기 앞 체크 → 행 색상
       flag.onchange=function(){ p.flag=flag.checked; row.classList.toggle("flagged", p.flag); save(); };
