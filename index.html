@@ -2292,9 +2292,16 @@
   // ---------- 관리자 모드 (PC) ----------
   function renameSubcat(oldN,newN){ state.subcats=(state.subcats||[]).map(function(s){return s===oldN?newN:s;}).filter(function(s,i,a){return a.indexOf(s)===i;}); Object.keys(state.people||{}).forEach(function(n){ if((state.people[n]||{}).sub===oldN) state.people[n].sub=newN; }); save(); rebuild(); renderAdminPeople(); }
   function deleteSubcat(name){ state.subcats=(state.subcats||[]).filter(function(s){return s!==name;}); Object.keys(state.people||{}).forEach(function(n){ if((state.people[n]||{}).sub===name) delete state.people[n].sub; }); save(); rebuild(); renderAdminPeople(); }
+  function meetCountsForYear(yr){   // 관리자 연도 기준 만난횟수(날짜×인물 중복 제거)
+    var cnt={}, seen={};
+    function add(d,names){ (names||[]).forEach(function(n){ if(!n) return; var k=d+"|"+n; if(seen[k]) return; seen[k]=1; cnt[n]=(cnt[n]||0)+1; }); }
+    (state.entries||[]).forEach(function(e){ var d=e.date||""; if(yr!=="all" && d.slice(0,4)!==yr) return; add(d, e.people); if(e.meals) mealKeys(e).forEach(function(k){ var m=e.meals[k]; if(m&&m.people) add(d, m.people); }); bizArr(e).forEach(function(b){ if(b.people) add(d, b.people); }); });
+    (state.events||[]).forEach(function(ev){ var d=ev.date||""; if(yr!=="all" && d.slice(0,4)!==yr) return; add(d, ev.attendees); });
+    return cnt;
+  }
   function renderAdminPeople(){
     var el=$("#adminPeople"); if(!el) return;
-    var g=buildGraph(), meet=g.meetings||{};
+    var meet=meetCountsForYear(adminYear);
     var q=(adminFindQ||"").trim();
     el.innerHTML="";
     var byRel={}; REL_ORDER.forEach(function(r){ byRel[r]=[]; });
@@ -2652,7 +2659,7 @@
     if(adminYear!=="all" && !years[adminYear]) adminYear="all";
     sel.innerHTML='<option value="all">전체 연도</option>'+list.map(function(y){ return '<option value="'+y+'">'+y+'년</option>'; }).join("");
     sel.value=adminYear;
-    sel.onchange=function(){ adminYear=this.value; golfListPeriod=adminYear; renderAdminGolf(); renderAdminPlan(); };
+    sel.onchange=function(){ adminYear=this.value; golfListPeriod=adminYear; renderAdminGolf(); renderAdminPlan(); renderAdminPeople(); };
   }
   (function(){
     var back=$("#adminModal"); if(!back) return;
