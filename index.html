@@ -933,7 +933,7 @@
 
   <!-- ===== 오늘 기록 (전체 폭) ===== -->
   <section class="card composer-wide">
-    <div class="card-h"><h2>✦ 오늘 기록</h2><div class="rec-find"><input type="text" id="recFind" placeholder="🔍 주요일정·회고·배움 찾기" autocomplete="off"><div class="rec-find-res" id="recFindRes" hidden></div></div><div class="ch-right"><span class="sub" id="editing"></span><button class="btn primary mini-btn" id="saveBtn2">저장</button></div></div>
+    <div class="card-h"><h2>✦ 오늘 기록</h2><div class="rec-find"><input type="text" id="recFind" placeholder="🔍 일정·회고·인물·장소 찾기" autocomplete="off"><div class="rec-find-res" id="recFindRes" hidden></div></div><div class="ch-right"><span class="sub" id="editing"></span><button class="btn primary mini-btn" id="saveBtn2">저장</button></div></div>
     <div class="field cfields">
       <div class="cgroup">
         <label for="date">날짜</label>
@@ -2691,7 +2691,12 @@
       if(!q){ box.hidden=true; box.innerHTML=""; return; }
       var ql=q.toLowerCase(), hits=[];
       state.entries.forEach(function(e){
-        var fs=[["주요일정",e.schedule],["Reflection",e.thoughts],["Learning",e.learning]], m=null;
+        var ppl=[], pls=[], seenP={}, seenL={};
+        function addP(a){ (a||[]).forEach(function(n){ if(n&&!seenP[n]){ seenP[n]=1; ppl.push(n); } }); }
+        addP(e.people);
+        if(e.meals) mealKeys(e).forEach(function(k){ var m=e.meals[k]; if(m){ if(m.people) addP(m.people); if(m.place&&!seenL[m.place]){ seenL[m.place]=1; pls.push(m.place); } } });
+        bizArr(e).forEach(function(b){ if(b&&b.people) addP(b.people); });
+        var fs=[["주요일정",e.schedule||""],["Reflection",e.thoughts||""],["Learning",e.learning||""],["인물",ppl.join(", ")],["장소",pls.join(" · ")]], m=null;
         for(var i=0;i<fs.length;i++){ var v=fs[i][1]||""; if(v.toLowerCase().indexOf(ql)>=0){ m=fs[i]; break; } }
         if(m) hits.push({date:e.date||"", label:m[0], text:m[1]});
       });
