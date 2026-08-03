@@ -1640,7 +1640,7 @@
         ctx.beginPath(); ctx.arc(n.x,n.y,n.r,0,6.29); ctx.fill(); ctx.stroke();
         // 서브그룹 멤버: 원 안에 서브그룹 이니셜(예: GUCCI→G)
         var _sub=(state.people[n.name]||{}).sub;
-        if(_sub && n.r>=8){ var _ch=_sub.charAt(0); if(/[a-z]/i.test(_ch)) _ch=_ch.toUpperCase(); ctx.font="800 "+Math.round(n.r*1.15)+"px "+BODY_FONT; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillStyle=hexA("#FFFFFF", a*0.96); ctx.fillText(_ch, n.x, n.y+0.5); }
+        if(_sub && n.r>=8){ var _ch=_sub.charAt(0); if(/[a-z]/i.test(_ch)) _ch=_ch.toUpperCase(); ctx.font="800 "+Math.round(n.r*1.15)+"px "+BODY_FONT; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillStyle=hexA("#FFFFFF", a*0.55); ctx.fillText(_ch, n.x, n.y+0.5); }
       }
       // label (사람은 모두 표시 · 2회만 만난 사람은 절반 크기)
       var showLabel = isPlace || n.type==="person" || focus===n || neigh[n.name];
