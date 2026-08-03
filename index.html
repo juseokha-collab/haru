@@ -666,6 +666,19 @@
   .adm-mgmt-chip .amc-btn:hover{background:var(--surface); color:var(--ink)}
   .adm-mgmt-chip .amc-btn.danger:hover{color:var(--c-fam)}
   .gc-yr-badge{font-size:12px; font-weight:800; color:var(--accent-ink); background:color-mix(in srgb,var(--accent) 16%,transparent); border-radius:7px; padding:4px 10px}
+  .amc-btn{width:20px; height:20px; border:0; background:none; color:var(--ink-3); font-size:12px; line-height:1; cursor:pointer; border-radius:5px; padding:0}
+  .amc-btn:hover{background:var(--surface); color:var(--ink)}
+  .amc-btn.danger:hover{color:var(--c-fam)}
+  .adm-sec-h .adm-relname{cursor:pointer; color:var(--ink)}
+  .adm-sec-h .adm-relname:hover{color:var(--accent-ink); text-decoration:underline}
+  .adm-subchips{display:flex; flex-wrap:wrap; gap:5px; margin:0 0 9px 16px}
+  .adm-subchip{display:inline-flex; align-items:center; gap:2px; background:var(--surface-2); border:1px solid var(--border); border-radius:7px; padding:2px 4px 2px 8px}
+  .adm-subchip .amc-nm{font-size:11.5px; font-weight:600; color:var(--ink)}
+  .adm-subchip .amc-nm i{color:var(--ink-3); font-style:normal; font-size:10px; font-weight:600; margin-left:1px}
+  .modal-title-row{display:flex; align-items:center; gap:10px; margin-bottom:8px}
+  .modal-title-row .modal-title{margin-bottom:0; flex:none}
+  .modal-find{margin-left:auto; flex:0 1 170px; min-width:96px; font-family:inherit; font-size:12.5px; padding:6px 10px; border:1px solid var(--border); border-radius:8px; background:var(--surface-2); color:var(--ink); outline:0}
+  .modal-find:focus{border-color:var(--accent)}
   .adm-golf-list{display:flex; flex-direction:column; gap:8px}
   .adm-golf-row{background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:8px 12px}
   .agr-head{display:flex; align-items:center; gap:7px; margin-bottom:6px}
@@ -1038,7 +1051,7 @@
 
 <div class="modal-back" id="relModalBack" hidden>
   <div class="modal relmodal" role="dialog" aria-modal="true">
-    <div class="modal-title" id="relModalTitle"></div>
+    <div class="modal-title-row"><div class="modal-title" id="relModalTitle"></div><input class="modal-find" id="relFind" placeholder="🔍 이름 찾기" autocomplete="off"></div>
     <div class="modal-msg">이름 옆에서 관계를 바꾸면 성좌 색상·그룹이 함께 바뀌어요.</div>
     <div class="rel-list" id="relList"></div>
     <div class="modal-actions">
@@ -1053,6 +1066,7 @@
       <div class="admin-tabs" id="adminTabs">
         <select id="adminYearSel" class="adm-yearsel" title="연도"></select><button type="button" class="on" data-at="plan">일정관리</button><button type="button" data-at="people">인맥 관리</button><button type="button" data-at="golf">골프 스코어</button>
       </div>
+      <input class="modal-find adm-find" id="adminFind" placeholder="🔍 이름 찾기" autocomplete="off">
       <button class="x" id="adminClose" aria-label="닫기">&times;</button>
     </div>
     <div class="admin-body" id="adminGolf"></div>
@@ -2206,10 +2220,12 @@
   function openRelEdit(r){
     var back=$("#relModalBack"), list=$("#relList");
     $("#relModalTitle").innerHTML='<span class="dot" style="background:'+REL[r].color+'"></span>'+esc(relName(r))+' 인맥 편집';
+    var _rf=$("#relFind"); if(_rf){ _rf.value=""; _rf.oninput=function(){ build(); }; }
     function build(){
-      var names=Object.keys(state.people||{}).filter(function(n){ return ((state.people[n]||{}).rel||"etc")===r; }).sort(function(a,b){ var sa=(state.people[a]||{}).sub||"", sb=(state.people[b]||{}).sub||""; if(!sa!==!sb) return sa? -1:1; if(sa!==sb) return sa.localeCompare(sb,"ko"); return a.localeCompare(b,"ko"); });
+      var q=((_rf&&_rf.value)||"").trim();
+      var names=Object.keys(state.people||{}).filter(function(n){ return ((state.people[n]||{}).rel||"etc")===r && (!q || n.indexOf(q)>=0); }).sort(function(a,b){ var sa=(state.people[a]||{}).sub||"", sb=(state.people[b]||{}).sub||""; if(!sa!==!sb) return sa? -1:1; if(sa!==sb) return sa.localeCompare(sb,"ko"); return a.localeCompare(b,"ko"); });
       list.innerHTML="";
-      if(!names.length){ list.innerHTML='<div class="rel-empty">이 관계로 분류된 사람이 없어요.</div>'; return; }
+      if(!names.length){ list.innerHTML='<div class="rel-empty">'+(q?"‘"+esc(q)+"’ 검색 결과가 없어요.":"이 관계로 분류된 사람이 없어요.")+'</div>'; return; }
       // 이 관계 안에서 이미 쓰이는 서브그룹만(다른 관계의 그룹은 숨김)
       var _rs={}; Object.keys(state.people||{}).forEach(function(pn){ var p=state.people[pn]; if(((p.rel||"etc")===r) && p.sub) _rs[p.sub]=1; }); var subsList=Object.keys(_rs).sort(function(a,b){return a.localeCompare(b,"ko");});
       names.forEach(function(n){
@@ -2263,46 +2279,44 @@
   function renderAdminPeople(){
     var el=$("#adminPeople"); if(!el) return;
     var g=buildGraph(), meet=g.meetings||{};
+    var q=(adminFindQ||"").trim();
     el.innerHTML="";
-    // ── 그룹/서브그룹 관리 ──
-    var mgmt=document.createElement("div"); mgmt.className="adm-mgmt";
-    var relBox=document.createElement("div"); relBox.className="adm-mgmt-box";
-    relBox.innerHTML='<div class="adm-mgmt-h">그룹 이름</div>';
-    REL_ORDER.forEach(function(r){
-      var chip=document.createElement("div"); chip.className="adm-mgmt-chip";
-      chip.innerHTML='<span class="dot" style="background:'+REL[r].color+'"></span><span class="amc-nm">'+esc(relName(r))+'</span>';
-      var ren=document.createElement("button"); ren.type="button"; ren.className="amc-btn"; ren.textContent="✎"; ren.title="이름 변경";
-      ren.onclick=function(){ askConfirm({ title:"그룹 이름 변경", message:"‘"+relName(r)+"’ 그룹의 새 이름을 입력하세요.", okText:"변경", promptText:true, placeholder:relName(r), onOk:function(nm){ nm=(nm||"").trim(); if(!nm) return; state.relNames[r]=nm; save(); renderAdminPeople(); renderLegend(); rebuild(); } }); };
-      chip.appendChild(ren);
-      if(state.relNames[r]){ var rst=document.createElement("button"); rst.type="button"; rst.className="amc-btn"; rst.textContent="↺"; rst.title="기본 이름으로"; rst.onclick=function(){ delete state.relNames[r]; save(); renderAdminPeople(); renderLegend(); rebuild(); }; chip.appendChild(rst); }
-      relBox.appendChild(chip);
-    });
-    mgmt.appendChild(relBox);
-    var subBox=document.createElement("div"); subBox.className="adm-mgmt-box";
-    subBox.innerHTML='<div class="adm-mgmt-h">서브그룹</div>';
-    var subs=(state.subcats||[]).slice();
-    if(!subs.length){ var no=document.createElement("span"); no.className="adm-mgmt-none"; no.textContent="없음"; subBox.appendChild(no); }
-    subs.forEach(function(sc){
-      var cnt=Object.keys(state.people||{}).filter(function(n){return (state.people[n]||{}).sub===sc;}).length;
-      var chip=document.createElement("div"); chip.className="adm-mgmt-chip";
-      chip.innerHTML='<span class="amc-nm">'+esc(sc)+' <i>'+cnt+'</i></span>';
-      var ren=document.createElement("button"); ren.type="button"; ren.className="amc-btn"; ren.textContent="✎"; ren.title="이름 변경";
-      ren.onclick=function(){ askConfirm({ title:"서브그룹 이름 변경", message:"‘"+sc+"’ 의 새 이름을 입력하세요.", okText:"변경", promptText:true, placeholder:sc, onOk:function(nm){ nm=(nm||"").trim(); if(!nm||nm===sc) return; renameSubcat(sc,nm); } }); };
-      var del=document.createElement("button"); del.type="button"; del.className="amc-btn danger"; del.textContent="×"; del.title="서브그룹 삭제";
-      del.onclick=function(){ askConfirm({ title:"서브그룹 삭제", message:"‘"+sc+"’ 서브그룹을 삭제할까요?\n소속 인맥 "+cnt+"명의 서브그룹만 해제돼요(인맥은 유지).", okText:"삭제", danger:true, onOk:function(){ deleteSubcat(sc); } }); };
-      chip.appendChild(ren); chip.appendChild(del); subBox.appendChild(chip);
-    });
-    mgmt.appendChild(subBox);
-    el.appendChild(mgmt);
-    // ── 인맥 목록(관계별 · 서브그룹순 · 만난횟수) ──
     var byRel={}; REL_ORDER.forEach(function(r){ byRel[r]=[]; });
     Object.keys(state.people||{}).forEach(function(n){ (byRel[relOf(n)]=byRel[relOf(n)]||[]).push(n); });
     var subOptsHtml=function(cur){ return '<option value="">그룹없음</option>'+(state.subcats||[]).map(function(s){ return '<option value="'+esc(s)+'"'+(s===cur?' selected':'')+'>'+esc(s)+'</option>'; }).join("")+'<option value="__new">＋ 새 그룹…</option>'; };
     REL_ORDER.forEach(function(r){
-      var list=(byRel[r]||[]).sort(function(a,b){ var sa=(state.people[a]||{}).sub||"", sb=(state.people[b]||{}).sub||""; if(sa!==sb) return sa<sb?-1:1; return a.localeCompare(b,"ko"); });
+      var full=(byRel[r]||[]).sort(function(a,b){ var sa=(state.people[a]||{}).sub||"", sb=(state.people[b]||{}).sub||""; if(sa!==sb) return sa<sb?-1:1; return a.localeCompare(b,"ko"); });
+      var list = q? full.filter(function(n){ return n.indexOf(q)>=0; }) : full;
+      if(q && !list.length) return;   // 검색 중 매칭 없는 그룹 숨김
       var sec=document.createElement("div"); sec.className="adm-sec";
-      var h=document.createElement("div"); h.className="adm-sec-h"; h.innerHTML='<span class="dot" style="background:'+REL[r].color+'"></span>'+esc(relName(r))+' <b>'+list.length+'</b>';
+      // 헤더: 그룹 이름을 여기서 바로 편집(✎) + 인원수
+      var h=document.createElement("div"); h.className="adm-sec-h";
+      h.innerHTML='<span class="dot" style="background:'+REL[r].color+'"></span>';
+      var nmS=document.createElement("span"); nmS.className="adm-relname"; nmS.textContent=relName(r); nmS.title="그룹 이름 변경";
+      var renRel=function(){ askConfirm({ title:"그룹 이름 변경", message:"‘"+relName(r)+"’ 그룹의 새 이름을 입력하세요.", okText:"변경", promptText:true, placeholder:relName(r), onOk:function(nm){ nm=(nm||"").trim(); if(!nm) return; state.relNames[r]=nm; save(); renderAdminPeople(); renderLegend(); rebuild(); } }); };
+      nmS.onclick=renRel; h.appendChild(nmS);
+      var reB=document.createElement("button"); reB.type="button"; reB.className="amc-btn"; reB.textContent="✎"; reB.title="이름 변경"; reB.onclick=renRel; h.appendChild(reB);
+      if(state.relNames[r]){ var rst=document.createElement("button"); rst.type="button"; rst.className="amc-btn"; rst.textContent="↺"; rst.title="기본 이름으로"; rst.onclick=function(){ delete state.relNames[r]; save(); renderAdminPeople(); renderLegend(); rebuild(); }; h.appendChild(rst); }
+      var cntB=document.createElement("b"); cntB.textContent=full.length; h.appendChild(cntB);
       sec.appendChild(h);
+      // 이 그룹에 포함된 서브그룹만 표기(+이름변경·삭제)
+      if(!q){
+        var scMap={}; full.forEach(function(n){ var s=(state.people[n]||{}).sub; if(s) scMap[s]=(scMap[s]||0)+1; });
+        var scList=Object.keys(scMap).sort(function(a,b){return a.localeCompare(b,"ko");});
+        if(scList.length){
+          var chips=document.createElement("div"); chips.className="adm-subchips";
+          scList.forEach(function(sc){
+            var chip=document.createElement("div"); chip.className="adm-subchip";
+            chip.innerHTML='<span class="amc-nm">'+esc(sc)+' <i>'+scMap[sc]+'</i></span>';
+            var ren=document.createElement("button"); ren.type="button"; ren.className="amc-btn"; ren.textContent="✎"; ren.title="서브그룹 이름 변경";
+            ren.onclick=function(){ askConfirm({ title:"서브그룹 이름 변경", message:"‘"+sc+"’ 의 새 이름을 입력하세요.", okText:"변경", promptText:true, placeholder:sc, onOk:function(nm){ nm=(nm||"").trim(); if(!nm||nm===sc) return; renameSubcat(sc,nm); } }); };
+            var del=document.createElement("button"); del.type="button"; del.className="amc-btn danger"; del.textContent="×"; del.title="서브그룹 삭제";
+            del.onclick=function(){ var tot=Object.keys(state.people||{}).filter(function(x){return (state.people[x]||{}).sub===sc;}).length; askConfirm({ title:"서브그룹 삭제", message:"‘"+sc+"’ 서브그룹을 삭제할까요?\n소속 인맥 "+tot+"명의 서브그룹만 해제돼요(인맥은 유지).", okText:"삭제", danger:true, onOk:function(){ deleteSubcat(sc); } }); };
+            chip.appendChild(ren); chip.appendChild(del); chips.appendChild(chip);
+          });
+          sec.appendChild(chips);
+        }
+      }
       if(!list.length){ var em=document.createElement("div"); em.className="adm-empty"; em.textContent="없음"; sec.appendChild(em); el.appendChild(sec); return; }
       var plist=document.createElement("div"); plist.className="adm-plist";
       list.forEach(function(n){
@@ -2323,6 +2337,7 @@
       });
       sec.appendChild(plist); el.appendChild(sec);
     });
+    if(q && !el.children.length){ el.innerHTML='<div class="adm-empty" style="padding:20px 2px">‘'+esc(q)+'’ 검색 결과가 없어요.</div>'; }
   }
   function renderAdminGolf(){
     var el=$("#adminGolf"); if(!el) return;
@@ -2592,6 +2607,7 @@
   }
   function openAdmin(tab){
     tab=tab||"plan";
+    adminFindQ=""; var _af=$("#adminFind"); if(_af) _af.value="";
     renderAdminYearSel(); renderAdminPeople(); renderAdminGolf(); renderAdminPlan();
     var tabs=$("#adminTabs").children;
     for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle("on", tabs[i].getAttribute("data-at")===tab);
@@ -2601,7 +2617,8 @@
     $("#adminModal").hidden=false;
   }
   if($("#adminBtn")) $("#adminBtn").onclick=function(){ openAdmin("plan"); };
-  var adminYear="all";
+  var adminYear="all", adminFindQ="";
+  (function(){ var fi=$("#adminFind"); if(!fi) return; fi.addEventListener("input",function(){ adminFindQ=this.value.trim(); if(adminFindQ){ var tabs=$("#adminTabs").children; for(var i=0;i<tabs.length;i++){ var b=tabs[i]; if(b.getAttribute&&b.getAttribute("data-at")) b.classList.toggle("on", b.getAttribute("data-at")==="people"); } $("#adminPeople").hidden=false; $("#adminGolf").hidden=true; $("#adminPlan").hidden=true; } renderAdminPeople(); }); })();
   function renderAdminYearSel(){
     var sel=$("#adminYearSel"); if(!sel) return;
     var years={}; state.entries.forEach(function(e){ var y=(e.date||"").slice(0,4); if(/^\d{4}$/.test(y)) years[y]=1; });
