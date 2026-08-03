@@ -777,12 +777,20 @@
   .modal-actions .btn{padding:9px 16px}
   .btn.primary.danger{background:var(--c-fam); border-color:var(--c-fam); color:#fff}
 
+  .admin-m{display:none}   /* 관리 버튼: 모바일에서만(PC는 상단 도구모음의 ⚙관리 사용) */
   /* 좁은 화면(폰)에선 백업/초기화 버튼 숨김 — 테마·로그인만 유지 */
   @media (max-width:640px){
     #exportBtn, #importBtn, #resetBtn, #golfCsvBtn, #adminBtn, #themeBtn{ display:none; }
+    .admin-m{display:inline-flex; padding:5px 11px; font-size:12px}   /* 로그아웃 아래 줄에 표시 */
     /* 달력 헤더: 만난사람(좌) / Today·연월 이동(우) 2줄로 */
     .calcard .card-h{ flex-direction:column; align-items:stretch; gap:8px; }
     .calcard .card-h .cv-nav{ justify-content:flex-end; }
+    /* 관리자 모달: 모바일 대응 */
+    .admin-modal{ max-width:100%; }
+    .admin-head{ flex-wrap:wrap; padding:12px 12px 0; }
+    .admin-body{ padding:12px 12px 14px; max-height:74vh; }
+    .adm-plist{ grid-template-columns:1fr; }
+    .adm-find{ flex-basis:120px; }
   }
 
   @media (prefers-reduced-motion:reduce){ *{scroll-behavior:auto} .modal-input.shake{animation:none} }
@@ -796,6 +804,7 @@
     </div>
     <div class="top-right">
       <div class="auth" id="authArea" hidden></div>
+      <button class="btn ghost admin-m" id="adminBtnM" title="관리">⚙ 관리</button>
       <div class="top-tools">
         <button class="btn ghost" id="exportBtn" title="JSON 백업 파일 내려받기">내보내기</button>
         <button class="btn ghost" id="importBtn" title="백업 파일에서 복원">가져오기</button>
@@ -2293,7 +2302,7 @@
       var list=full;
       if(q) list=list.filter(function(n){ return n.indexOf(q)>=0; });
       var _subF=Object.keys(adminSubFilter);
-      if(_subF.length) list=list.filter(function(n){ return !!adminSubFilter[(state.people[n]||{}).sub]; });
+      if(_subF.length) list=list.filter(function(n){ var s=(state.people[n]||{}).sub; return s? !!adminSubFilter[s] : !!adminSubFilter["__none__"]; });
       if((q||_subF.length) && !list.length) return;   // 검색·서브그룹 필터에 매칭 없는 그룹 숨김
       var scMap={}; full.forEach(function(n){ var s=(state.people[n]||{}).sub; if(s) scMap[s]=(scMap[s]||0)+1; });
       var scList=Object.keys(scMap).sort(function(a,b){return a.localeCompare(b,"ko");});   // 이 관계에 실제 있는 서브그룹만
@@ -2319,6 +2328,15 @@
         del.onclick=function(){ var tot=Object.keys(state.people||{}).filter(function(x){return (state.people[x]||{}).sub===sc;}).length; askConfirm({ title:"서브그룹 삭제", message:"‘"+sc+"’ 서브그룹을 삭제할까요?\n소속 인맥 "+tot+"명의 서브그룹만 해제돼요(인맥은 유지).", okText:"삭제", danger:true, onOk:function(){ deleteSubcat(sc); } }); };
         chip.appendChild(ren); chip.appendChild(del); h.appendChild(chip);
       });
+      // '그룹없음' 필터 칩(서브그룹 미지정 인맥)
+      var noneCnt=full.filter(function(n){ return !(state.people[n]||{}).sub; }).length;
+      if(noneCnt>0){
+        var nchip=document.createElement("span"); nchip.className="adm-subchip"+(adminSubFilter["__none__"]?" on":"");
+        var ncb=document.createElement("input"); ncb.type="checkbox"; ncb.className="adm-subchk"; ncb.checked=!!adminSubFilter["__none__"]; ncb.title="그룹없음만 보기";
+        ncb.onchange=function(){ if(ncb.checked) adminSubFilter["__none__"]=true; else delete adminSubFilter["__none__"]; renderAdminPeople(); };
+        var nsp=document.createElement("span"); nsp.className="amc-nm"; nsp.innerHTML='그룹없음 <i>'+noneCnt+'</i>';
+        nchip.appendChild(ncb); nchip.appendChild(nsp); h.appendChild(nchip);
+      }
       sec.appendChild(h);
       if(!list.length){ var em=document.createElement("div"); em.className="adm-empty"; em.textContent="없음"; sec.appendChild(em); el.appendChild(sec); return; }
       var plist=document.createElement("div"); plist.className="adm-plist";
@@ -2620,6 +2638,7 @@
     $("#adminModal").hidden=false;
   }
   if($("#adminBtn")) $("#adminBtn").onclick=function(){ openAdmin("plan"); };
+  if($("#adminBtnM")) $("#adminBtnM").onclick=function(){ openAdmin("plan"); };
   var adminYear="all", adminFindQ="", adminSubFilter={};
   (function(){ var fi=$("#adminFind"); if(!fi) return; fi.addEventListener("input",function(){ adminFindQ=this.value.trim(); if(adminFindQ){ var tabs=$("#adminTabs").children; for(var i=0;i<tabs.length;i++){ var b=tabs[i]; if(b.getAttribute&&b.getAttribute("data-at")) b.classList.toggle("on", b.getAttribute("data-at")==="people"); } $("#adminPeople").hidden=false; $("#adminGolf").hidden=true; $("#adminPlan").hidden=true; } renderAdminPeople(); }); })();
   function renderAdminYearSel(){
