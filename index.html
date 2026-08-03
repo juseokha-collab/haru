@@ -679,12 +679,11 @@
   .adm-sec-h .adm-relname{cursor:pointer; color:var(--ink)}
   .adm-sec-h .adm-relname:hover{color:var(--accent-ink); text-decoration:underline}
   .adm-subchips{display:flex; flex-wrap:wrap; gap:5px; margin:0 0 9px 16px}
-  .adm-subchip{display:inline-flex; align-items:center; gap:2px; background:var(--surface-2); border:1px solid var(--border); border-radius:7px; padding:2px 4px 2px 8px}
+  .adm-subchip{display:inline-flex; align-items:center; gap:2px; background:color-mix(in srgb, var(--chipc,#8a94b0) 16%, var(--surface)); border:1px solid color-mix(in srgb, var(--chipc,#8a94b0) 38%, transparent); border-radius:7px; padding:2px 4px 2px 8px}
+  .adm-subchip.on{background:color-mix(in srgb, var(--chipc,#8a94b0) 32%, var(--surface)); border-color:color-mix(in srgb, var(--chipc,#8a94b0) 62%, transparent)}
   .adm-subchip .amc-nm{font-size:11.5px; font-weight:600; color:var(--ink)}
   .adm-subchip .amc-nm i{color:var(--ink-3); font-style:normal; font-size:10px; font-weight:600; margin-left:1px}
-  .adm-subchip .adm-subchk{width:13px; height:13px; margin:0 2px 0 0; accent-color:var(--accent); cursor:pointer; flex:none}
-  .adm-subchip.on{background:color-mix(in srgb,var(--accent) 16%,transparent); border-color:var(--accent)}
-  .adm-subchip.on .amc-nm{color:var(--accent-ink)}
+  .adm-subchip .adm-subchk{width:13px; height:13px; margin:0 2px 0 0; accent-color:var(--chipc,var(--accent)); cursor:pointer; flex:none}
   .modal-title-row{display:flex; align-items:center; gap:10px; margin-bottom:8px}
   .modal-title-row .modal-title{margin-bottom:0; flex:none}
   .modal-find{margin-left:auto; flex:0 1 170px; min-width:96px; font-family:inherit; font-size:12.5px; padding:6px 10px; border:1px solid var(--border); border-radius:8px; background:var(--surface-2); color:var(--ink); outline:0}
@@ -2302,7 +2301,7 @@
     Object.keys(state.people||{}).forEach(function(n){ (byRel[relOf(n)]=byRel[relOf(n)]||[]).push(n); });
     var subOptsHtml=function(cur, sl){ sl=sl||[]; return '<option value="">그룹없음</option>'+sl.map(function(s){ return '<option value="'+esc(s)+'"'+(s===cur?' selected':'')+'>'+esc(s)+'</option>'; }).join("")+(cur&&sl.indexOf(cur)<0?'<option value="'+esc(cur)+'" selected>'+esc(cur)+'</option>':'')+'<option value="__new">＋ 새 그룹…</option>'; };
     REL_ORDER.forEach(function(r){
-      var full=(byRel[r]||[]).sort(function(a,b){ var sa=(state.people[a]||{}).sub||"", sb=(state.people[b]||{}).sub||""; if(sa!==sb) return sa<sb?-1:1; return a.localeCompare(b,"ko"); });
+      var full=(byRel[r]||[]).sort(function(a,b){ var sa=(state.people[a]||{}).sub||"", sb=(state.people[b]||{}).sub||""; if(sa!==sb) return sa<sb?-1:1; var ma=meet[a]||0, mb=meet[b]||0; if(ma!==mb) return mb-ma; return a.localeCompare(b,"ko"); });   // 서브그룹별 → 만난횟수 내림차순 → (동수·0) 가나다
       var list=full;
       if(q) list=list.filter(function(n){ return n.indexOf(q)>=0; });
       var _subF=Object.keys(adminSubFilter);
@@ -2321,7 +2320,7 @@
       if(state.relNames[r]){ var rst=document.createElement("button"); rst.type="button"; rst.className="amc-btn"; rst.textContent="↺"; rst.title="기본 이름으로"; rst.onclick=function(){ delete state.relNames[r]; save(); renderAdminPeople(); renderLegend(); rebuild(); }; h.appendChild(rst); }
       var cntB=document.createElement("b"); cntB.textContent=full.length; h.appendChild(cntB);
       scList.forEach(function(sc){
-        var chip=document.createElement("span"); chip.className="adm-subchip"+(adminSubFilter[sc]?" on":"");
+        var chip=document.createElement("span"); chip.className="adm-subchip"+(adminSubFilter[sc]?" on":""); chip.style.setProperty("--chipc", REL[r].color);   // 인맥그룹 색상(파스텔)로 배경
         var cb=document.createElement("input"); cb.type="checkbox"; cb.className="adm-subchk"; cb.checked=!!adminSubFilter[sc]; cb.title="이 서브그룹만 보기";
         cb.onchange=function(){ if(cb.checked) adminSubFilter[sc]=true; else delete adminSubFilter[sc]; renderAdminPeople(); };
         var nmspan=document.createElement("span"); nmspan.className="amc-nm"; nmspan.innerHTML=esc(sc)+' <i>'+scMap[sc]+'</i>';
