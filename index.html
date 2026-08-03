@@ -3458,7 +3458,11 @@
         ctrls.appendChild(typeSel);
         if(p.repeat.type==="weekly"){ var ws=document.createElement("select"); ws.className="pl-sel"; DOW.forEach(function(dn,i){ var o=document.createElement("option"); o.value=i; o.textContent=dn+"요일"; if(p.repeat.wd===i)o.selected=true; ws.appendChild(o); }); ws.onchange=function(){ p.repeat.wd=+ws.value; showSave(); }; ctrls.appendChild(ws); }
         else if(p.repeat.type==="monthly"){ var ms=document.createElement("select"); ms.className="pl-sel"; for(var dd=1;dd<=31;dd++){ var o=document.createElement("option"); o.value=dd; o.textContent=dd+"일"; if(p.repeat.day===dd)o.selected=true; ms.appendChild(o); } ms.onchange=function(){ p.repeat.day=+ms.value; showSave(); }; ctrls.appendChild(ms); }
-        else if(p.repeat.type==="yearly"){ var yi=document.createElement("input"); yi.type="date"; yi.className="pl-date"; yi.value=(p.repeat.md?"2000-"+p.repeat.md:""); yi.onchange=function(){ p.repeat.md=yi.value?yi.value.slice(5):""; showSave(); }; ctrls.appendChild(yi); }
+        else if(p.repeat.type==="yearly"){ var _md=(p.repeat.md||todayStr().slice(5)).split("-"), _mm=+_md[0]||1, _dd=+_md[1]||1;
+          var mo=document.createElement("select"); mo.className="pl-sel"; for(var m=1;m<=12;m++){ var o=document.createElement("option"); o.value=m; o.textContent=m+"월"; if(m===_mm)o.selected=true; mo.appendChild(o); }
+          var dy=document.createElement("select"); dy.className="pl-sel"; for(var d2=1;d2<=31;d2++){ var o2=document.createElement("option"); o2.value=d2; o2.textContent=d2+"일"; if(d2===_dd)o2.selected=true; dy.appendChild(o2); }
+          var applyMd=function(){ p.repeat.md=pad(+mo.value)+"-"+pad(+dy.value); showSave(); }; mo.onchange=applyMd; dy.onchange=applyMd;
+          ctrls.appendChild(mo); ctrls.appendChild(dy); }
       }
       chk.onchange=function(){ p.repeat = chk.checked? {type:"yearly", md:(p.due?p.due.slice(5):todayStr().slice(5))} : null; buildCtrls(); showSave(); };
       buildCtrls();
