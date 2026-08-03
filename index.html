@@ -634,7 +634,7 @@
   /* 관리자 모드 */
   .admin-modal{max-width:760px; width:100%; padding:0; overflow:hidden; position:relative}
   .admin-head{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:14px 18px 0}
-  .admin-tabs{display:inline-flex; background:var(--surface-2); border:1px solid var(--border); border-radius:9px; padding:2px; gap:2px}
+  .admin-tabs{display:inline-flex; align-items:center; flex-wrap:wrap; background:var(--surface-2); border:1px solid var(--border); border-radius:9px; padding:2px; gap:2px}
   .admin-tabs button{border:0; background:none; font-family:inherit; font-size:13px; color:var(--ink-3); padding:6px 14px; border-radius:7px; cursor:pointer; font-weight:600}
   .admin-tabs button.on{background:var(--surface); color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.12)}
   .admin-modal .x{cursor:pointer; color:var(--ink-3); border:0; background:none; font-size:22px; line-height:1; padding:2px 6px}
@@ -644,12 +644,28 @@
   .adm-sec-h .dot{width:9px; height:9px; border-radius:50%}
   .adm-sec-h b{color:var(--ink-3); font-weight:600}
   .adm-empty{font-size:12px; color:var(--ink-3); padding:2px 2px 6px}
-  .adm-plist{display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:6px}
-  .adm-prow{display:flex; align-items:center; gap:6px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:5px 6px 5px 10px}
+  .adm-plist{display:grid; grid-template-columns:repeat(auto-fill,minmax(275px,1fr)); gap:6px}
+  .adm-prow{display:flex; align-items:center; gap:5px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:5px 6px 5px 10px}
   .adm-prow .adm-nm{flex:1; min-width:0; font-size:12.5px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-  .adm-prow .adm-rel{font-family:inherit; font-size:11.5px; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:3px 4px; outline:0; cursor:pointer}
+  .adm-prow .adm-nm .adm-cnt{color:var(--ink-3); font-weight:600; font-size:11px}
+  .adm-prow .adm-nm .adm-subtag{font-size:10px; font-weight:700; color:var(--accent-ink); background:color-mix(in srgb,var(--accent) 14%,transparent); border-radius:5px; padding:1px 5px; margin-left:2px}
+  .adm-prow .adm-sub, .adm-prow .adm-rel{font-family:inherit; font-size:11px; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:3px 3px; outline:0; cursor:pointer; max-width:88px}
   .adm-prow .adm-del{flex:none; width:22px; height:22px; border:1px solid var(--border); background:var(--surface); border-radius:6px; color:var(--ink-3); font-size:14px; line-height:1; cursor:pointer}
   .adm-prow .adm-del:hover{border-color:var(--c-fam); color:var(--c-fam)}
+  /* 연도 셀렉트 + 그룹/서브그룹 관리 */
+  .adm-yearsel{font-family:inherit; font-size:12.5px; font-weight:700; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:5px 8px; outline:0; cursor:pointer; margin-right:4px}
+  .adm-mgmt{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid var(--border)}
+  .adm-mgmt-box{flex:1; min-width:220px}
+  .adm-mgmt-h{font-size:11px; font-weight:800; letter-spacing:.03em; color:var(--ink-3); text-transform:uppercase; margin-bottom:6px}
+  .adm-mgmt-none{font-size:12px; color:var(--ink-3)}
+  .adm-mgmt-chip{display:inline-flex; align-items:center; gap:5px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:3px 5px 3px 9px; margin:0 5px 5px 0}
+  .adm-mgmt-chip .dot{width:8px; height:8px; border-radius:50%}
+  .adm-mgmt-chip .amc-nm{font-size:12px; font-weight:600; color:var(--ink)}
+  .adm-mgmt-chip .amc-nm i{color:var(--ink-3); font-style:normal; font-weight:600; font-size:10.5px}
+  .adm-mgmt-chip .amc-btn{width:20px; height:20px; border:0; background:none; color:var(--ink-3); font-size:12px; line-height:1; cursor:pointer; border-radius:5px}
+  .adm-mgmt-chip .amc-btn:hover{background:var(--surface); color:var(--ink)}
+  .adm-mgmt-chip .amc-btn.danger:hover{color:var(--c-fam)}
+  .gc-yr-badge{font-size:12px; font-weight:800; color:var(--accent-ink); background:color-mix(in srgb,var(--accent) 16%,transparent); border-radius:7px; padding:4px 10px}
   .adm-golf-list{display:flex; flex-direction:column; gap:8px}
   .adm-golf-row{background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:8px 12px}
   .agr-head{display:flex; align-items:center; gap:7px; margin-bottom:6px}
@@ -1035,7 +1051,7 @@
   <div class="modal admin-modal" role="dialog" aria-modal="true">
     <div class="admin-head">
       <div class="admin-tabs" id="adminTabs">
-        <button type="button" class="on" data-at="golf">골프 스코어</button><button type="button" data-at="people">인맥 관리</button><button type="button" data-at="plan">일정관리</button>
+        <select id="adminYearSel" class="adm-yearsel" title="연도"></select><button type="button" class="on" data-at="plan">일정관리</button><button type="button" data-at="people">인맥 관리</button><button type="button" data-at="golf">골프 스코어</button>
       </div>
       <button class="x" id="adminClose" aria-label="닫기">&times;</button>
     </div>
@@ -1059,6 +1075,7 @@
     etc:{name:"기타", color:"#E0B24C"}
   };
   var REL_ORDER=["fam","fri","work","mn","etc"];   // 거래처(acq)는 기타(etc)로 통합
+  function relName(k){ return (state.relNames&&state.relNames[k])||((REL[k]||{}).name)||k; }   // 관계 표시명(사용자 지정 우선)
   var MEALS=[{key:"breakfast",ico:"🌅",label:"아침"},{key:"lunch",ico:"☀️",label:"점심"},{key:"dinner",ico:"🌙",label:"저녁"},{key:"special",ico:"✨",label:"Special"}];
   function emptyMeals(){ var m={}; MEALS.forEach(function(x){ m[x.key]={place:"",food:"",people:[]}; }); return m; }
   function mealHasContent(m){ return !!m && MEALS.some(function(x){ var v=m[x.key]||{}; return v.place||v.food||(v.people&&v.people.length); }); }
@@ -1092,6 +1109,7 @@
   state.todos = state.todos || [];
   state.plans = state.plans || [];   // 일정관리(Things to do 아카이브 + 반복일정)
   state.subcats = state.subcats || [];
+  state.relNames = state.relNames || {};   // 관계(그룹) 표시명 사용자 지정
   var draft = { date: todayStr(), people: [], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), drinks:emptyDrinks(), exercise:emptyExercise(), golfScore:{}, thoughts:"", learning:"" };
   var hiddenRels = {fam:true, work:true}, hideRest=true, hideGolf=true, drinkPeriod="week", weightPeriod="month", view="graph", recapMonth="", minMeet=2, minMeetIdx=1, meetExact=false, calMonth="", searchQ="", graphYear=String(new Date().getFullYear());
 
@@ -2167,7 +2185,7 @@
     var l=$("#legend"); l.innerHTML="";
     REL_ORDER.forEach(function(r){
       var c=document.createElement("span"); c.className="chip"; c.setAttribute("aria-pressed", hiddenRels[r]?"false":"true");
-      c.innerHTML='<span class="dot" style="background:'+REL[r].color+'"></span>'+REL[r].name;
+      c.innerHTML='<span class="dot" style="background:'+REL[r].color+'"></span>'+esc(relName(r));
       c.onclick=function(){ hiddenRels[r]=!hiddenRels[r]; c.setAttribute("aria-pressed",hiddenRels[r]?"false":"true"); renderStats(); rebuild(); alpha=Math.max(alpha,0.4); wake(); };
       c.title="더블클릭 → 이 관계 인맥 편집";
       c.ondblclick=function(){ openRelEdit(r); };
@@ -2187,7 +2205,7 @@
   // ---------- 인맥 관계 편집 (관계칩 더블클릭) ----------
   function openRelEdit(r){
     var back=$("#relModalBack"), list=$("#relList");
-    $("#relModalTitle").innerHTML='<span class="dot" style="background:'+REL[r].color+'"></span>'+REL[r].name+' 인맥 편집';
+    $("#relModalTitle").innerHTML='<span class="dot" style="background:'+REL[r].color+'"></span>'+esc(relName(r))+' 인맥 편집';
     function build(){
       var names=Object.keys(state.people||{}).filter(function(n){ return ((state.people[n]||{}).rel||"etc")===r; }).sort(function(a,b){ var sa=(state.people[a]||{}).sub||"", sb=(state.people[b]||{}).sub||""; if(!sa!==!sb) return sa? -1:1; if(sa!==sb) return sa.localeCompare(sb,"ko"); return a.localeCompare(b,"ko"); });
       list.innerHTML="";
@@ -2200,7 +2218,7 @@
         row.innerHTML='<div class="rn"><span class="dot" style="background:'+REL[cur].color+'"></span><span class="nm"></span></div>';
         row.querySelector(".nm").textContent=n;
         var sel=document.createElement("select");
-        REL_ORDER.forEach(function(k){ var o=document.createElement("option"); o.value=k; o.textContent=REL[k].name; if(k===cur)o.selected=true; sel.appendChild(o); });
+        REL_ORDER.forEach(function(k){ var o=document.createElement("option"); o.value=k; o.textContent=relName(k); if(k===cur)o.selected=true; sel.appendChild(o); });
         sel.onchange=function(){ if(state.people[n]){ state.people[n].rel=sel.value; save(); rebuild(); refresh(); build(); } };
         // 서브카테고리(그룹) 선택 + 새로 만들기
         var subSel=document.createElement("select"); subSel.className="rel-sub"; subSel.title="서브그룹";
@@ -2240,28 +2258,75 @@
   })();
 
   // ---------- 관리자 모드 (PC) ----------
+  function renameSubcat(oldN,newN){ state.subcats=(state.subcats||[]).map(function(s){return s===oldN?newN:s;}).filter(function(s,i,a){return a.indexOf(s)===i;}); Object.keys(state.people||{}).forEach(function(n){ if((state.people[n]||{}).sub===oldN) state.people[n].sub=newN; }); save(); rebuild(); renderAdminPeople(); }
+  function deleteSubcat(name){ state.subcats=(state.subcats||[]).filter(function(s){return s!==name;}); Object.keys(state.people||{}).forEach(function(n){ if((state.people[n]||{}).sub===name) delete state.people[n].sub; }); save(); rebuild(); renderAdminPeople(); }
   function renderAdminPeople(){
     var el=$("#adminPeople"); if(!el) return;
-    var byRel={}; REL_ORDER.forEach(function(r){ byRel[r]=[]; });
-    Object.keys(state.people||{}).forEach(function(n){ var r=relOf(n); (byRel[r]=byRel[r]||[]).push(n); });
-    var html="";
+    var g=buildGraph(), meet=g.meetings||{};
+    el.innerHTML="";
+    // ── 그룹/서브그룹 관리 ──
+    var mgmt=document.createElement("div"); mgmt.className="adm-mgmt";
+    var relBox=document.createElement("div"); relBox.className="adm-mgmt-box";
+    relBox.innerHTML='<div class="adm-mgmt-h">그룹 이름</div>';
     REL_ORDER.forEach(function(r){
-      var list=(byRel[r]||[]).sort(function(a,b){ return a.localeCompare(b,"ko"); });
-      html+='<div class="adm-sec"><div class="adm-sec-h"><span class="dot" style="background:'+REL[r].color+'"></span>'+REL[r].name+' <b>'+list.length+'</b></div>';
-      html+= list.length? ('<div class="adm-plist">'+list.map(function(n){
-        return '<div class="adm-prow" data-nm="'+encodeURIComponent(n)+'"><span class="adm-nm">'+esc(n)+'</span><select class="adm-rel">'+REL_ORDER.map(function(k){ return '<option value="'+k+'"'+(k===r?' selected':'')+'>'+REL[k].name+'</option>'; }).join("")+'</select><button class="adm-del" title="삭제">×</button></div>';
-      }).join("")+'</div>') : '<div class="adm-empty">없음</div>';
-      html+='</div>';
+      var chip=document.createElement("div"); chip.className="adm-mgmt-chip";
+      chip.innerHTML='<span class="dot" style="background:'+REL[r].color+'"></span><span class="amc-nm">'+esc(relName(r))+'</span>';
+      var ren=document.createElement("button"); ren.type="button"; ren.className="amc-btn"; ren.textContent="✎"; ren.title="이름 변경";
+      ren.onclick=function(){ askConfirm({ title:"그룹 이름 변경", message:"‘"+relName(r)+"’ 그룹의 새 이름을 입력하세요.", okText:"변경", promptText:true, placeholder:relName(r), onOk:function(nm){ nm=(nm||"").trim(); if(!nm) return; state.relNames[r]=nm; save(); renderAdminPeople(); renderLegend(); rebuild(); } }); };
+      chip.appendChild(ren);
+      if(state.relNames[r]){ var rst=document.createElement("button"); rst.type="button"; rst.className="amc-btn"; rst.textContent="↺"; rst.title="기본 이름으로"; rst.onclick=function(){ delete state.relNames[r]; save(); renderAdminPeople(); renderLegend(); rebuild(); }; chip.appendChild(rst); }
+      relBox.appendChild(chip);
     });
-    el.innerHTML=html;
-    Array.prototype.forEach.call(el.querySelectorAll(".adm-prow"), function(row){
-      var nm=decodeURIComponent(row.getAttribute("data-nm"));
-      row.querySelector(".adm-rel").onchange=function(){ if(state.people[nm]){ state.people[nm].rel=this.value; save(); rebuild(); refresh(); renderAdminPeople(); } };
-      row.querySelector(".adm-del").onclick=function(){ askConfirm({ title:"인맥 삭제", message:"‘"+nm+"’ 님을 모든 기록에서 삭제할까요?\n되돌릴 수 없어요.", okText:"삭제", danger:true, onOk:function(){ deletePerson(nm); renderAdminPeople(); renderAdminGolf(); } }); };
+    mgmt.appendChild(relBox);
+    var subBox=document.createElement("div"); subBox.className="adm-mgmt-box";
+    subBox.innerHTML='<div class="adm-mgmt-h">서브그룹</div>';
+    var subs=(state.subcats||[]).slice();
+    if(!subs.length){ var no=document.createElement("span"); no.className="adm-mgmt-none"; no.textContent="없음"; subBox.appendChild(no); }
+    subs.forEach(function(sc){
+      var cnt=Object.keys(state.people||{}).filter(function(n){return (state.people[n]||{}).sub===sc;}).length;
+      var chip=document.createElement("div"); chip.className="adm-mgmt-chip";
+      chip.innerHTML='<span class="amc-nm">'+esc(sc)+' <i>'+cnt+'</i></span>';
+      var ren=document.createElement("button"); ren.type="button"; ren.className="amc-btn"; ren.textContent="✎"; ren.title="이름 변경";
+      ren.onclick=function(){ askConfirm({ title:"서브그룹 이름 변경", message:"‘"+sc+"’ 의 새 이름을 입력하세요.", okText:"변경", promptText:true, placeholder:sc, onOk:function(nm){ nm=(nm||"").trim(); if(!nm||nm===sc) return; renameSubcat(sc,nm); } }); };
+      var del=document.createElement("button"); del.type="button"; del.className="amc-btn danger"; del.textContent="×"; del.title="서브그룹 삭제";
+      del.onclick=function(){ askConfirm({ title:"서브그룹 삭제", message:"‘"+sc+"’ 서브그룹을 삭제할까요?\n소속 인맥 "+cnt+"명의 서브그룹만 해제돼요(인맥은 유지).", okText:"삭제", danger:true, onOk:function(){ deleteSubcat(sc); } }); };
+      chip.appendChild(ren); chip.appendChild(del); subBox.appendChild(chip);
+    });
+    mgmt.appendChild(subBox);
+    el.appendChild(mgmt);
+    // ── 인맥 목록(관계별 · 서브그룹순 · 만난횟수) ──
+    var byRel={}; REL_ORDER.forEach(function(r){ byRel[r]=[]; });
+    Object.keys(state.people||{}).forEach(function(n){ (byRel[relOf(n)]=byRel[relOf(n)]||[]).push(n); });
+    var subOptsHtml=function(cur){ return '<option value="">그룹없음</option>'+(state.subcats||[]).map(function(s){ return '<option value="'+esc(s)+'"'+(s===cur?' selected':'')+'>'+esc(s)+'</option>'; }).join("")+'<option value="__new">＋ 새 그룹…</option>'; };
+    REL_ORDER.forEach(function(r){
+      var list=(byRel[r]||[]).sort(function(a,b){ var sa=(state.people[a]||{}).sub||"", sb=(state.people[b]||{}).sub||""; if(sa!==sb) return sa<sb?-1:1; return a.localeCompare(b,"ko"); });
+      var sec=document.createElement("div"); sec.className="adm-sec";
+      var h=document.createElement("div"); h.className="adm-sec-h"; h.innerHTML='<span class="dot" style="background:'+REL[r].color+'"></span>'+esc(relName(r))+' <b>'+list.length+'</b>';
+      sec.appendChild(h);
+      if(!list.length){ var em=document.createElement("div"); em.className="adm-empty"; em.textContent="없음"; sec.appendChild(em); el.appendChild(sec); return; }
+      var plist=document.createElement("div"); plist.className="adm-plist";
+      list.forEach(function(n){
+        var cur=(state.people[n]||{}).sub||"";
+        var row=document.createElement("div"); row.className="adm-prow";
+        var nmEl=document.createElement("span"); nmEl.className="adm-nm"; nmEl.innerHTML=esc(n)+' <i class="adm-cnt">('+(meet[n]||0)+')</i>'+(cur?' <span class="adm-subtag">'+esc(cur)+'</span>':'');
+        row.appendChild(nmEl);
+        var subSel=document.createElement("select"); subSel.className="adm-sub"; subSel.title="서브그룹"; subSel.innerHTML=subOptsHtml(cur);
+        subSel.onchange=function(){ var v=this.value; if(v==="__new"){ this.value=cur; askConfirm({ title:"새 서브그룹", message:"서브그룹 이름을 입력하세요.", okText:"만들기", promptText:true, placeholder:"예: 대학동기 · SK임원", onOk:function(x){ x=(x||"").trim(); if(!x) return; state.subcats=state.subcats||[]; if(state.subcats.indexOf(x)<0) state.subcats.push(x); if(state.people[n]) state.people[n].sub=x; save(); rebuild(); renderAdminPeople(); } }); return; } if(state.people[n]){ if(v) state.people[n].sub=v; else delete state.people[n].sub; save(); rebuild(); renderAdminPeople(); } };
+        row.appendChild(subSel);
+        var relSel=document.createElement("select"); relSel.className="adm-rel"; relSel.innerHTML=REL_ORDER.map(function(k){ return '<option value="'+k+'"'+(k===r?' selected':'')+'>'+esc(relName(k))+'</option>'; }).join("");
+        relSel.onchange=function(){ if(state.people[n]){ state.people[n].rel=this.value; save(); rebuild(); refresh(); renderAdminPeople(); } };
+        row.appendChild(relSel);
+        var del=document.createElement("button"); del.type="button"; del.className="adm-del"; del.textContent="×"; del.title="삭제";
+        del.onclick=function(){ askConfirm({ title:"인맥 삭제", message:"‘"+n+"’ 님을 모든 기록에서 삭제할까요?\n되돌릴 수 없어요.", okText:"삭제", danger:true, onOk:function(){ deletePerson(n); renderAdminPeople(); renderAdminGolf(); } }); };
+        row.appendChild(del);
+        plist.appendChild(row);
+      });
+      sec.appendChild(plist); el.appendChild(sec);
     });
   }
   function renderAdminGolf(){
     var el=$("#adminGolf"); if(!el) return;
+    golfListPeriod=adminYear;   // 연도 탭과 연동
     var allRounds=[];
     state.entries.forEach(function(e){
       roundsOf(e).forEach(function(r){
@@ -2285,10 +2350,6 @@
     el.appendChild(buildGolfChart());
     var bar=document.createElement("div"); bar.className="golf-admin-bar";
     var newBtn=document.createElement("button"); newBtn.type="button"; newBtn.className="gab-new"; newBtn.textContent="+ 새 라운드";
-    var yearSel=document.createElement("select"); yearSel.className="gab-year"; yearSel.title="기간(연도)";
-    var oAll=document.createElement("option"); oAll.value="all"; oAll.textContent="전체"; yearSel.appendChild(oAll);
-    yearList.forEach(function(y){ var o=document.createElement("option"); o.value=y; o.textContent=y+"년"; yearSel.appendChild(o); });
-    yearSel.value=golfListPeriod; yearSel.onchange=function(){ golfListPeriod=this.value; renderAdminGolf(); };
     var wl=document.createElement("span"); wl.className="gab-wl";
     if(golfCompare){
       var rr=golfRoundsVs(golfCompare); if(golfListPeriod!=="all") rr=rr.filter(function(x){ return x.date.slice(0,4)===golfListPeriod; });
@@ -2296,7 +2357,7 @@
       wl.innerHTML='<b>'+esc(golfCompare)+'</b>와 <b class="gab-wl-n">'+w+'승 '+l+'패</b>'+(dd?' '+dd+'무':'')+' <span class="gab-wl-r">('+(golfListPeriod==="all"?"전체":golfListPeriod)+' '+rr.length+'R)</span>';
     } else { wl.className+=" muted"; wl.textContent="비교 인물을 선택하면 승패가 표시돼요"; }
     var saveAll=document.createElement("button"); saveAll.type="button"; saveAll.className="gab-saveall"; saveAll.textContent="전체 저장";
-    bar.appendChild(newBtn); bar.appendChild(yearSel); bar.appendChild(wl); bar.appendChild(saveAll);
+    bar.appendChild(newBtn); bar.appendChild(wl); bar.appendChild(saveAll);
     el.appendChild(bar);
     var listWrap=document.createElement("div"); listWrap.className="adm-golf-list";
     var rows=[];
@@ -2317,11 +2378,13 @@
   // 나의 스코어 등락 선 그래프(18홀 환산, 기간별) + 좌측 통계·비교 이름 / 우측 기간 버튼
   function buildGolfChart(){
     var wrap=document.createElement("div"); wrap.className="golf-chart-wrap";
-    var now=new Date(), cutoff=null;
-    if(golfChartPeriod==="6m"){ var d=new Date(now); d.setMonth(d.getMonth()-6); cutoff=isoDate(d); }
-    else if(golfChartPeriod==="1y"){ var d2=new Date(now); d2.setFullYear(d2.getFullYear()-1); cutoff=isoDate(d2); }
+    var now=new Date(), cutoff=null, yrFilter=(adminYear!=="all");
+    if(!yrFilter){
+      if(golfChartPeriod==="6m"){ var d=new Date(now); d.setMonth(d.getMonth()-6); cutoff=isoDate(d); }
+      else if(golfChartPeriod==="1y"){ var d2=new Date(now); d2.setFullYear(d2.getFullYear()-1); cutoff=isoDate(d2); }
+    }
     var byAsc=function(a,b){ return a.date<b.date?-1:1; };
-    var inP=function(dt){ return /^\d{4}-\d{2}-\d{2}$/.test(dt) && (!cutoff||dt>=cutoff); };
+    var inP=function(dt){ if(!/^\d{4}-\d{2}-\d{2}$/.test(dt)) return false; return yrFilter? dt.slice(0,4)===adminYear : (!cutoff||dt>=cutoff); };
     var myPts=[], cmpPts=[], names={};
     state.entries.forEach(function(e){
       var rs=roundsOf(e);
@@ -2352,7 +2415,8 @@
     stats.appendChild(line1);
     if(golfCompare && cmpPts.length){ var line2=document.createElement("div"); line2.className="gc-stat-line gc-cmp-line"; var _rec=golfRecordVs(golfCompare); var _wlTxt=_rec.n? ' · <b style="color:#3FA35A">'+_rec.w+'승 '+_rec.l+'패</b>'+(_rec.d?' '+_rec.d+'무':'')+' ('+_rec.n+'게임)' : ''; line2.innerHTML='<span class="gc-swatch"></span><b>'+esc(golfCompare)+'</b> '+cmpPts.length+'R · 평균 '+cavg.toFixed(1)+'타'+_wlTxt; stats.appendChild(line2); }
     var periods=document.createElement("div"); periods.className="gc-periods";
-    [["6m","6개월"],["1y","1년"],["all","전체"]].forEach(function(p){ var b=document.createElement("button"); b.type="button"; b.textContent=p[1]; if(golfChartPeriod===p[0]) b.className="on"; b.onclick=function(){ golfChartPeriod=p[0]; renderAdminGolf(); }; periods.appendChild(b); });
+    if(!yrFilter){ [["6m","6개월"],["1y","1년"],["all","전체"]].forEach(function(p){ var b=document.createElement("button"); b.type="button"; b.textContent=p[1]; if(golfChartPeriod===p[0]) b.className="on"; b.onclick=function(){ golfChartPeriod=p[0]; renderAdminGolf(); }; periods.appendChild(b); }); }
+    else { var yb=document.createElement("span"); yb.className="gc-yr-badge"; yb.textContent=adminYear+"년"; periods.appendChild(yb); }
     top.appendChild(stats); top.appendChild(periods);
     wrap.appendChild(top);
     var chart=document.createElement("div"); chart.className="gc-chart"; chart.innerHTML=golfChartSvg(myPts, avg, golfCompare?cmpPts:[], golfCompare);
@@ -2527,8 +2591,8 @@
     flash("삭제했어요.");
   }
   function openAdmin(tab){
-    tab=tab||"golf";
-    renderAdminPeople(); renderAdminGolf(); renderAdminPlan();
+    tab=tab||"plan";
+    renderAdminYearSel(); renderAdminPeople(); renderAdminGolf(); renderAdminPlan();
     var tabs=$("#adminTabs").children;
     for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle("on", tabs[i].getAttribute("data-at")===tab);
     $("#adminPeople").hidden = (tab!=="people");
@@ -2536,7 +2600,18 @@
     $("#adminPlan").hidden = (tab!=="plan");
     $("#adminModal").hidden=false;
   }
-  if($("#adminBtn")) $("#adminBtn").onclick=function(){ openAdmin("golf"); };
+  if($("#adminBtn")) $("#adminBtn").onclick=function(){ openAdmin("plan"); };
+  var adminYear="all";
+  function renderAdminYearSel(){
+    var sel=$("#adminYearSel"); if(!sel) return;
+    var years={}; state.entries.forEach(function(e){ var y=(e.date||"").slice(0,4); if(/^\d{4}$/.test(y)) years[y]=1; });
+    (state.plans||[]).forEach(function(p){ var y=(p.due||"").slice(0,4); if(/^\d{4}$/.test(y)) years[y]=1; });
+    var list=Object.keys(years).sort().reverse();
+    if(adminYear!=="all" && !years[adminYear]) adminYear="all";
+    sel.innerHTML='<option value="all">전체 연도</option>'+list.map(function(y){ return '<option value="'+y+'">'+y+'년</option>'; }).join("");
+    sel.value=adminYear;
+    sel.onchange=function(){ adminYear=this.value; golfListPeriod=adminYear; renderAdminGolf(); renderAdminPlan(); };
+  }
   (function(){
     var back=$("#adminModal"); if(!back) return;
     function close(){ back.hidden=true; }
@@ -3286,12 +3361,13 @@
     var hits=(state.plans||[]).filter(function(p){ return repeatOccursOn(p.repeat, tmr); }).map(function(p){ return p.task; });
     st.innerHTML=esc(base)+(hits.length? ' <span class="sky-rep">'+esc(hits.join(" · "))+'</span>' : "");
   }
+  function planYear(p){ return (p.due||"").slice(0,4) || (p.ts? String(new Date(p.ts).getFullYear()) : ""); }
   function renderAdminPlan(){
     var el=$("#adminPlan"); if(!el) return;
-    var plans=state.plans||[];
+    var plans=(state.plans||[]).filter(function(p){ return adminYear==="all" || planYear(p)===adminYear; });
     el.innerHTML="";
     var head=document.createElement("div"); head.className="plan-head";
-    head.innerHTML='<h3>일정관리</h3><span class="plan-sub">'+plans.length+'건 · Things to do에서 삭제하면 여기 보관돼요</span>';
+    head.innerHTML='<h3>일정관리</h3><span class="plan-sub">'+(adminYear==="all"?"전체":adminYear+"년")+' · '+plans.length+'건 · Things to do에서 삭제하면 여기 보관돼요</span>';
     el.appendChild(head);
     if(!plans.length){ var emp=document.createElement("div"); emp.className="plan-empty"; emp.innerHTML="아직 없어요.<br>‘오늘 기록’의 Things to do에서 항목을 ×로 지우면 여기에 보관돼요."; el.appendChild(emp); return; }
     plans.forEach(function(p){
@@ -3404,7 +3480,7 @@
     get:function(){ return state; },
     replace:function(s, keepDraft){
       if(!s || !Array.isArray(s.entries)) return;
-      state={ people:s.people||{}, entries:s.entries||[], events:s.events||[], golf:s.golf||{}, todos:s.todos||[], plans:s.plans||[], subcats:s.subcats||[] };
+      state={ people:s.people||{}, entries:s.entries||[], events:s.events||[], golf:s.golf||{}, todos:s.todos||[], plans:s.plans||[], subcats:s.subcats||[], relNames:s.relNames||{} };
       mergeDuplicateDates();
       save();
       if(!keepDraft) resetDraft();
