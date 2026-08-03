@@ -652,6 +652,7 @@
   .adm-sec-h b{color:var(--ink-3); font-weight:600}
   .adm-empty{font-size:12px; color:var(--ink-3); padding:2px 2px 6px}
   .adm-plist{display:grid; grid-template-columns:repeat(auto-fill,minmax(275px,1fr)); gap:6px}
+  .adm-subdiv{height:0; border-top:1px dashed color-mix(in srgb, var(--chipc,#8a94b0) 45%, transparent); margin:8px 2px}
   .adm-prow{display:flex; align-items:center; gap:5px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:5px 6px 5px 10px}
   .adm-prow .adm-nm{flex:1; min-width:0; font-size:12.5px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .adm-prow .adm-nm .adm-cnt{color:var(--ink-3); font-weight:600; font-size:11px}
@@ -2349,8 +2350,7 @@
       }
       sec.appendChild(h);
       if(!list.length){ var em=document.createElement("div"); em.className="adm-empty"; em.textContent="없음"; sec.appendChild(em); el.appendChild(sec); return; }
-      var plist=document.createElement("div"); plist.className="adm-plist";
-      list.forEach(function(n){
+      var mkRow=function(n){
         var cur=(state.people[n]||{}).sub||"";
         var row=document.createElement("div"); row.className="adm-prow";
         var nmEl=document.createElement("span"); nmEl.className="adm-nm"; nmEl.innerHTML=esc(n)+' <i class="adm-cnt">('+(meet[n]||0)+')</i>'+(cur?' <span class="adm-subtag">'+esc(cur)+'</span>':'');
@@ -2364,9 +2364,20 @@
         var del=document.createElement("button"); del.type="button"; del.className="adm-del"; del.textContent="×"; del.title="삭제";
         del.onclick=function(){ askConfirm({ title:"인맥 삭제", message:"‘"+n+"’ 님을 모든 기록에서 삭제할까요?\n되돌릴 수 없어요.", okText:"삭제", danger:true, onOk:function(){ deletePerson(n); renderAdminPeople(); renderAdminGolf(); } }); };
         row.appendChild(del);
-        plist.appendChild(row);
+        return row;
+      };
+      // 서브그룹이 바뀌면 새 줄(별도 그리드) + 그룹색 흐린 구분선
+      var curSub=null, plist=null, first=true;
+      list.forEach(function(n){
+        var s=(state.people[n]||{}).sub||"";
+        if(s!==curSub){ curSub=s;
+          if(!first){ var dv=document.createElement("div"); dv.className="adm-subdiv"; dv.style.setProperty("--chipc", REL[r].color); sec.appendChild(dv); }
+          first=false;
+          plist=document.createElement("div"); plist.className="adm-plist"; sec.appendChild(plist);
+        }
+        plist.appendChild(mkRow(n));
       });
-      sec.appendChild(plist); el.appendChild(sec);
+      el.appendChild(sec);
     });
     if(q && !el.children.length){ el.innerHTML='<div class="adm-empty" style="padding:20px 2px">‘'+esc(q)+'’ 검색 결과가 없어요.</div>'; }
   }
