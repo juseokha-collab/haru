@@ -67,7 +67,7 @@
 
   /* ---- Header ---- */
   header.top{display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:6px 2px 18px; flex-wrap:nowrap}
-  .top-right{display:flex; flex-direction:column; align-items:flex-end; gap:6px}
+  .top-right{display:flex; flex-direction:row; align-items:center; flex-wrap:wrap; justify-content:flex-end; gap:10px}
   .top-tools{display:flex; align-items:center; gap:10px}
   .brand{display:flex; flex-direction:column; gap:2px; min-width:0}
   .weather-now{display:block; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:12px; font-weight:600; color:var(--ink-2); font-variant-numeric:tabular-nums; line-height:1.35; letter-spacing:-.01em}
@@ -812,8 +812,6 @@
     <div class="top-right">
       <div class="auth" id="authArea" hidden></div>
       <div class="top-tools">
-        <button class="btn ghost" id="exportBtn" title="JSON 백업 파일 내려받기">내보내기</button>
-        <button class="btn ghost" id="importBtn" title="백업 파일에서 복원">가져오기</button>
         <input type="file" id="importFile" accept="application/json,.json" style="display:none">
         <input type="file" id="golfCsvFile" accept=".csv,text/csv" style="display:none">
         <button class="btn ghost" id="adminBtn" title="관리자 모드 (PC)">⚙ 관리</button>
@@ -3125,19 +3123,19 @@
       flash("불러왔어요 ✦ ("+state.entries.length+"일치)");
     }});
   }
-  $("#exportBtn").onclick=function(){
+  if($("#exportBtn")) $("#exportBtn").onclick=function(){
     var json=JSON.stringify(state,null,2);
     // 호스팅 환경에선 파일로도 저장(샌드박스에선 조용히 무시됨)
     try{ var blob=new Blob([json],{type:"application/json"}); var url=URL.createObjectURL(blob), a=document.createElement("a"); a.href=url; a.download="haru-backup-"+todayStr()+".json"; document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(function(){ URL.revokeObjectURL(url); },1000); }catch(e){}
     textModal({ title:"백업 내보내기", message:"아래 내용 전체를 복사하세요 (전체선택 Ctrl+A → 복사 Ctrl+C). 다른 기기의 ‘가져오기’에 붙여넣으면 기록이 옮겨집니다.", value:json, readOnly:true, okText:"복사",
       onOk:function(v){ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(v).then(function(){ flash("복사됐어요 ✦"); }, function(){ flash("전체 선택 후 Ctrl+C 로 복사하세요"); }); } else { flash("전체 선택 후 Ctrl+C 로 복사하세요"); } return false; } });
   };
-  $("#importBtn").onclick=function(){
+  if($("#importBtn")) $("#importBtn").onclick=function(){
     textModal({ title:"백업 가져오기", messageHtml:"다른 기기에서 복사한 백업 텍스트를 아래에 붙여넣고 <b>불러오기</b>를 누르세요. 또는 <button type=\"button\" class=\"linkbtn\" id=\"tPickFile\">파일에서 선택</button>.", value:"", readOnly:false, okText:"불러오기",
       wire:function(){ var b=document.getElementById("tPickFile"); if(b) b.onclick=function(){ $("#importFile").click(); }; },
       onOk:function(v){ v=(v||"").trim(); if(!v){ flash("붙여넣은 내용이 없어요."); return false; } var data; try{ data=JSON.parse(v); }catch(e){ flash("붙여넣은 내용이 올바른 형식이 아니에요."); return false; } startImport(data); return true; } });
   };
-  $("#importFile").addEventListener("change",function(){
+  if($("#importFile")) $("#importFile").addEventListener("change",function(){
     var f=this.files[0]; if(!f)return; var rd=new FileReader();
     rd.onload=function(){ var data; try{ data=JSON.parse(rd.result); }catch(e){ flash("올바른 백업 파일이 아니에요."); return; } startImport(data); };
     rd.readAsText(f); this.value="";
