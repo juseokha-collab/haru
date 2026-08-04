@@ -3699,7 +3699,7 @@
     {id:"h_tax",group:"cash",name:"세금"},{id:"h_holiday",group:"cash",name:"명절"},{id:"h_personal",group:"cash",name:"개인"},{id:"h_event",group:"cash",name:"축/조의"},{id:"h_eeum",group:"cash",name:"e음"},{id:"h_etc",group:"cash",name:"기타"}
   ]; }
   function fmtWon(n){ n=Math.round(n||0); var s=Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,","); return (n<0?"-":"")+s; }
-  function parseWon(s){ s=(s||"").toString().replace(/[^\d-]/g,""); var n=parseInt(s,10); return isNaN(n)?0:n; }
+  function parseWon(s){ s=(s||"").toString().replace(/[,\s]/g,""); var m=s.match(/[+-]?\d+/g); if(!m) return 0; var sum=0; for(var i=0;i<m.length;i++){ sum+=parseInt(m[i],10)||0; } return sum; }   // 콤마 제거 + '+/-' 식 합산(100000+10000 → 110000)
   function ledCatsOf(g){ return (state.ledgerCats||[]).filter(function(c){return c.group===g;}); }
   function ledCell(ym,id){ var m=state.ledger[ym]; return (m&&m.cells&&m.cells[id])||0; }
   function ledNotes(ym){ var m=state.ledger[ym]; if(!m) return {}; if(!m.notes){ m.notes = m.note? {income:m.note}:{}; } return m.notes; }   // 대분류별 비고(구형 단일 note는 수입으로 이전)
