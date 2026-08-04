@@ -490,12 +490,12 @@
   .plan-sub{font-size:11.5px; color:var(--ink-3)}
   .plan-empty{padding:30px 10px; text-align:center; color:var(--ink-3); font-size:13px; line-height:1.8}
   .plan-div{font-size:11px; font-weight:800; letter-spacing:.03em; color:var(--ink-3); text-transform:uppercase; margin:16px 0 7px; padding-bottom:4px; border-bottom:1px solid var(--border)}
-  .plan-row{background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:9px 11px; margin-bottom:8px}
-  .plan-row.flagged{background:color-mix(in srgb,#E6A23C 13%,var(--surface-2)); border-color:color-mix(in srgb,#E6A23C 48%,transparent)}
+  .plan-row{background:transparent; border:0; border-bottom:1px solid var(--border); border-radius:0; padding:7px 4px; margin-bottom:0}
+  .plan-row.flagged{background:color-mix(in srgb,#E6A23C 11%,transparent); border-left:3px solid #E6A23C; padding-left:8px}
   .pl-top .pl-flag{width:14px; height:14px; flex:none; margin:0 0 0 2px; accent-color:#E6A23C; cursor:pointer}
-  .pl-save{margin-left:auto; font-family:inherit; font-size:11.5px; font-weight:700; border:1px solid var(--accent); background:var(--accent); color:#fff; border-radius:7px; padding:4px 13px; cursor:pointer}
+  .pl-save{margin-left:2px; font-family:inherit; font-size:11px; font-weight:700; border:1px solid var(--accent); background:var(--accent); color:#fff; border-radius:7px; padding:3px 11px; cursor:pointer}
   .pl-save.done{background:#3FA35A; border-color:#3FA35A}
-  .pl-top{display:flex; align-items:center; gap:8px}
+  .pl-top{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
   .pl-status{flex:none; font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:20px; cursor:pointer; background:var(--surface); border:1px solid var(--border); color:var(--ink-3)}
   .pl-status.done{background:color-mix(in srgb,#3FA35A 15%,transparent); border-color:color-mix(in srgb,#3FA35A 45%,transparent); color:#3FA35A}
   .pl-task{flex:1; min-width:0; font-size:13.5px; font-weight:600; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
@@ -504,9 +504,9 @@
   .pl-repbadge{flex:none; font-size:10.5px; color:var(--accent-ink); background:color-mix(in srgb,var(--accent) 14%,transparent); border-radius:6px; padding:2px 6px; white-space:nowrap}
   .pl-x{flex:none; width:22px; height:22px; border:0; background:none; color:var(--ink-3); font-size:17px; line-height:1; cursor:pointer; border-radius:6px}
   .pl-x:hover{color:var(--c-fam); background:var(--surface)}
-  .pl-result{width:100%; box-sizing:border-box; margin-top:7px; font-family:inherit; font-size:12px; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:5px 8px; outline:0}
+  .pl-result{width:100%; box-sizing:border-box; margin-top:5px; font-family:inherit; font-size:12px; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:4px 8px; outline:0}
   .pl-result:focus{border-color:var(--accent)}
-  .pl-rep{display:flex; align-items:center; gap:8px; margin-top:7px; flex-wrap:wrap}
+  .pl-rep{display:inline-flex; align-items:center; gap:7px; margin-top:0; flex-wrap:wrap}
   .pl-rep-lbl{display:inline-flex; align-items:center; gap:4px; font-size:11.5px; color:var(--ink-2); cursor:pointer}
   .pl-rep-lbl input{accent-color:var(--accent); cursor:pointer}
   .pl-rep-ctrls{display:inline-flex; gap:6px; flex-wrap:wrap}
@@ -3562,14 +3562,7 @@
       flag.onchange=function(){ p.flag=flag.checked; row.classList.toggle("flagged", p.flag); save(); };
       top.appendChild(flag);
       if(p.due){ var due=document.createElement("span"); due.className="pl-due"; due.textContent=p.due.slice(5).replace("-","."); top.appendChild(due); }
-      var repd=planRepeatDesc(p.repeat); if(repd){ var rb=document.createElement("span"); rb.className="pl-repbadge"; rb.textContent="🔁 "+repd; top.appendChild(rb); }
-      var x=document.createElement("button"); x.type="button"; x.className="pl-x"; x.textContent="×"; x.title="완전 삭제";
-      x.onclick=function(){ askConfirm({ title:"일정 완전 삭제", message:"‘"+(p.task||"")+"’ 을(를) 완전히 삭제할까요?\n되돌릴 수 없어요.", okText:"삭제", danger:true, onOk:function(){ state.plans=state.plans.filter(function(q){return q!==p;}); save(); renderAdminPlan(); updateSkyDate(); } }); };
-      top.appendChild(x);
-      row.appendChild(top);
-      var res=document.createElement("input"); res.type="text"; res.className="pl-result"; res.placeholder="결과·메모 기록"; res.value=p.result||"";
-      res.onchange=function(){ p.result=res.value.trim(); save(); };
-      row.appendChild(res);
+      // 반복 체크·컨트롤을 납기 옆(같은 줄)에 → 일정 1건이 2줄로
       var repWrap=document.createElement("div"); repWrap.className="pl-rep";
       var lbl=document.createElement("label"); lbl.className="pl-rep-lbl";
       var chk=document.createElement("input"); chk.type="checkbox"; chk.checked=!!p.repeat;
@@ -3596,7 +3589,14 @@
       chk.onchange=function(){ p.repeat = chk.checked? {type:"yearly", md:(p.due?p.due.slice(5):todayStr().slice(5))} : null; buildCtrls(); showSave(); };
       buildCtrls();
       repWrap.appendChild(lbl); repWrap.appendChild(ctrls); repWrap.appendChild(saveB);
-      row.appendChild(repWrap);
+      top.appendChild(repWrap);
+      var x=document.createElement("button"); x.type="button"; x.className="pl-x"; x.textContent="×"; x.title="완전 삭제";
+      x.onclick=function(){ askConfirm({ title:"일정 완전 삭제", message:"‘"+(p.task||"")+"’ 을(를) 완전히 삭제할까요?\n되돌릴 수 없어요.", okText:"삭제", danger:true, onOk:function(){ state.plans=state.plans.filter(function(q){return q!==p;}); save(); renderAdminPlan(); updateSkyDate(); } }); };
+      top.appendChild(x);
+      row.appendChild(top);
+      var res=document.createElement("input"); res.type="text"; res.className="pl-result"; res.placeholder="결과·메모 기록"; res.value=p.result||"";
+      res.onchange=function(){ p.result=res.value.trim(); save(); };
+      row.appendChild(res);
       return row;
     }
     function stageBlock(label, arr){ if(!arr.length) return; var d=document.createElement("div"); d.className="plan-div"; d.textContent=label+" · "+arr.length; el.appendChild(d); arr.forEach(function(p){ el.appendChild(buildPlanRow(p)); }); }
