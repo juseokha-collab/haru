@@ -692,6 +692,16 @@
   .modal-find:focus{border-color:var(--accent)}
   .adm-golf-list{display:flex; flex-direction:column; gap:8px}
   .adm-golf-row{background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:8px 12px}
+  .adm-golf-row.golf-sum{display:flex; align-items:center; gap:10px; padding:9px 12px}
+  .gsum-main{flex:1; min-width:0; font-size:12.5px; color:var(--ink); display:flex; flex-wrap:wrap; align-items:baseline; gap:3px 9px; line-height:1.55}
+  .gsum-main .gsum-date{color:var(--ink-3); font-variant-numeric:tabular-nums}
+  .gsum-main .gsum-place{font-weight:700}
+  .gsum-main .gsum-sc{color:var(--ink-2); font-variant-numeric:tabular-nums}
+  .gsum-main .gsum-win{color:#3FA35A; font-weight:800}
+  .gsum-edit{flex:none; border:1px solid var(--border); background:var(--surface); color:var(--ink-2); font-family:inherit; font-size:11.5px; font-weight:700; padding:5px 13px; border-radius:7px; cursor:pointer}
+  .gsum-edit:hover{border-color:var(--accent); color:var(--accent-ink)}
+  .golf-edit-modal{max-width:560px; width:100%}
+  .golf-edit-modal .agr-form{margin:6px 0 4px}
   .agr-head{display:flex; align-items:center; gap:7px; margin-bottom:6px}
   .agr-head .agr-place{flex:1}
   .agr-head .agr-date-in{flex:none; width:auto; font-family:inherit; font-size:12px; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:3px 5px; outline:0}
@@ -2418,20 +2428,15 @@
       var w=0,l=0,dd=0; rr.forEach(function(x){ if(x.mine<x.th)w++; else if(x.mine>x.th)l++; else dd++; });
       wl.innerHTML='<b>'+esc(golfCompare)+'</b>와 <b class="gab-wl-n">'+w+'승 '+l+'패</b>'+(dd?' '+dd+'무':'')+' <span class="gab-wl-r">('+(golfListPeriod==="all"?"전체":golfListPeriod)+' '+rr.length+'R)</span>';
     } else { wl.className+=" muted"; wl.textContent="비교 인물을 선택하면 승패가 표시돼요"; }
-    var saveAll=document.createElement("button"); saveAll.type="button"; saveAll.className="gab-saveall"; saveAll.textContent="전체 저장";
-    bar.appendChild(newBtn); bar.appendChild(wl); bar.appendChild(saveAll);
+    bar.appendChild(newBtn); bar.appendChild(wl);
     el.appendChild(bar);
     var listWrap=document.createElement("div"); listWrap.className="adm-golf-list";
-    var rows=[];
-    // 편집 중인 새 라운드(초안)를 맨 위에
-    golfDrafts.forEach(function(dr){ var row=buildGolfRow({e:null, date:dr.date||todayStr(), place:"", ppl:[], holes:18, draftRef:dr}); rows.push(row); listWrap.appendChild(row); });
-    listRounds.forEach(function(r){ var row=buildGolfRow(r); rows.push(row); listWrap.appendChild(row); });
-    if(!listRounds.length && !golfDrafts.length){ var em=document.createElement("div"); em.className="adm-empty";
+    listRounds.forEach(function(r){ listWrap.appendChild(buildGolfRow(r)); });
+    if(!listRounds.length){ var em=document.createElement("div"); em.className="adm-empty";
       em.textContent = golfSearchQ? ("‘"+golfSearchQ+"’ 골프장 기록이 없어요.") : (golfCompare? ("‘"+golfCompare+"’ 님과 함께한 라운드가 없어요"+(golfListPeriod!=="all"?" ("+golfListPeriod+"년)":"")+".") : (allRounds.length? "이 기간 기록이 없어요." : "골프 기록이 없어요. ‘+ 새 라운드’로 추가하세요."));
       listWrap.appendChild(em); }
     el.appendChild(listWrap);
-    newBtn.onclick=function(){ golfDrafts.push({date:todayStr()}); renderAdminGolf(); };
-    saveAll.onclick=function(){ var apl=rows.filter(function(x){return x._apply;}); apl.forEach(function(row){ row._apply(); }); save(); refresh(); rebuild(); renderAdminGolf(); golfToast("✓ 전체 저장 완료 · "+apl.length+"개 라운드"); };
+    newBtn.onclick=function(){ openGolfEdit({e:null, date:todayStr(), place:"", ppl:[], holes:18, scores:{}}); };
   }
   var golfChartPeriod="1y", golfCompare="", golfListPeriod="all", golfDrafts=[];
   function golfToast(msg){ var t=$("#adminToast"); if(!t) return; t.textContent=msg; t.hidden=false; void t.offsetWidth; t.classList.add("show"); clearTimeout(t._tmr); t._tmr=setTimeout(function(){ t.classList.remove("show"); setTimeout(function(){ t.hidden=true; },240); },1900); }
@@ -2604,20 +2609,36 @@
     if(!fixed){ var x=document.createElement("button"); x.type="button"; x.className="agr-sc-del"; x.title="이 동반자 삭제"; x.textContent="×"; x.onclick=function(){ cell.parentNode.removeChild(cell); }; cell.appendChild(x); }
     return cell;
   }
-  // 골프 라운드 한 행(편집 후 저장 버튼으로 커밋). r.e가 null이면 새 라운드(초안)
+  // 라운드 한 줄 요약(읽기) + 수정 버튼 → 수정 시 팝업 편집
   function buildGolfRow(r){
-    var e=r.e, gs=r.scores||{}, isDraft=!e;
-    var row=document.createElement("div"); row.className="adm-golf-row"+(isDraft?" is-draft":"");
+    var gs=r.scores||{};
+    var row=document.createElement("div"); row.className="adm-golf-row golf-sum";
+    var vals=[]; var addv=function(v){ if(v!=null&&v!==""&&!isNaN(+v)) vals.push(+v); }; addv(gs["나"]); r.ppl.forEach(function(n){ addv(gs[n]); });
+    var minV=vals.length?Math.min.apply(null,vals):null;
+    var d=(r.date||"").slice(2).replace(/-/g,"."), holes=r.holes||18;
+    var main='<span class="gsum-date">'+d+'</span> <span class="gsum-place">'+esc(r.place)+(holes!==18?'('+holes+'홀)':'')+'</span>';
+    [["나",gs["나"]]].concat(r.ppl.map(function(n){return [n,gs[n]];})).forEach(function(pr){
+      var nm=pr[0], v=pr[1], has=(v!=null&&v!==""&&!isNaN(+v)), win=has&&+v===minV;
+      main+=' <span class="gsum-sc'+(win?" gsum-win":"")+'">'+esc(nm)+(has?' '+(+v):'')+'</span>';
+    });
+    var mainEl=document.createElement("div"); mainEl.className="gsum-main"; mainEl.innerHTML=main;
+    var edit=document.createElement("button"); edit.type="button"; edit.className="gsum-edit"; edit.textContent="수정";
+    edit.onclick=function(){ openGolfEdit(r); };
+    row.appendChild(mainEl); row.appendChild(edit);
+    return row;
+  }
+  // 편집 폼(날짜·골프장·홀·나/동반자 점수·동반자 추가) — form._apply로 커밋
+  function buildGolfEditForm(r){
+    var e=r.e, gs=r.scores||{};
+    var form=document.createElement("div"); form.className="agr-form";
     var head=document.createElement("div"); head.className="agr-head";
     var dIn=document.createElement("input"); dIn.type="date"; dIn.className="agr-date-in"; dIn.value=r.date;
     var ico=document.createElement("span"); ico.className="agr-golf-ico"; ico.textContent="⛳";
-    var pIn=document.createElement("input"); pIn.type="text"; pIn.className="agr-place-in"; pIn.value=r.place; pIn.placeholder="골프장명"; pIn.autocomplete="off";
+    var pIn=document.createElement("input"); pIn.type="text"; pIn.className="agr-place-in"; pIn.value=r.place||""; pIn.placeholder="골프장명"; pIn.autocomplete="off";
     var hSel=document.createElement("select"); hSel.className="agr-holes-in"; hSel.title="홀 수";
     [18,27,9].forEach(function(h){ var o=document.createElement("option"); o.value=h; o.textContent=h+"홀"; if((r.holes||18)===h) o.selected=true; hSel.appendChild(o); });
-    var delR=document.createElement("button"); delR.type="button"; delR.className="agr-del"; delR.title=isDraft?"이 새 라운드 취소":"이 라운드 삭제"; delR.textContent=isDraft?"취소":"삭제";
-    head.appendChild(dIn); head.appendChild(ico); head.appendChild(pIn); head.appendChild(hSel); head.appendChild(delR);
+    head.appendChild(dIn); head.appendChild(ico); head.appendChild(pIn); head.appendChild(hSel);
     var sc=document.createElement("div"); sc.className="agr-scores";
-    // 최저 타수(이긴 사람) 계산
     var vals=[]; var addv=function(v){ if(v!=null&&v!==""&&!isNaN(+v)) vals.push(+v); }; addv(gs["나"]); r.ppl.forEach(function(n){ addv(gs[n]); });
     var minV=vals.length?Math.min.apply(null,vals):null;
     var isLow=function(v){ return minV!=null && v!=null && v!=="" && +v===minV; };
@@ -2625,14 +2646,29 @@
     r.ppl.forEach(function(n){ sc.appendChild(makeScoreCell(n, gs[n], false, isLow(gs[n]))); });
     var addBtn=document.createElement("button"); addBtn.type="button"; addBtn.className="agr-add"; addBtn.textContent="+ 동반자";
     addBtn.onclick=function(){ var c=makeScoreCell("", "", false); sc.appendChild(c); var ni=c.querySelector(".agr-nm-in"); if(ni) ni.focus(); };
-    row._apply=function(){ return applyGolfRound(e, r.place, dIn, pIn, sc, hSel, r.slot, r.draftRef); };
-    var line2=document.createElement("div"); line2.className="agr-line2"; line2.appendChild(sc); line2.appendChild(addBtn);   // 점수 + 동반자 한 줄
-    row.appendChild(head); row.appendChild(line2);
-    delR.onclick=function(){
-      if(isDraft){ var i=golfDrafts.indexOf(r.draftRef); if(i>=0) golfDrafts.splice(i,1); renderAdminGolf(); return; }
-      askConfirm({ title:"골프 라운드 삭제", message:e.date+" · "+r.place+" 라운드를 삭제할까요?\n이 라운드의 골프 내용만 정리돼요.", okText:"삭제", danger:true, onOk:function(){ deleteGolfRound(e, r.place, r.slot); renderAdminGolf(); golfToast("✓ 라운드 삭제됨"); } });
-    };
-    return row;
+    var line2=document.createElement("div"); line2.className="agr-line2"; line2.appendChild(sc); line2.appendChild(addBtn);
+    form.appendChild(head); form.appendChild(line2);
+    form._apply=function(){ return applyGolfRound(e, r.place, dIn, pIn, sc, hSel, r.slot, null); };
+    return form;
+  }
+  function openGolfEdit(r){
+    var back=document.createElement("div"); back.className="modal-back";
+    var modal=document.createElement("div"); modal.className="modal golf-edit-modal";
+    var title=document.createElement("div"); title.className="modal-title"; title.textContent=r.e?"라운드 수정":"새 라운드";
+    var form=buildGolfEditForm(r);
+    var acts=document.createElement("div"); acts.className="modal-actions";
+    function close(){ back.remove(); }
+    if(r.e){ var delB=document.createElement("button"); delB.type="button"; delB.className="btn ghost"; delB.style.marginRight="auto"; delB.textContent="라운드 삭제";
+      delB.onclick=function(){ askConfirm({ title:"골프 라운드 삭제", message:r.e.date+" · "+r.place+" 라운드를 삭제할까요?\n이 라운드의 골프 내용만 정리돼요.", okText:"삭제", danger:true, onOk:function(){ deleteGolfRound(r.e, r.place, r.slot); close(); renderAdminGolf(); golfToast("✓ 라운드 삭제됨"); } }); };
+      acts.appendChild(delB);
+    }
+    var cancelB=document.createElement("button"); cancelB.type="button"; cancelB.className="btn"; cancelB.textContent="닫기"; cancelB.onclick=close;
+    var saveB=document.createElement("button"); saveB.type="button"; saveB.className="btn primary"; saveB.textContent="저장";
+    saveB.onclick=function(){ var ent=form._apply(); save(); refresh(); rebuild(); close(); renderAdminGolf(); golfToast("✓ 저장 완료 · "+((ent&&ent.date)||"")); };
+    acts.appendChild(cancelB); acts.appendChild(saveB);
+    modal.appendChild(title); modal.appendChild(form); modal.appendChild(acts);
+    back.appendChild(modal); document.body.appendChild(back);
+    back.addEventListener("click",function(ev){ if(ev.target===back) close(); });
   }
   // 편집된 라운드 값을 기록에 반영(날짜·골프장·홀수·나·동반자 점수) — 저장/렌더는 호출측에서
   // e가 null이면 새 라운드: 날짜의 기존 기록에 합치거나 새 기록 생성. 반영한 entry를 반환
