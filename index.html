@@ -2402,6 +2402,7 @@
     var listRounds=allRounds.filter(function(r){
       if(golfListPeriod!=="all" && r.date.slice(0,4)!==golfListPeriod) return false;
       if(golfCompare){ var gs=r.scores||{}; if(gs[golfCompare]==null || gs[golfCompare]==="") return false; }
+      if(golfSearchQ && (r.place||"").indexOf(golfSearchQ)<0) return false;   // 골프장 찾기
       return true;
     });
     el.innerHTML="";
@@ -2423,7 +2424,7 @@
     golfDrafts.forEach(function(dr){ var row=buildGolfRow({e:null, date:dr.date||todayStr(), place:"", ppl:[], holes:18, draftRef:dr}); rows.push(row); listWrap.appendChild(row); });
     listRounds.forEach(function(r){ var row=buildGolfRow(r); rows.push(row); listWrap.appendChild(row); });
     if(!listRounds.length && !golfDrafts.length){ var em=document.createElement("div"); em.className="adm-empty";
-      em.textContent = golfCompare? ("‘"+golfCompare+"’ 님과 함께한 라운드가 없어요"+(golfListPeriod!=="all"?" ("+golfListPeriod+"년)":"")+".") : (allRounds.length? "이 기간 기록이 없어요." : "골프 기록이 없어요. ‘+ 새 라운드’로 추가하세요.");
+      em.textContent = golfSearchQ? ("‘"+golfSearchQ+"’ 골프장 기록이 없어요.") : (golfCompare? ("‘"+golfCompare+"’ 님과 함께한 라운드가 없어요"+(golfListPeriod!=="all"?" ("+golfListPeriod+"년)":"")+".") : (allRounds.length? "이 기간 기록이 없어요." : "골프 기록이 없어요. ‘+ 새 라운드’로 추가하세요."));
       listWrap.appendChild(em); }
     el.appendChild(listWrap);
     newBtn.onclick=function(){ golfDrafts.push({date:todayStr()}); renderAdminGolf(); };
@@ -2650,7 +2651,7 @@
   }
   function openAdmin(tab){
     tab=tab||"plan";
-    adminFindQ=""; adminSubFilter={}; var _af=$("#adminFind"); if(_af) _af.value="";
+    adminTab=tab; adminFindQ=""; golfSearchQ=""; adminSubFilter={}; var _af=$("#adminFind"); if(_af) _af.value=""; setAdminFindPh();
     renderAdminYearSel(); renderAdminPeople(); renderAdminGolf(); renderAdminPlan();
     var tabs=$("#adminTabs").children;
     for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle("on", tabs[i].getAttribute("data-at")===tab);
@@ -2661,8 +2662,14 @@
   }
   if($("#adminBtn")) $("#adminBtn").onclick=function(){ openAdmin("plan"); };
   document.addEventListener("click", function(e){ if(e.target && e.target.closest && e.target.closest("#adminBtnM")) openAdmin("plan"); });   // 모바일 관리 버튼(로그인 영역에서 동적 생성)
-  var adminYear="all", adminFindQ="", adminSubFilter={};
-  (function(){ var fi=$("#adminFind"); if(!fi) return; fi.addEventListener("input",function(){ adminFindQ=this.value.trim(); if(adminFindQ){ var tabs=$("#adminTabs").children; for(var i=0;i<tabs.length;i++){ var b=tabs[i]; if(b.getAttribute&&b.getAttribute("data-at")) b.classList.toggle("on", b.getAttribute("data-at")==="people"); } $("#adminPeople").hidden=false; $("#adminGolf").hidden=true; $("#adminPlan").hidden=true; } renderAdminPeople(); }); })();
+  var adminYear="all", adminFindQ="", adminSubFilter={}, adminTab="plan", golfSearchQ="";
+  function setAdminFindPh(){ var fi=$("#adminFind"); if(fi) fi.placeholder = (adminTab==="golf")? "🔍 골프장 찾기" : "🔍 이름 찾기"; }
+  (function(){ var fi=$("#adminFind"); if(!fi) return; fi.addEventListener("input",function(){ var v=this.value.trim();
+    if(adminTab==="golf"){ golfSearchQ=v; renderAdminGolf(); return; }
+    adminFindQ=v;
+    if(adminFindQ && adminTab!=="people"){ adminTab="people"; var tabs=$("#adminTabs").children; for(var i=0;i<tabs.length;i++){ var b=tabs[i]; if(b.getAttribute&&b.getAttribute("data-at")) b.classList.toggle("on", b.getAttribute("data-at")==="people"); } $("#adminPeople").hidden=false; $("#adminGolf").hidden=true; $("#adminPlan").hidden=true; setAdminFindPh(); }
+    renderAdminPeople();
+  }); })();
   function renderAdminYearSel(){
     var sel=$("#adminYearSel"); if(!sel) return;
     var years={}; state.entries.forEach(function(e){ var y=(e.date||"").slice(0,4); if(/^\d{4}$/.test(y)) years[y]=1; });
@@ -2680,7 +2687,9 @@
     back.addEventListener("click",function(e){ if(e.target===back) close(); });
     $("#adminTabs").addEventListener("click",function(e){ var b=e.target.closest("button"); if(!b) return; var at=b.getAttribute("data-at");
       var tabs=this.children; for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle("on", tabs[i]===b);
-      $("#adminPeople").hidden = (at!=="people"); $("#adminGolf").hidden = (at!=="golf"); $("#adminPlan").hidden = (at!=="plan"); if(at==="plan") renderAdminPlan(); });
+      adminTab=at; adminFindQ=""; golfSearchQ=""; var _fi=$("#adminFind"); if(_fi) _fi.value=""; setAdminFindPh();
+      $("#adminPeople").hidden = (at!=="people"); $("#adminGolf").hidden = (at!=="golf"); $("#adminPlan").hidden = (at!=="plan");
+      if(at==="plan") renderAdminPlan(); else if(at==="golf") renderAdminGolf(); else if(at==="people") renderAdminPeople(); });
   })();
 
   // 오늘 기록 찾기: 주요일정·회고(Reflection)·배움(Learning) 텍스트 검색 → 해당 기록으로 이동
