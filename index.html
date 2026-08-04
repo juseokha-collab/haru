@@ -691,7 +691,9 @@
   .led-navb{width:26px; height:26px; border:1px solid var(--border); background:var(--surface); color:var(--ink); border-radius:7px; cursor:pointer; font-size:15px; line-height:1}
   .led-navb:hover{border-color:var(--accent); color:var(--accent-ink)}
   .led-mlabel{font-size:13px; font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums; min-width:78px; text-align:center}
-  .led-sum{display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap}
+  .led-imp{border:1px solid var(--border); background:var(--surface); color:var(--ink-2); font-family:inherit; font-size:11.5px; font-weight:600; padding:5px 10px; border-radius:7px; cursor:pointer; margin-right:6px}
+  .led-imp:hover{border-color:var(--accent); color:var(--accent-ink)}
+  .led-sum{display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; position:sticky; top:0; z-index:5; background:var(--surface); padding:6px 0 8px; box-shadow:0 6px 8px -6px rgba(0,0,0,.15)}
   .led-s{flex:1; min-width:80px; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:7px 6px; text-align:center}
   .led-s i{display:block; font-size:10.5px; font-style:normal; color:var(--ink-3); margin-bottom:3px}
   .led-s b{font-size:14px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums}
@@ -3686,6 +3688,9 @@
     el.innerHTML="";
     var head=document.createElement("div"); head.className="led-head"; head.innerHTML='<h3>가계부</h3>';
     var nav=document.createElement("div"); nav.className="led-nav";
+    var imp=document.createElement("button"); imp.type="button"; imp.className="led-imp"; imp.textContent="엑셀 붙여넣기"; imp.title="엑셀 표를 붙여 한 번에 가져오기";
+    imp.onclick=function(){ openLedgerImport(yr); };
+    nav.appendChild(imp);
     var prev=document.createElement("button"); prev.type="button"; prev.className="led-navb"; prev.textContent="‹";
     var mlabel=document.createElement("span"); mlabel.className="led-mlabel"; mlabel.textContent=yr+". "+pad(ledgerMonth)+"월";
     var next=document.createElement("button"); next.type="button"; next.className="led-navb"; next.textContent="›";
@@ -3751,6 +3756,27 @@
     s+='</svg>';
     wrap.innerHTML='<div class="led-chart-legend"><span class="lg inc">수입</span><span class="lg exp">지출</span></div>'+s;
     return wrap;
+  }
+  // 엑셀(탭구분) 월별 행 붙여넣기 → 항목 매핑해서 가져오기
+  function openLedgerImport(baseYear){
+    textModal({ title:"엑셀 붙여넣기 가져오기",
+      messageHtml:"엑셀에서 <b>월별 데이터 행</b>(1월·2월 … 또는 26년 9월)을 복사해 붙여넣고 <b>가져오기</b>.<br>연도 없는 행은 <b>"+baseYear+"년</b>으로 저장, 같은 달은 덮어씁니다. (열 순서는 기존 표 기준)",
+      value:"", readOnly:false, okText:"가져오기",
+      onOk:function(v){ var n=importLedgerPaste(v, baseYear); if(!n){ flash("인식된 월 데이터가 없어요."); return false; } flash(n+"개월 가져왔어요 ✦"); return true; } });
+  }
+  function importLedgerPaste(text, baseYear){
+    var map={3:"sal",4:"sal2",5:"rent",6:"ssj",7:"inc_etc",8:"pension",10:"c_shinhan",11:"c_hyundai",12:"c_samsung",13:"c_hana",14:"c_kb",15:"c_uk",16:"c_comm",17:"r_kdb",18:"r_saving",19:"i_stock",20:"i_coin",21:"h_tax",22:"h_holiday",23:"h_personal",24:"h_event",25:"h_eeum",26:"h_etc"};
+    var lines=(text||"").split(/\r?\n/), count=0;
+    lines.forEach(function(ln){
+      var cols=ln.split("\t"), c0=(cols[0]||"").trim();
+      var mt=c0.match(/(?:(\d{2,4})\s*년)?\s*(\d{1,2})\s*월/); if(!mt) return;
+      var y=mt[1]? (mt[1].length===2?"20"+mt[1]:mt[1]) : String(baseYear), ym=y+"-"+pad(+mt[2]);
+      var cells={}; Object.keys(map).forEach(function(ci){ var v=parseWon(cols[+ci]); if(v) cells[map[ci]]=v; });
+      var note=(cols[2]||"").trim();
+      if(Object.keys(cells).length || note){ state.ledger[ym]={cells:cells, note:note}; count++; }
+    });
+    if(count){ save(); renderAdminLedger(); }
+    return count;
   }
 
   // 같은 날짜에 기록이 둘 이상이면 하나로 병합(끼니는 빈 슬롯으로 이동, 골프 라운드는 슬롯별 스코어로 보존)
