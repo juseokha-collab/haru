@@ -2477,11 +2477,13 @@
     stats.appendChild(line1);
     if(golfCompare && cmpPts.length){ var line2=document.createElement("div"); line2.className="gc-stat-line gc-cmp-line"; var _rec=golfRecordVs(golfCompare); var _wlTxt=_rec.n? ' · <b style="color:#3FA35A">'+_rec.w+'승 '+_rec.l+'패</b>'+(_rec.d?' '+_rec.d+'무':'')+' ('+_rec.n+'게임)' : ''; line2.innerHTML='<span class="gc-swatch"></span><b>'+esc(golfCompare)+'</b> '+cmpPts.length+'R · 평균 '+cavg.toFixed(1)+'타'+_wlTxt; stats.appendChild(line2); }
     var periods=document.createElement("div"); periods.className="gc-periods";
-    if(!yrFilter){ [["6m","6개월"],["1y","1년"],["all","전체"]].forEach(function(p){ var b=document.createElement("button"); b.type="button"; b.textContent=p[1]; if(golfChartPeriod===p[0]) b.className="on"; b.onclick=function(){ golfChartPeriod=p[0]; renderAdminGolf(); }; periods.appendChild(b); }); }
+    if(!yrFilter){ [["6m","6개월"],["1y","1년"],["all","전체"],["yearly","연도별"]].forEach(function(p){ var b=document.createElement("button"); b.type="button"; b.textContent=p[1]; if(golfChartPeriod===p[0]) b.className="on"; b.onclick=function(){ golfChartPeriod=p[0]; renderAdminGolf(); }; periods.appendChild(b); }); }
     else { var yb=document.createElement("span"); yb.className="gc-yr-badge"; yb.textContent=adminYear+"년"; periods.appendChild(yb); }
     top.appendChild(stats); top.appendChild(periods);
     wrap.appendChild(top);
-    var chart=document.createElement("div"); chart.className="gc-chart"; chart.innerHTML=golfChartSvg(myPts, avg, golfCompare?cmpPts:[], golfCompare);
+    var chart=document.createElement("div"); chart.className="gc-chart";
+    if(golfChartPeriod==="yearly" && !yrFilter){ chart.innerHTML=golfYearlySvg(golfYearlyData()); }
+    else chart.innerHTML=golfChartSvg(myPts, avg, golfCompare?cmpPts:[], golfCompare);
     var tipEl=document.createElement("div"); tipEl.className="gc-tip"; tipEl.hidden=true; chart.appendChild(tipEl);
     Array.prototype.forEach.call(chart.querySelectorAll("[data-tip]"), function(c){
       c.addEventListener("mouseenter", function(){ var r=c.getBoundingClientRect(), cr=chart.getBoundingClientRect(); tipEl.textContent=c.getAttribute("data-tip"); tipEl.hidden=false; tipEl.style.left=(r.left+r.width/2-cr.left+chart.scrollLeft)+"px"; tipEl.style.top=(r.top-cr.top-8+chart.scrollTop)+"px"; });
@@ -2492,6 +2494,44 @@
     return wrap;
   }
   function isoDate(d){ return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2); }
+  // 연도별 집계: {y, avg(18홀환산), rounds, courses, comps}
+  function golfYearlyData(){
+    var ya={};
+    (state.entries||[]).forEach(function(e){ var y=(e.date||"").slice(0,4); if(!/^\d{4}$/.test(y)) return;
+      roundsOf(e).forEach(function(r){ if(!(state.golf && state.golf[r.place])) return;
+        var o=ya[y]||(ya[y]={sum:0,sn:0,rounds:0,courses:{},comp:{}});
+        o.rounds++; o.courses[r.place]=1;
+        var mine=r.scores["나"]; if(mine!=null&&mine!==""&&!isNaN(+mine)){ o.sum+=Math.round(+mine*18/(r.holes||18)); o.sn++; }
+        var mp=(r.slot && e.meals && e.meals[r.slot] && e.meals[r.slot].people)||[]; mp.forEach(function(nm){ if(nm&&nm!=="나") o.comp[nm]=1; });
+        Object.keys(r.scores).forEach(function(nm){ if(nm!=="나") o.comp[nm]=1; });
+      });
+    });
+    return Object.keys(ya).sort().filter(function(y){ return ya[y].sn>0; }).map(function(y){ var o=ya[y]; return {y:y, avg:o.sum/o.sn, rounds:o.rounds, courses:Object.keys(o.courses).length, comps:Object.keys(o.comp).length}; });
+  }
+  function golfYearlySvg(years){
+    var H=225, pl=30, pr=18, ptop=16, pb=26;
+    if(!years.length) return '<svg viewBox="0 0 560 '+H+'" class="gc-svg" width="560" height="'+H+'"><text x="280" y="'+(H/2)+'" text-anchor="middle" class="gc-empty-t">연도별 기록이 없어요</text></svg>';
+    var n=years.length, GAP=Math.max(50, Math.min(96, 520/Math.max(1,n))), W=Math.max(560, pl+pr+GAP*Math.max(1,n-1)), iw=W-pl-pr, ih=H-ptop-pb;
+    var xOf=function(i){ return n===1? pl+iw/2 : pl+iw*(i/(n-1)); };
+    var vals=years.map(function(o){return o.avg;}), mn=Math.min.apply(null,vals)-2, mx=Math.max.apply(null,vals)+2;
+    var yOf=function(v){ return ptop+ih*((mx-v)/(mx-mn)); };
+    var s='<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" class="gc-svg">';
+    s+='<text x="'+(pl-4)+'" y="'+(ptop+3)+'" text-anchor="end" class="gc-axl">'+Math.ceil(mx)+'</text>';
+    s+='<text x="'+(pl-4)+'" y="'+(ptop+ih+3)+'" text-anchor="end" class="gc-axl">'+Math.floor(mn)+'</text>';
+    var oavg=vals.reduce(function(a,b){return a+b;},0)/n, ay=yOf(oavg);
+    s+='<line x1="'+pl+'" y1="'+ay.toFixed(1)+'" x2="'+(W-pr)+'" y2="'+ay.toFixed(1)+'" class="gc-avgline"/><text x="'+(pl-4)+'" y="'+(ay+3).toFixed(1)+'" text-anchor="end" class="gc-axl">'+oavg.toFixed(0)+'</text>';
+    var path=years.map(function(o,i){ return (i?"L":"M")+xOf(i).toFixed(1)+" "+yOf(o.avg).toFixed(1); }).join(" ");
+    s+='<path d="'+path+' L'+xOf(n-1).toFixed(1)+' '+(ptop+ih)+' L'+xOf(0).toFixed(1)+' '+(ptop+ih)+' Z" class="gc-area"/>';
+    s+='<path d="'+path+'" class="gc-line" vector-effect="non-scaling-stroke"/>';
+    years.forEach(function(o,i){ var cx=xOf(i), cy=yOf(o.avg);
+      s+='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="3.5" class="gc-dot"/>';
+      s+='<text x="'+cx.toFixed(1)+'" y="'+(cy-7).toFixed(1)+'" text-anchor="middle" class="gc-pt">'+o.avg.toFixed(1)+'</text>';
+      s+='<text x="'+cx.toFixed(1)+'" y="'+(H-8)+'" text-anchor="middle" class="gc-axl">'+o.y+'</text>';
+      s+='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="12" class="gc-hit" data-tip="'+esc(o.y+"년 · "+o.rounds+"라운딩 · "+o.courses+"골프장 · 함께 "+o.comps+"명")+'"/>';
+    });
+    s+='</svg>';
+    return s;
+  }
   // 선 그래프 SVG (타수 큰 값이 위 = 일반 축 방향). cmpPts 있으면 비교선 추가
   function golfChartSvg(myPts, avg, cmpPts, cmpName){
     cmpPts=cmpPts||[];
