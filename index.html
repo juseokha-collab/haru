@@ -694,7 +694,8 @@
   .adm-golf-row{background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:8px 12px}
   .gc-mbox{background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:10px 12px 12px}
   .gc-mbox-h{font-size:11px; font-weight:800; letter-spacing:.03em; color:var(--ink-3); text-transform:uppercase; margin-bottom:8px}
-  .gc-mgrid{display:grid; align-items:center; row-gap:5px; column-gap:7px}
+  .gc-mgrid{display:grid; align-items:center; row-gap:5px; column-gap:12px}
+  .gc-mgrid .gc-p0{padding-right:12px}   /* 나(첫 열)와 동반자 사이 여백 조금 더 */
   .gc-mgrid .gc-c{font-size:12.5px; min-width:0}
   .gc-mgrid .gc-cd{color:var(--ink-3); font-variant-numeric:tabular-nums; white-space:nowrap}
   .gc-mgrid .gc-cp{font-weight:700; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
@@ -2441,9 +2442,8 @@
       var rounds=byMonth[ym];
       var box=document.createElement("div"); box.className="gc-mbox";
       var mh=document.createElement("div"); mh.className="gc-mbox-h"; mh.textContent=ym.slice(2).replace("-",".")+"  ·  "+rounds.length+"라운딩"; box.appendChild(mh);
-      var maxP=1; rounds.forEach(function(r){ maxP=Math.max(maxP, 1+r.ppl.length); });
-      var grid=document.createElement("div"); grid.className="gc-mgrid"; grid.style.gridTemplateColumns="48px minmax(76px,130px) repeat("+maxP+",max-content) 1fr";
-      rounds.forEach(function(r){ appendGolfRoundRow(grid, r, maxP); });
+      var grid=document.createElement("div"); grid.className="gc-mgrid"; grid.style.gridTemplateColumns="48px minmax(76px,130px) repeat(4,max-content) 1fr";
+      rounds.forEach(function(r){ appendGolfRoundRow(grid, r); });
       box.appendChild(grid); listWrap.appendChild(box);
     });
     if(!listRounds.length){ var em=document.createElement("div"); em.className="adm-empty";
@@ -2624,18 +2624,23 @@
     if(!fixed){ var x=document.createElement("button"); x.type="button"; x.className="agr-sc-del"; x.title="이 동반자 삭제"; x.textContent="×"; x.onclick=function(){ cell.parentNode.removeChild(cell); }; cell.appendChild(x); }
     return cell;
   }
-  // 라운드 한 줄을 월 박스 그리드에 셀 단위로 추가(열 정렬) + 수정 버튼
-  function appendGolfRoundRow(grid, r, maxP){
-    var gs=r.scores||{};
-    var vals=[]; var addv=function(v){ if(v!=null&&v!==""&&!isNaN(+v)) vals.push(+v); }; addv(gs["나"]); r.ppl.forEach(function(n){ addv(gs[n]); });
-    var minV=vals.length?Math.min.apply(null,vals):null, holes=r.holes||18;
-    var dCell=document.createElement("span"); dCell.className="gc-c gc-cd"; dCell.textContent=(r.date||"").slice(2).replace(/-/g,"."); grid.appendChild(dCell);
-    var pCell=document.createElement("span"); pCell.className="gc-c gc-cp"; pCell.textContent=(r.place||"")+(holes!==18?'('+holes+'홀)':''); pCell.title=r.place||""; grid.appendChild(pCell);
+  // 라운드를 월 박스 그리드에 추가: 동반자 4명 초과 시 4열 기준으로 다음 줄에 이어 표기(날짜/장소/수정은 첫 줄만)
+  function appendGolfRoundRow(grid, r){
+    var gs=r.scores||{}, PCOLS=4, holes=r.holes||18;
     var players=[["나",gs["나"]]].concat(r.ppl.map(function(n){return [n,gs[n]];}));
-    for(var i=0;i<maxP;i++){ var cell=document.createElement("span"); cell.className="gc-c gc-cs"; var pr=players[i];
-      if(pr){ var v=pr[1], has=(v!=null&&v!==""&&!isNaN(+v)), win=has&&+v===minV; if(win) cell.className+=" win"; cell.innerHTML='<span class="gc-nm">'+esc(pr[0])+'</span> <span class="gc-v">'+(has?(+v):'')+'</span>'; }
-      grid.appendChild(cell); }
-    var ed=document.createElement("button"); ed.type="button"; ed.className="gc-c gsum-edit"; ed.textContent="✏️"; ed.title="수정"; ed.onclick=function(){ openGolfEdit(r); }; grid.appendChild(ed);
+    var vals=[]; players.forEach(function(p){ var v=p[1]; if(v!=null&&v!==""&&!isNaN(+v)) vals.push(+v); });
+    var minV=vals.length?Math.min.apply(null,vals):null;
+    var chunks=Math.max(1, Math.ceil(players.length/PCOLS));
+    for(var ci=0; ci<chunks; ci++){
+      var dCell=document.createElement("span"); dCell.className="gc-c gc-cd"; if(ci===0) dCell.textContent=(r.date||"").slice(2).replace(/-/g,"."); grid.appendChild(dCell);
+      var pCell=document.createElement("span"); pCell.className="gc-c gc-cp"; if(ci===0){ pCell.textContent=(r.place||"")+(holes!==18?'('+holes+'홀)':''); pCell.title=r.place||""; } grid.appendChild(pCell);
+      for(var j=0;j<PCOLS;j++){ var idx=ci*PCOLS+j, pr=players[idx];
+        var cell=document.createElement("span"); cell.className="gc-c gc-cs"+(j===0?" gc-p0":"");
+        if(pr){ var v=pr[1], has=(v!=null&&v!==""&&!isNaN(+v)), win=has&&+v===minV; if(win) cell.className+=" win"; cell.innerHTML='<span class="gc-nm">'+esc(pr[0])+'</span> <span class="gc-v">'+(has?(+v):'')+'</span>'; }
+        grid.appendChild(cell); }
+      if(ci===0){ var ed=document.createElement("button"); ed.type="button"; ed.className="gc-c gsum-edit"; ed.textContent="✏️"; ed.title="수정"; ed.onclick=function(){ openGolfEdit(r); }; grid.appendChild(ed); }
+      else { var sp=document.createElement("span"); sp.className="gc-c"; grid.appendChild(sp); }
+    }
   }
   // 편집 폼(날짜·골프장·홀·나/동반자 점수·동반자 추가) — form._apply로 커밋
   function buildGolfEditForm(r){
