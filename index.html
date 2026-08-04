@@ -694,15 +694,15 @@
   .adm-golf-row{background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:8px 12px}
   .gc-mbox{background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:10px 12px 12px}
   .gc-mbox-h{font-size:11px; font-weight:800; letter-spacing:.03em; color:var(--ink-3); text-transform:uppercase; margin-bottom:8px}
-  .gc-mgrid{display:grid; align-items:baseline; row-gap:11px; column-gap:10px}
+  .gc-mgrid{display:grid; align-items:center; row-gap:5px; column-gap:7px}
   .gc-mgrid .gc-c{font-size:12.5px; min-width:0}
   .gc-mgrid .gc-cd{color:var(--ink-3); font-variant-numeric:tabular-nums; white-space:nowrap}
   .gc-mgrid .gc-cp{font-weight:700; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .gc-mgrid .gc-cs{color:var(--ink-2); font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .gc-mgrid .gc-cs .gc-v{font-weight:600; color:var(--ink)}
   .gc-mgrid .gc-cs.win, .gc-mgrid .gc-cs.win .gc-v{color:#3FA35A; font-weight:800}
-  .gsum-edit{justify-self:end; align-self:center; border:1px solid var(--border); background:var(--surface); color:var(--ink-2); font-family:inherit; font-size:11px; font-weight:700; padding:4px 11px; border-radius:7px; cursor:pointer}
-  .gsum-edit:hover{border-color:var(--accent); color:var(--accent-ink)}
+  .gsum-edit{justify-self:end; align-self:center; border:0; background:transparent; color:var(--ink-3); font-size:15px; line-height:1; padding:3px 5px; border-radius:6px; cursor:pointer}
+  .gsum-edit:hover{background:var(--surface)}
   .golf-edit-modal{max-width:560px; width:100%}
   .golf-edit-modal .agr-form{margin:6px 0 4px}
   .agr-head{display:flex; align-items:center; gap:7px; margin-bottom:6px}
@@ -2442,7 +2442,7 @@
       var box=document.createElement("div"); box.className="gc-mbox";
       var mh=document.createElement("div"); mh.className="gc-mbox-h"; mh.textContent=ym.slice(2).replace("-",".")+"  ·  "+rounds.length+"라운딩"; box.appendChild(mh);
       var maxP=1; rounds.forEach(function(r){ maxP=Math.max(maxP, 1+r.ppl.length); });
-      var grid=document.createElement("div"); grid.className="gc-mgrid"; grid.style.gridTemplateColumns="52px minmax(80px,140px) repeat("+maxP+",minmax(56px,1fr)) auto";
+      var grid=document.createElement("div"); grid.className="gc-mgrid"; grid.style.gridTemplateColumns="48px minmax(76px,130px) repeat("+maxP+",max-content) 1fr";
       rounds.forEach(function(r){ appendGolfRoundRow(grid, r, maxP); });
       box.appendChild(grid); listWrap.appendChild(box);
     });
@@ -2635,7 +2635,7 @@
     for(var i=0;i<maxP;i++){ var cell=document.createElement("span"); cell.className="gc-c gc-cs"; var pr=players[i];
       if(pr){ var v=pr[1], has=(v!=null&&v!==""&&!isNaN(+v)), win=has&&+v===minV; if(win) cell.className+=" win"; cell.innerHTML='<span class="gc-nm">'+esc(pr[0])+'</span> <span class="gc-v">'+(has?(+v):'')+'</span>'; }
       grid.appendChild(cell); }
-    var ed=document.createElement("button"); ed.type="button"; ed.className="gc-c gsum-edit"; ed.textContent="수정"; ed.onclick=function(){ openGolfEdit(r); }; grid.appendChild(ed);
+    var ed=document.createElement("button"); ed.type="button"; ed.className="gc-c gsum-edit"; ed.textContent="✏️"; ed.title="수정"; ed.onclick=function(){ openGolfEdit(r); }; grid.appendChild(ed);
   }
   // 편집 폼(날짜·골프장·홀·나/동반자 점수·동반자 추가) — form._apply로 커밋
   function buildGolfEditForm(r){
