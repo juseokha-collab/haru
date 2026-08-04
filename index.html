@@ -494,7 +494,8 @@
   .plan-row{background:transparent; border:0; border-radius:0; padding:7px 2px; margin-bottom:0}
   .plan-row + .plan-row{border-top:0}
   .plan-row.flagged{background:color-mix(in srgb,#E6A23C 11%,transparent); border-left:3px solid #E6A23C; padding-left:8px; border-radius:6px}
-  .pl-top .pl-flag{width:14px; height:14px; flex:none; margin:0 0 0 2px; accent-color:#E6A23C; cursor:pointer}
+  .pl-top .pl-flag{-webkit-appearance:none; appearance:none; width:15px; height:15px; flex:none; margin:0 0 0 2px; border:1.5px solid var(--border); border-radius:4px; background:var(--surface); cursor:pointer}
+  .pl-top .pl-flag:checked{background:#E6A23C; border-color:#E6A23C}   /* 체크 시 강조색으로 박스 채움 */
   .pl-save{margin-left:2px; font-family:inherit; font-size:11px; font-weight:700; border:1px solid var(--accent); background:var(--accent); color:#fff; border-radius:7px; padding:3px 11px; cursor:pointer}
   .pl-save.done{background:#3FA35A; border-color:#3FA35A}
   .pl-top{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
