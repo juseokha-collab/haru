@@ -2774,10 +2774,10 @@
     var years={}; state.entries.forEach(function(e){ var y=(e.date||"").slice(0,4); if(/^\d{4}$/.test(y)) years[y]=1; });
     (state.plans||[]).forEach(function(p){ var y=(p.due||"").slice(0,4); if(/^\d{4}$/.test(y)) years[y]=1; });
     var list=Object.keys(years).sort().reverse();
-    if(adminYear!=="all" && !years[adminYear]) adminYear="all";
+    if(adminYear!=="all" && !years[adminYear]){ adminYear="all"; golfChartPeriod="yearly"; }
     sel.innerHTML='<option value="all">전체 연도</option>'+list.map(function(y){ return '<option value="'+y+'">'+y+'년</option>'; }).join("");
     sel.value=adminYear;
-    sel.onchange=function(){ adminYear=this.value; golfListPeriod=adminYear; renderAdminGolf(); renderAdminPlan(); renderAdminPeople(); };
+    sel.onchange=function(){ adminYear=this.value; if(adminYear==="all") golfChartPeriod="yearly"; golfListPeriod=adminYear; renderAdminGolf(); renderAdminPlan(); renderAdminPeople(); };
   }
   (function(){
     var back=$("#adminModal"); if(!back) return;
