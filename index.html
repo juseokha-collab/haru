@@ -3548,11 +3548,12 @@
     if(!plans.length){ var emp=document.createElement("div"); emp.className="plan-empty"; emp.innerHTML="아직 없어요.<br>‘오늘 기록’의 Things to do에서 항목을 ×로 지우면 여기에 보관돼요."; el.appendChild(emp); return; }
     var today=todayStr();
     function daysTo(due){ return Math.round((parseD(due)-parseD(today))/864e5); }
-    var s1=[], s2=[], s3=[];   // 1) 7일 이내 미완 2) 그 외 미완 3) 완료
-    plans.forEach(function(p){ if(p.done) s3.push(p); else if(p.due && daysTo(p.due)<=7) s1.push(p); else s2.push(p); });
+    var s1=[], s2=[], s3=[], s4=[];   // 1) 7일 이내 미완 2) 그 외 미완 3) 완료 4) 반복(별도)
+    plans.forEach(function(p){ if(p.repeat){ s4.push(p); return; } if(p.done) s3.push(p); else if(p.due && daysTo(p.due)<=7) s1.push(p); else s2.push(p); });
     var byDueAsc=function(a,b){ var ad=a.due||"9999", bd=b.due||"9999"; return ad<bd?-1:ad>bd?1:0; };
     s1.sort(byDueAsc); s2.sort(byDueAsc);
     s3.sort(function(a,b){ return (b.doneAt||b.ts||0)-(a.doneAt||a.ts||0); });
+    s4.sort(function(a,b){ return (a.task||"").localeCompare(b.task||"","ko"); });
     function buildPlanRow(p){
       var row=document.createElement("div"); row.className="plan-row"+(p.flag?" flagged":"");
       var top=document.createElement("div"); top.className="pl-top";
@@ -3606,6 +3607,7 @@
     stageBlock("이번 주 (7일 이내)", s1);
     stageBlock("예정", s2);
     stageBlock("완료", s3);
+    stageBlock("반복 일정", s4);
   }
 
   // 같은 날짜에 기록이 둘 이상이면 하나로 병합(끼니는 빈 슬롯으로 이동, 골프 라운드는 슬롯별 스코어로 보존)
