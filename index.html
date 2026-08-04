@@ -684,6 +684,53 @@
   .adm-mgmt-chip .amc-btn:hover{background:var(--surface); color:var(--ink)}
   .adm-mgmt-chip .amc-btn.danger:hover{color:var(--c-fam)}
   .gc-yr-badge{font-size:12px; font-weight:800; color:var(--accent-ink); background:color-mix(in srgb,var(--accent) 16%,transparent); border-radius:7px; padding:4px 10px}
+  /* 가계부 */
+  .led-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px}
+  .led-head h3{margin:0; font-size:15px; font-weight:800; color:var(--ink)}
+  .led-nav{display:flex; align-items:center; gap:8px}
+  .led-navb{width:26px; height:26px; border:1px solid var(--border); background:var(--surface); color:var(--ink); border-radius:7px; cursor:pointer; font-size:15px; line-height:1}
+  .led-navb:hover{border-color:var(--accent); color:var(--accent-ink)}
+  .led-mlabel{font-size:13px; font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums; min-width:78px; text-align:center}
+  .led-sum{display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap}
+  .led-s{flex:1; min-width:80px; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:7px 6px; text-align:center}
+  .led-s i{display:block; font-size:10.5px; font-style:normal; color:var(--ink-3); margin-bottom:3px}
+  .led-s b{font-size:14px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums}
+  .led-s.net{background:color-mix(in srgb,var(--accent) 10%,var(--surface-2)); border-color:color-mix(in srgb,var(--accent) 30%,transparent)}
+  .led-s b.pos{color:#2f8f52} .led-s b.neg{color:#d06666}
+  .led-grp{margin-bottom:10px}
+  .led-grp-h{display:flex; align-items:baseline; justify-content:space-between; font-size:11px; font-weight:800; letter-spacing:.03em; color:var(--ink-3); text-transform:uppercase; margin-bottom:5px; padding-bottom:3px; border-bottom:1px solid var(--border)}
+  .led-grp-h b{font-size:12px; color:var(--ink-2); font-variant-numeric:tabular-nums}
+  .led-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:6px}
+  .led-item{display:flex; align-items:center; gap:6px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:4px 6px 4px 9px}
+  .led-item .led-nm{flex:1; min-width:0; font-size:12px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .led-item .led-nm .led-day{font-style:normal; font-size:9.5px; color:var(--ink-3); background:var(--surface); border-radius:4px; padding:0 3px; margin-left:2px}
+  .led-item .led-nm .led-memo{font-style:normal; font-size:9.5px; color:var(--accent-ink)}
+  .led-in{width:84px; flex:none; font-family:inherit; font-size:12px; text-align:right; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:4px 6px; outline:0; font-variant-numeric:tabular-nums}
+  .led-in:focus{border-color:var(--accent)}
+  .led-note-wrap{margin:2px 0 14px}
+  .led-note{width:100%; box-sizing:border-box; font-family:inherit; font-size:12px; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:5px 8px; outline:0}
+  .led-year{margin-top:6px}
+  .led-year-h{font-size:12px; font-weight:800; color:var(--ink); margin-bottom:6px}
+  .led-ytbl{border:1px solid var(--border); border-radius:9px; overflow:hidden}
+  .lyr{display:grid; grid-template-columns:44px 1fr 1fr 1fr 1fr; font-size:11.5px; font-variant-numeric:tabular-nums}
+  .lyr>span{padding:5px 8px; text-align:right; color:var(--ink); border-top:1px solid var(--border)}
+  .lyr>span:first-child{text-align:left; color:var(--ink-2)}
+  .lyr.lyr-head{background:var(--surface-2); font-weight:700; color:var(--ink-2)}
+  .lyr.lyr-head>span{border-top:0; color:var(--ink-3)}
+  .lyr:not(.lyr-head){cursor:pointer}
+  .lyr:not(.lyr-head):hover{background:var(--surface-2)}
+  .lyr.on{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+  .lyr.lyr-tot{font-weight:800; background:var(--surface-2)}
+  .lyr .pos{color:#2f8f52} .lyr .neg{color:#d06666}
+  .led-chart-wrap{margin-top:14px; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:8px 10px}
+  .led-chart-legend{display:flex; gap:12px; font-size:11px; margin-bottom:2px}
+  .led-chart-legend .lg{display:inline-flex; align-items:center; gap:4px; color:var(--ink-2)}
+  .led-chart-legend .lg::before{content:""; width:9px; height:9px; border-radius:2px; display:inline-block}
+  .led-chart-legend .lg.inc::before{background:#5FBFA0} .led-chart-legend .lg.exp::before{background:#E58A8A}
+  .led-svg{display:block; width:100%; height:170px}
+  .led-svg .led-bar-inc{fill:#5FBFA0} .led-svg .led-bar-exp{fill:#E58A8A}
+  .led-svg .led-axl{fill:var(--ink-3); font-size:9px}
+  .led-empty{padding:20px 8px; text-align:center; color:var(--ink-3); font-size:12.5px}
   .amc-btn{width:20px; height:20px; border:0; background:none; color:var(--ink-3); font-size:12px; line-height:1; cursor:pointer; border-radius:5px; padding:0}
   .amc-btn:hover{background:var(--surface); color:var(--ink)}
   .amc-btn.danger:hover{color:var(--c-fam)}
@@ -1108,7 +1155,7 @@
   <div class="modal admin-modal" role="dialog" aria-modal="true">
     <div class="admin-head">
       <div class="admin-tabs" id="adminTabs">
-        <select id="adminYearSel" class="adm-yearsel" title="연도"></select><button type="button" class="on" data-at="plan">일정관리</button><button type="button" data-at="people">인맥 관리</button><button type="button" data-at="golf">골프 스코어</button>
+        <select id="adminYearSel" class="adm-yearsel" title="연도"></select><button type="button" class="on" data-at="plan">일정관리</button><button type="button" data-at="people">인맥 관리</button><button type="button" data-at="golf">골프 스코어</button><button type="button" data-at="ledger">가계부</button>
       </div>
       <input class="modal-find adm-find" id="adminFind" placeholder="🔍 이름 찾기" autocomplete="off">
       <button class="x" id="adminClose" aria-label="닫기">&times;</button>
@@ -1116,6 +1163,7 @@
     <div class="admin-body" id="adminGolf"></div>
     <div class="admin-body" id="adminPeople" hidden></div>
     <div class="admin-body" id="adminPlan" hidden></div>
+    <div class="admin-body" id="adminLedger" hidden></div>
     <div class="admin-toast" id="adminToast" hidden></div>
   </div>
 </div>
@@ -1168,6 +1216,8 @@
   state.plans = state.plans || [];   // 일정관리(Things to do 아카이브 + 반복일정)
   state.subcats = state.subcats || [];
   state.relNames = state.relNames || {};   // 관계(그룹) 표시명 사용자 지정
+  state.ledger = state.ledger || {};        // 가계부: {"YYYY-MM":{cells:{catId:금액}, note}}
+  state.ledgerCats = (state.ledgerCats && state.ledgerCats.length) ? state.ledgerCats : defaultLedgerCats();
   var draft = { date: todayStr(), people: [], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), drinks:emptyDrinks(), exercise:emptyExercise(), golfScore:{}, thoughts:"", learning:"" };
   var hiddenRels = {fam:true, work:true}, hideRest=true, hideGolf=true, drinkPeriod="week", weightPeriod="month", view="graph", recapMonth="", minMeet=2, minMeetIdx=1, meetExact=false, calMonth="", searchQ="", graphYear=String(new Date().getFullYear());
 
@@ -2751,17 +2801,18 @@
   function openAdmin(tab){
     tab=tab||"plan";
     adminTab=tab; adminFindQ=""; golfSearchQ=""; adminSubFilter={}; var _af=$("#adminFind"); if(_af) _af.value=""; setAdminFindPh();
-    renderAdminYearSel(); renderAdminPeople(); renderAdminGolf(); renderAdminPlan();
+    renderAdminYearSel(); renderAdminPeople(); renderAdminGolf(); renderAdminPlan(); renderAdminLedger();
     var tabs=$("#adminTabs").children;
     for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle("on", tabs[i].getAttribute("data-at")===tab);
     $("#adminPeople").hidden = (tab!=="people");
     $("#adminGolf").hidden = (tab!=="golf");
     $("#adminPlan").hidden = (tab!=="plan");
+    $("#adminLedger").hidden = (tab!=="ledger");
     $("#adminModal").hidden=false;
   }
   if($("#adminBtn")) $("#adminBtn").onclick=function(){ openAdmin("plan"); };
   document.addEventListener("click", function(e){ if(e.target && e.target.closest && e.target.closest("#adminBtnM")) openAdmin("plan"); });   // 모바일 관리 버튼(로그인 영역에서 동적 생성)
-  var adminYear=String(new Date().getFullYear()), adminFindQ="", adminSubFilter={}, adminTab="plan", golfSearchQ="";   // 기본 = 올해
+  var adminYear=String(new Date().getFullYear()), adminFindQ="", adminSubFilter={}, adminTab="plan", golfSearchQ="", ledgerMonth=new Date().getMonth()+1;   // 기본 = 올해
   function setAdminFindPh(){ var fi=$("#adminFind"); if(fi) fi.placeholder = (adminTab==="golf")? "🔍 골프장 찾기" : "🔍 이름 찾기"; }
   (function(){ var fi=$("#adminFind"); if(!fi) return; fi.addEventListener("input",function(){ var v=this.value.trim();
     if(adminTab==="golf"){ golfSearchQ=v; renderAdminGolf(); return; }
@@ -2787,8 +2838,8 @@
     $("#adminTabs").addEventListener("click",function(e){ var b=e.target.closest("button"); if(!b) return; var at=b.getAttribute("data-at");
       var tabs=this.children; for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle("on", tabs[i]===b);
       adminTab=at; adminFindQ=""; golfSearchQ=""; var _fi=$("#adminFind"); if(_fi) _fi.value=""; setAdminFindPh();
-      $("#adminPeople").hidden = (at!=="people"); $("#adminGolf").hidden = (at!=="golf"); $("#adminPlan").hidden = (at!=="plan");
-      if(at==="plan") renderAdminPlan(); else if(at==="golf") renderAdminGolf(); else if(at==="people") renderAdminPeople(); });
+      $("#adminPeople").hidden = (at!=="people"); $("#adminGolf").hidden = (at!=="golf"); $("#adminPlan").hidden = (at!=="plan"); $("#adminLedger").hidden = (at!=="ledger");
+      if(at==="plan") renderAdminPlan(); else if(at==="golf") renderAdminGolf(); else if(at==="people") renderAdminPeople(); else if(at==="ledger") renderAdminLedger(); });
   })();
 
   // 오늘 기록 찾기: 주요일정·회고(Reflection)·배움(Learning) 텍스트 검색 → 해당 기록으로 이동
@@ -3610,6 +3661,98 @@
     stageBlock("반복 일정", s4);
   }
 
+  // ---------- 가계부 ----------
+  var LEDGER_GROUPS=[{k:"income",n:"수입"},{k:"card",n:"카드지출"},{k:"regular",n:"정기지출"},{k:"invest",n:"투자"},{k:"cash",n:"현금"}];
+  function defaultLedgerCats(){ return [
+    {id:"sal",group:"income",name:"급여",day:20},{id:"sal2",group:"income",name:"급여외",day:14},{id:"rent",group:"income",name:"임대소득",day:30},{id:"ssj",group:"income",name:"상원/상진",day:1},{id:"inc_etc",group:"income",name:"기타"},{id:"pension",group:"income",name:"연금",day:20,memo:"하나"},
+    {id:"c_shinhan",group:"card",name:"신한",day:25},{id:"c_hyundai",group:"card",name:"현대",day:25,memo:"K뱅크"},{id:"c_samsung",group:"card",name:"삼성",day:26,memo:"모니모"},{id:"c_hana",group:"card",name:"하나",day:25},{id:"c_kb",group:"card",name:"KB",day:26,memo:"K뱅크"},{id:"c_uk",group:"card",name:"영국"},{id:"c_comm",group:"card",name:"통신/교통",memo:"12/15/21"},
+    {id:"r_kdb",group:"regular",name:"KDB생명",day:30,memo:"카뱅"},{id:"r_saving",group:"regular",name:"적금 신한",day:20},
+    {id:"i_stock",group:"invest",name:"주식/IRP"},{id:"i_coin",group:"invest",name:"코인"},
+    {id:"h_tax",group:"cash",name:"세금"},{id:"h_holiday",group:"cash",name:"명절"},{id:"h_personal",group:"cash",name:"개인"},{id:"h_event",group:"cash",name:"축/조의"},{id:"h_eeum",group:"cash",name:"e음"},{id:"h_etc",group:"cash",name:"기타"}
+  ]; }
+  function fmtWon(n){ n=Math.round(n||0); var s=Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,","); return (n<0?"-":"")+s; }
+  function parseWon(s){ s=(s||"").toString().replace(/[^\d-]/g,""); var n=parseInt(s,10); return isNaN(n)?0:n; }
+  function ledCatsOf(g){ return (state.ledgerCats||[]).filter(function(c){return c.group===g;}); }
+  function ledCell(ym,id){ var m=state.ledger[ym]; return (m&&m.cells&&m.cells[id])||0; }
+  function ledMonthTotals(ym){
+    var t={income:0,card:0,regular:0,invest:0,cash:0};
+    (state.ledgerCats||[]).forEach(function(c){ if(t[c.group]!=null) t[c.group]+=ledCell(ym,c.id); });
+    t.expense=t.card+t.regular+t.cash; t.net=t.income-t.expense-t.invest;   // 투자=지출성(양수 지출/음수 수입)
+    return t;
+  }
+  function renderAdminLedger(){
+    var el=$("#adminLedger"); if(!el) return;
+    var yr=adminYear==="all"?String(new Date().getFullYear()):adminYear, ym=yr+"-"+pad(ledgerMonth);
+    el.innerHTML="";
+    var head=document.createElement("div"); head.className="led-head"; head.innerHTML='<h3>가계부</h3>';
+    var nav=document.createElement("div"); nav.className="led-nav";
+    var prev=document.createElement("button"); prev.type="button"; prev.className="led-navb"; prev.textContent="‹";
+    var mlabel=document.createElement("span"); mlabel.className="led-mlabel"; mlabel.textContent=yr+". "+pad(ledgerMonth)+"월";
+    var next=document.createElement("button"); next.type="button"; next.className="led-navb"; next.textContent="›";
+    prev.onclick=function(){ ledgerMonth--; if(ledgerMonth<1)ledgerMonth=12; renderAdminLedger(); };
+    next.onclick=function(){ ledgerMonth++; if(ledgerMonth>12)ledgerMonth=1; renderAdminLedger(); };
+    nav.appendChild(prev); nav.appendChild(mlabel); nav.appendChild(next); head.appendChild(nav); el.appendChild(head);
+    var t=ledMonthTotals(ym);
+    var sum=document.createElement("div"); sum.className="led-sum";
+    sum.innerHTML='<div class="led-s"><i>수입</i><b>'+fmtWon(t.income)+'</b></div><div class="led-s"><i>지출</i><b>'+fmtWon(t.expense)+'</b></div><div class="led-s"><i>투자</i><b>'+fmtWon(t.invest)+'</b></div><div class="led-s net"><i>수지</i><b class="'+(t.net<0?"neg":"pos")+'">'+fmtWon(t.net)+'</b></div>';
+    el.appendChild(sum);
+    LEDGER_GROUPS.forEach(function(g){
+      var cats=ledCatsOf(g.k); if(!cats.length) return;
+      var gt=0; cats.forEach(function(c){ gt+=ledCell(ym,c.id); });
+      var sec=document.createElement("div"); sec.className="led-grp";
+      var gh=document.createElement("div"); gh.className="led-grp-h"; gh.innerHTML='<span>'+esc(g.n)+'</span><b>'+fmtWon(gt)+'</b>'; sec.appendChild(gh);
+      var grid=document.createElement("div"); grid.className="led-grid";
+      cats.forEach(function(c){
+        var item=document.createElement("label"); item.className="led-item";
+        item.innerHTML='<span class="led-nm">'+esc(c.name)+(c.day?' <i class="led-day">'+c.day+'일</i>':'')+(c.memo?' <i class="led-memo">'+esc(c.memo)+'</i>':'')+'</span>';
+        var inp=document.createElement("input"); inp.type="text"; inp.className="led-in"; inp.inputMode="numeric"; inp.value=ledCell(ym,c.id)?fmtWon(ledCell(ym,c.id)):""; inp.placeholder="0";
+        inp.onchange=function(){ var v=parseWon(inp.value); state.ledger[ym]=state.ledger[ym]||{cells:{},note:""}; state.ledger[ym].cells=state.ledger[ym].cells||{}; if(v) state.ledger[ym].cells[c.id]=v; else delete state.ledger[ym].cells[c.id]; save(); renderAdminLedger(); };
+        item.appendChild(inp); grid.appendChild(item);
+      });
+      sec.appendChild(grid); el.appendChild(sec);
+    });
+    var noteWrap=document.createElement("div"); noteWrap.className="led-note-wrap";
+    var note=document.createElement("input"); note.type="text"; note.className="led-note"; note.placeholder="이 달 비고"; note.value=(state.ledger[ym]&&state.ledger[ym].note)||"";
+    note.onchange=function(){ state.ledger[ym]=state.ledger[ym]||{cells:{},note:""}; state.ledger[ym].note=note.value.trim(); save(); };
+    noteWrap.appendChild(note); el.appendChild(noteWrap);
+    el.appendChild(buildLedgerYear(yr));
+    el.appendChild(buildLedgerChart(yr));
+  }
+  function buildLedgerYear(yr){
+    var box=document.createElement("div"); box.className="led-year";
+    box.innerHTML='<div class="led-year-h">'+yr+'년 요약</div>';
+    var tbl=document.createElement("div"); tbl.className="led-ytbl";
+    tbl.innerHTML='<div class="lyr lyr-head"><span>월</span><span>수입</span><span>지출</span><span>투자</span><span>수지</span></div>';
+    var tot={income:0,expense:0,invest:0,net:0}, any=false;
+    for(var m=1;m<=12;m++){ var ym=yr+"-"+pad(m), t=ledMonthTotals(ym); if(!(t.income||t.expense||t.invest)) continue; any=true;
+      tot.income+=t.income; tot.expense+=t.expense; tot.invest+=t.invest; tot.net+=t.net;
+      var row=document.createElement("div"); row.className="lyr"+(m===ledgerMonth?" on":""); row.setAttribute("data-m",m);
+      row.innerHTML='<span>'+m+'월</span><span>'+fmtWon(t.income)+'</span><span>'+fmtWon(t.expense)+'</span><span>'+fmtWon(t.invest)+'</span><span class="'+(t.net<0?"neg":"pos")+'">'+fmtWon(t.net)+'</span>';
+      row.onclick=function(){ ledgerMonth=+this.getAttribute("data-m"); renderAdminLedger(); };
+      tbl.appendChild(row);
+    }
+    if(any){ var trow=document.createElement("div"); trow.className="lyr lyr-tot"; trow.innerHTML='<span>합계</span><span>'+fmtWon(tot.income)+'</span><span>'+fmtWon(tot.expense)+'</span><span>'+fmtWon(tot.invest)+'</span><span class="'+(tot.net<0?"neg":"pos")+'">'+fmtWon(tot.net)+'</span>'; tbl.appendChild(trow); }
+    else { var em=document.createElement("div"); em.className="led-empty"; em.textContent="이 해 입력이 없어요."; tbl.appendChild(em); }
+    box.appendChild(tbl); return box;
+  }
+  function buildLedgerChart(yr){
+    var wrap=document.createElement("div"); wrap.className="led-chart-wrap";
+    var months=[], any=false; for(var m=1;m<=12;m++){ var t=ledMonthTotals(yr+"-"+pad(m)); if(t.income||t.expense) any=true; months.push({m:m,inc:t.income,exp:t.expense}); }
+    if(!any){ wrap.innerHTML='<div class="led-empty">입력이 쌓이면 수입·지출 그래프가 그려져요</div>'; return wrap; }
+    var W=Math.max(300,Math.min(680,(window.innerWidth||760)-90)), H=170, pl=8, pr=8, pb=18, pt=8;
+    var maxV=1; months.forEach(function(o){ maxV=Math.max(maxV,o.inc,o.exp); });
+    var bw=(W-pl-pr)/12, yBot=H-pb, ih=yBot-pt, yOf=function(v){ return yBot-(v/maxV)*ih; };
+    var s='<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" class="led-svg">';
+    months.forEach(function(o,i){ var cx=pl+bw*i+bw/2, bwi=bw*0.28;
+      if(o.inc) s+='<rect x="'+(cx-bwi-1).toFixed(1)+'" y="'+yOf(o.inc).toFixed(1)+'" width="'+bwi.toFixed(1)+'" height="'+(yBot-yOf(o.inc)).toFixed(1)+'" rx="1.5" class="led-bar-inc"/>';
+      if(o.exp) s+='<rect x="'+(cx+1).toFixed(1)+'" y="'+yOf(o.exp).toFixed(1)+'" width="'+bwi.toFixed(1)+'" height="'+(yBot-yOf(o.exp)).toFixed(1)+'" rx="1.5" class="led-bar-exp"/>';
+      s+='<text x="'+cx.toFixed(1)+'" y="'+(H-5)+'" text-anchor="middle" class="led-axl">'+o.m+'</text>';
+    });
+    s+='</svg>';
+    wrap.innerHTML='<div class="led-chart-legend"><span class="lg inc">수입</span><span class="lg exp">지출</span></div>'+s;
+    return wrap;
+  }
+
   // 같은 날짜에 기록이 둘 이상이면 하나로 병합(끼니는 빈 슬롯으로 이동, 골프 라운드는 슬롯별 스코어로 보존)
   // → 달력(마지막)과 수정(첫번째)이 서로 다른 기록을 보던 문제 해결 + 하루 여러 라운드 자연 지원
   function mergeDuplicateDates(){
@@ -3680,7 +3823,7 @@
     get:function(){ return state; },
     replace:function(s, keepDraft){
       if(!s || !Array.isArray(s.entries)) return;
-      state={ people:s.people||{}, entries:s.entries||[], events:s.events||[], golf:s.golf||{}, todos:s.todos||[], plans:s.plans||[], subcats:s.subcats||[], relNames:s.relNames||{} };
+      state={ people:s.people||{}, entries:s.entries||[], events:s.events||[], golf:s.golf||{}, todos:s.todos||[], plans:s.plans||[], subcats:s.subcats||[], relNames:s.relNames||{}, ledger:s.ledger||{}, ledgerCats:(s.ledgerCats&&s.ledgerCats.length)?s.ledgerCats:defaultLedgerCats() };
       mergeDuplicateDates();
       save();
       if(!keepDraft) resetDraft();
