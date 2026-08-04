@@ -725,7 +725,13 @@
   .lyr.on{background:color-mix(in srgb,var(--accent) 10%,transparent)}
   .lyr.lyr-tot{font-weight:800; background:var(--surface-2)}
   .lyr .pos{color:#2f8f52} .lyr .neg{color:#d06666}
-  .led-chart-wrap{margin-top:14px; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:8px 10px}
+  .led-notes{margin-top:16px}
+  .led-note-item{display:flex; gap:9px; align-items:baseline; padding:5px 6px; border-radius:7px; cursor:pointer; border-bottom:1px solid var(--border)}
+  .led-note-item:hover{background:var(--surface-2)}
+  .led-note-item.on{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+  .led-note-item .lni-m{flex:none; width:34px; font-size:11.5px; font-weight:700; color:var(--ink-2); font-variant-numeric:tabular-nums}
+  .led-note-item .lni-t{flex:1; min-width:0; font-size:12.5px; color:var(--ink)}
+  .led-chart-wrap{margin-top:16px; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:8px 10px}
   .led-chart-legend{display:flex; gap:12px; font-size:11px; margin-bottom:2px}
   .led-chart-legend .lg{display:inline-flex; align-items:center; gap:4px; color:var(--ink-2)}
   .led-chart-legend .lg::before{content:""; width:9px; height:9px; border-radius:2px; display:inline-block}
@@ -3740,7 +3746,21 @@
     note.onchange=function(){ state.ledger[ym]=state.ledger[ym]||{cells:{},note:""}; state.ledger[ym].note=note.value.trim(); save(); };
     noteWrap.appendChild(note); el.appendChild(noteWrap);
     el.appendChild(buildLedgerYear(yr));
+    el.appendChild(buildLedgerNotes(yr));
     el.appendChild(buildLedgerChart(yr));
+  }
+  function buildLedgerNotes(yr){
+    var box=document.createElement("div"); box.className="led-notes";
+    box.innerHTML='<div class="led-year-h">'+yr+'년 비고 모아보기</div>';
+    var any=false;
+    for(var m=1;m<=12;m++){ var ym=yr+"-"+pad(m), mn=state.ledger[ym]; if(!(mn&&mn.note)) continue; any=true;
+      var it=document.createElement("div"); it.className="led-note-item"+(m===ledgerMonth?" on":""); it.setAttribute("data-m",m);
+      it.innerHTML='<span class="lni-m">'+m+'월</span><span class="lni-t">'+esc(mn.note)+'</span>';
+      it.onclick=function(){ ledgerMonth=+this.getAttribute("data-m"); renderAdminLedger(); };
+      box.appendChild(it);
+    }
+    if(!any){ var em=document.createElement("div"); em.className="led-empty"; em.textContent="이 해 비고가 없어요. (각 달 하단 ‘이 달 비고’에 적으면 여기 모여요)"; box.appendChild(em); }
+    return box;
   }
   function buildLedgerYear(yr){
     var box=document.createElement("div"); box.className="led-year";
