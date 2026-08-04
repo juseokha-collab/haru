@@ -54,6 +54,13 @@
     --accent:#E7B24C; --accent-ink:#F1C46E; --accent-soft:rgba(231,178,76,.14);
     --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 32px rgba(0,0,0,.45);
   }
+  /* 관리자 계열 모달은 테마와 무관하게 화이트 톤 고정(시인성) */
+  .admin-modal, .modal.force-light{
+    --surface:#FFFFFF; --surface-2:#EDEFF6; --border:#DEE2EC;
+    --ink:#191E2C; --ink-2:#4B5268; --ink-3:#838BA3;
+    --accent:#B9822A; --accent-ink:#8A6115; --accent-soft:rgba(185,130,42,.12);
+    color:var(--ink);
+  }
 
   *{box-sizing:border-box}
   html,body{margin:0}
@@ -776,14 +783,17 @@
   .adm-golf-row{background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:8px 12px}
   .gc-mbox{background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:10px 12px 12px}
   .gc-mbox-h{font-size:11px; font-weight:800; letter-spacing:.03em; color:var(--ink-3); text-transform:uppercase; margin-bottom:8px}
-  .gc-mgrid{display:grid; align-items:center; row-gap:5px; column-gap:12px}
-  .gc-mgrid .gc-p0{padding-right:12px}   /* 나(첫 열)와 동반자 사이 여백 조금 더 */
-  .gc-mgrid .gc-c{font-size:12.5px; min-width:0}
-  .gc-mgrid .gc-cd{color:var(--ink-3); font-variant-numeric:tabular-nums; white-space:nowrap}
-  .gc-mgrid .gc-cp{font-weight:400; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-  .gc-mgrid .gc-cs{color:var(--ink-2); font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-  .gc-mgrid .gc-cs .gc-v{font-weight:400; color:var(--ink)}
-  .gc-mgrid .gc-cs.win, .gc-mgrid .gc-cs.win .gc-v{color:#3FA35A; font-weight:400}
+  .gc-round{display:flex; align-items:flex-start; gap:12px; padding:7px 2px; border-top:1px solid var(--border)}
+  .gc-round:first-of-type{border-top:0}
+  .gc-dp{flex:none; width:80px}
+  .gc-dp .gc-d{display:block; font-size:11px; color:var(--ink-3); font-variant-numeric:tabular-nums; white-space:nowrap}
+  .gc-dp .gc-p{display:block; font-size:13px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px}
+  .gc-players{flex:1; min-width:0; display:flex; flex-wrap:wrap; gap:5px 14px; align-content:flex-start; padding-top:1px}
+  .gc-players .gc-pl{font-size:12.5px; color:var(--ink-2); font-variant-numeric:tabular-nums; white-space:nowrap}
+  .gc-players .gc-pl .gc-nm{color:var(--ink)}
+  .gc-players .gc-pl .gc-v{color:var(--ink)}
+  .gc-players .gc-pl.win, .gc-players .gc-pl.win .gc-nm, .gc-players .gc-pl.win .gc-v{color:#3FA35A}
+  .gc-round .gsum-edit{flex:none; align-self:center}
   .gsum-edit{justify-self:end; align-self:center; border:0; background:transparent; color:var(--ink-3); font-size:15px; line-height:1; padding:3px 5px; border-radius:6px; cursor:pointer}
   .gsum-edit:hover{background:var(--surface)}
   .golf-edit-modal{max-width:560px; width:100%}
@@ -2536,9 +2546,8 @@
       var rounds=byMonth[ym];
       var box=document.createElement("div"); box.className="gc-mbox";
       var mh=document.createElement("div"); mh.className="gc-mbox-h"; mh.textContent=ym.slice(2).replace("-",".")+"  ·  "+rounds.length+"라운딩"; box.appendChild(mh);
-      var grid=document.createElement("div"); grid.className="gc-mgrid"; grid.style.gridTemplateColumns="48px minmax(76px,130px) repeat(4,max-content) 1fr";
-      rounds.forEach(function(r){ appendGolfRoundRow(grid, r); });
-      box.appendChild(grid); listWrap.appendChild(box);
+      rounds.forEach(function(r){ box.appendChild(buildGolfRoundRow(r)); });
+      listWrap.appendChild(box);
     });
     if(!listRounds.length){ var em=document.createElement("div"); em.className="adm-empty";
       em.textContent = golfSearchQ? ("‘"+golfSearchQ+"’ 골프장 기록이 없어요.") : (golfCompare? ("‘"+golfCompare+"’ 님과 함께한 라운드가 없어요"+(golfListPeriod!=="all"?" ("+golfListPeriod+"년)":"")+".") : (allRounds.length? "이 기간 기록이 없어요." : "골프 기록이 없어요. ‘+ 새 라운드’로 추가하세요."));
@@ -2718,23 +2727,22 @@
     if(!fixed){ var x=document.createElement("button"); x.type="button"; x.className="agr-sc-del"; x.title="이 동반자 삭제"; x.textContent="×"; x.onclick=function(){ cell.parentNode.removeChild(cell); }; cell.appendChild(x); }
     return cell;
   }
-  // 라운드를 월 박스 그리드에 추가: 동반자 4명 초과 시 4열 기준으로 다음 줄에 이어 표기(날짜/장소/수정은 첫 줄만)
-  function appendGolfRoundRow(grid, r){
-    var gs=r.scores||{}, PCOLS=4, holes=r.holes||18;
+  // 라운드 1건: 좌측에 날짜/골프장 2줄, 우측에 나·동반자 점수(자동 줄바꿈), 끝에 ✏️
+  function buildGolfRoundRow(r){
+    var gs=r.scores||{}, holes=r.holes||18;
     var players=[["나",gs["나"]]].concat(r.ppl.map(function(n){return [n,gs[n]];}));
     var vals=[]; players.forEach(function(p){ var v=p[1]; if(v!=null&&v!==""&&!isNaN(+v)) vals.push(+v); });
     var minV=vals.length?Math.min.apply(null,vals):null;
-    var chunks=Math.max(1, Math.ceil(players.length/PCOLS));
-    for(var ci=0; ci<chunks; ci++){
-      var dCell=document.createElement("span"); dCell.className="gc-c gc-cd"; if(ci===0) dCell.textContent=(r.date||"").slice(2).replace(/-/g,"."); grid.appendChild(dCell);
-      var pCell=document.createElement("span"); pCell.className="gc-c gc-cp"; if(ci===0){ pCell.textContent=(r.place||"")+(holes!==18?'('+holes+'홀)':''); pCell.title=r.place||""; } grid.appendChild(pCell);
-      for(var j=0;j<PCOLS;j++){ var idx=ci*PCOLS+j, pr=players[idx];
-        var cell=document.createElement("span"); cell.className="gc-c gc-cs"+(j===0?" gc-p0":"");
-        if(pr){ var v=pr[1], has=(v!=null&&v!==""&&!isNaN(+v)), win=has&&+v===minV; if(win) cell.className+=" win"; cell.innerHTML='<span class="gc-nm">'+esc(pr[0])+'</span> <span class="gc-v">'+(has?(+v):'')+'</span>'; }
-        grid.appendChild(cell); }
-      if(ci===0){ var ed=document.createElement("button"); ed.type="button"; ed.className="gc-c gsum-edit"; ed.textContent="✏️"; ed.title="수정"; ed.onclick=function(){ openGolfEdit(r); }; grid.appendChild(ed); }
-      else { var sp=document.createElement("span"); sp.className="gc-c"; grid.appendChild(sp); }
-    }
+    var row=document.createElement("div"); row.className="gc-round";
+    var dp=document.createElement("div"); dp.className="gc-dp";
+    dp.innerHTML='<span class="gc-d">'+(r.date||"").slice(2).replace(/-/g,".")+'</span><span class="gc-p" title="'+esc(r.place||"")+'">'+esc(r.place||"")+(holes!==18?'('+holes+'홀)':'')+'</span>';
+    row.appendChild(dp);
+    var pl=document.createElement("div"); pl.className="gc-players";
+    players.forEach(function(p){ var v=p[1], has=(v!=null&&v!==""&&!isNaN(+v)), win=has&&+v===minV;
+      var sp=document.createElement("span"); sp.className="gc-pl"+(win?" win":""); sp.innerHTML='<span class="gc-nm">'+esc(p[0])+'</span> <span class="gc-v">'+(has?(+v):"")+'</span>'; pl.appendChild(sp); });
+    row.appendChild(pl);
+    var ed=document.createElement("button"); ed.type="button"; ed.className="gsum-edit"; ed.textContent="✏️"; ed.title="수정"; ed.onclick=function(){ openGolfEdit(r); }; row.appendChild(ed);
+    return row;
   }
   // 편집 폼(날짜·골프장·홀·나/동반자 점수·동반자 추가) — form._apply로 커밋
   function buildGolfEditForm(r){
@@ -2762,7 +2770,7 @@
   }
   function openGolfEdit(r){
     var back=document.createElement("div"); back.className="modal-back";
-    var modal=document.createElement("div"); modal.className="modal golf-edit-modal";
+    var modal=document.createElement("div"); modal.className="modal golf-edit-modal force-light";
     var title=document.createElement("div"); title.className="modal-title"; title.textContent=r.e?"라운드 수정":"새 라운드";
     var form=buildGolfEditForm(r);
     var acts=document.createElement("div"); acts.className="modal-actions";
@@ -3841,7 +3849,7 @@
   }
   function openLedgerCats(){
     var back=document.createElement("div"); back.className="modal-back";
-    var modal=document.createElement("div"); modal.className="modal ledcat-modal";
+    var modal=document.createElement("div"); modal.className="modal ledcat-modal force-light";
     modal.innerHTML='<div class="modal-title">가계부 항목 편집</div><div class="modal-msg">이름·결제일(1~31)·메모를 바꾸거나, 그룹별로 항목을 추가/삭제하세요.</div>';
     var body=document.createElement("div"); body.className="ledcat-body";
     function render(){
