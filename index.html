@@ -515,6 +515,7 @@
   .pl-rep-ctrls{display:inline-flex; gap:6px; flex-wrap:wrap}
   .pl-sel, .pl-date{font-family:inherit; font-size:11.5px; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:3px 6px; outline:0; cursor:pointer}
   .sky-rep{color:#F0C674; font-style:normal; text-transform:none; letter-spacing:0; font-size:14px; font-weight:700; margin-left:7px}
+  .sky-card{color:#7EC8E3; font-style:normal; text-transform:none; letter-spacing:0; font-size:14px; font-weight:700; margin-left:7px}
   .dk-top{display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin:8px 0 12px; flex-wrap:wrap}
   .dk-nums{display:flex; gap:16px; align-items:baseline; flex:none}
   .dk-stat{display:inline-flex; align-items:baseline; gap:5px; font-size:15px}
@@ -3588,7 +3589,9 @@
     var base=d.getFullYear()+". "+pad(d.getMonth()+1)+". "+pad(d.getDate())+". ("+DOW[d.getDay()]+")";
     var tmr=new Date(d.getFullYear(), d.getMonth(), d.getDate()+1);
     var hits=(state.plans||[]).filter(function(p){ return repeatOccursOn(p.repeat, tmr); }).map(function(p){ return p.task; });
-    st.innerHTML=esc(base)+(hits.length? ' <span class="sky-rep">'+esc(hits.join(" · "))+'</span>' : "");
+    // 가계부 카드/정기 결제일 전날 알림
+    var cardHits=(state.ledgerCats||[]).filter(function(c){ return (c.group==="card"||c.group==="regular") && c.day===tmr.getDate(); }).map(function(c){ return c.name; });
+    st.innerHTML=esc(base)+(hits.length? ' <span class="sky-rep">'+esc(hits.join(" · "))+'</span>' : "")+(cardHits.length? ' <span class="sky-card">💳 '+esc(cardHits.join(" · "))+'</span>' : "");
   }
   function planYear(p){ return (p.due||"").slice(0,4) || (p.ts? String(new Date(p.ts).getFullYear()) : ""); }
   function renderAdminPlan(){
