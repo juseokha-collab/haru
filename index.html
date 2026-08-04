@@ -2991,13 +2991,15 @@
     var avg=convs.length? (convs.reduce(function(s,v){return s+v;},0)/convs.length) : null;
     var best=convs.length? Math.min.apply(null,convs) : null;
     var singles=convs.filter(function(v){return v<=79;}).length;
+    var trophies=rounds.filter(function(r){ return r.note; }).length;   // 이글·홀인원 등 특이사항 입력된 라운드
     var chip=function(v,lbl,fk){ return '<div class="rv-chip'+(fk?" rv-fchip":"")+(fk&&rvFilter===fk?" on":"")+'"'+(fk?' data-f="'+fk+'"':"")+'><b>'+v+'</b><i>'+lbl+'</i></div>'; };
     var html='<div class="pv-h"><h3>⛳ 나의 골프 라운딩</h3><b style="color:var(--sky-ink-2);font-size:12px;font-weight:600">'+rounds.length+' 라운딩</b></div>';
     html+='<div class="rv-stats">'+chip(rounds.length,"라운딩")+chip(Object.keys(courseSet).length,"골프장")+
-      (avg!=null?chip(avg.toFixed(1),"평균"):"")+(best!=null?chip(best,"베스트","best"):"")+chip(singles,"싱글","singles")+'</div>';
+      (avg!=null?chip(avg.toFixed(1),"평균"):"")+(best!=null?chip(best,"베스트","best"):"")+chip(singles,"싱글","singles")+chip(trophies,"🏆 트로피","trophy")+'</div>';
     var list=rounds;
     if(rvFilter==="best" && best!=null) list=rounds.filter(function(r){ return r.conv===best; });
     else if(rvFilter==="singles") list=rounds.filter(function(r){ return r.conv!=null && r.conv<=79; });
+    else if(rvFilter==="trophy") list=rounds.filter(function(r){ return r.note; });
     if(!list.length){ html+='<div class="pv-empty" style="height:auto;padding:24px 0">해당 기록이 없어요</div>'; }
     var prevY=null;
     list.forEach(function(r){
