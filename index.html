@@ -705,6 +705,8 @@
   .led-grp-h b{font-size:12px; color:var(--ink-2); font-variant-numeric:tabular-nums}
   .led-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(195px,1fr)); gap:6px}
   .led-item{display:flex; align-items:center; gap:6px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:4px 6px 4px 9px}
+  .led-item.led-hot{background:color-mix(in srgb,var(--accent) 12%,var(--surface-2)); border-color:color-mix(in srgb,var(--accent) 32%,transparent)}
+  .led-item.led-hot .led-nm{color:var(--accent-ink)}
   .led-item .led-nm{flex:1; min-width:0; font-size:12px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .led-item .led-nm .led-day{font-style:normal; font-size:9.5px; color:var(--ink-3); background:var(--surface); border-radius:4px; padding:0 3px; margin-left:2px}
   .led-item .led-nm .led-memo{font-style:normal; font-size:9.5px; color:var(--accent-ink)}
@@ -3701,6 +3703,9 @@
   function ledCatsOf(g){ return (state.ledgerCats||[]).filter(function(c){return c.group===g;}); }
   function ledCell(ym,id){ var m=state.ledger[ym]; return (m&&m.cells&&m.cells[id])||0; }
   function ledNotes(ym){ var m=state.ledger[ym]; if(!m) return {}; if(!m.notes){ m.notes = m.note? {income:m.note}:{}; } return m.notes; }   // 대분류별 비고(구형 단일 note는 수입으로 이전)
+  var LEDGER_NOTE_DEFAULTS={ regular:{1:"자차연납/면허세(지방세)",2:"면세사업장신고(~2/10)",3:"자동차보험(3/4)",5:"종득세 양세무",6:"종합소득세 납부",7:"주민/재산",8:"해마루 수수료",11:"종합소득세"} };
+  function ledNoteEff(ym, gk){ var v=ledNotes(ym)[gk]; if(v) return v; var d=LEDGER_NOTE_DEFAULTS[gk]; return (d && d[+ym.slice(5)])||""; }   // 저장값 없으면 월별 기본(정기지출 세금 등)
+  function ledCatAvg(id){ var sum=0,n=0; Object.keys(state.ledger||{}).forEach(function(ym){ var v=(state.ledger[ym].cells||{})[id]; if(v>0){ sum+=v; n++; } }); return n? sum/n : 0; }
   function ledMonthTotals(ym){
     var t={income:0,card:0,regular:0,invest:0,cash:0};
     (state.ledgerCats||[]).forEach(function(c){ if(t[c.group]!=null) t[c.group]+=ledCell(ym,c.id); });
@@ -3735,16 +3740,17 @@
       var gh=document.createElement("div"); gh.className="led-grp-h"; gh.innerHTML='<span>'+esc(g.n)+'</span><b>'+fmtWon(gt)+'</b>'; sec.appendChild(gh);
       var grid=document.createElement("div"); grid.className="led-grid";
       cats.forEach(function(c){
-        var item=document.createElement("label"); item.className="led-item";
+        var v0=ledCell(ym,c.id), avg=ledCatAvg(c.id), hot=(v0>0 && avg>0 && v0>=1.5*avg);
+        var item=document.createElement("label"); item.className="led-item"+(hot?" led-hot":"");
         item.innerHTML='<span class="led-nm">'+esc(c.name)+(c.day?' <i class="led-day">'+c.day+'일</i>':'')+(c.memo?' <i class="led-memo">'+esc(c.memo)+'</i>':'')+'</span>';
-        var inp=document.createElement("input"); inp.type="text"; inp.className="led-in"; inp.inputMode="numeric"; inp.value=ledCell(ym,c.id)?fmtWon(ledCell(ym,c.id)):""; inp.placeholder="0";
+        var inp=document.createElement("input"); inp.type="text"; inp.className="led-in"; inp.inputMode="numeric"; inp.value=v0?fmtWon(v0):""; inp.placeholder="0";
         inp.onchange=function(){ var v=parseWon(inp.value); state.ledger[ym]=state.ledger[ym]||{cells:{},note:""}; state.ledger[ym].cells=state.ledger[ym].cells||{}; if(v) state.ledger[ym].cells[c.id]=v; else delete state.ledger[ym].cells[c.id]; save(); renderAdminLedger(); };
         item.appendChild(inp); grid.appendChild(item);
       });
       sec.appendChild(grid);
       // 대분류 비고 (그룹 끝)
       var nrow=document.createElement("div"); nrow.className="led-note-wrap";
-      var gn=document.createElement("input"); gn.type="text"; gn.className="led-note"; gn.placeholder=g.n+" 비고"; gn.value=ledNotes(ym)[g.k]||"";
+      var gn=document.createElement("input"); gn.type="text"; gn.className="led-note"; gn.placeholder=g.n+" 비고"; gn.value=ledNoteEff(ym, g.k);
       gn.onchange=function(){ var mm=state.ledger[ym]=state.ledger[ym]||{cells:{},notes:{}}; mm.notes=ledNotes(ym); var v=gn.value.trim(); if(v) mm.notes[g.k]=v; else delete mm.notes[g.k]; save(); };
       nrow.appendChild(gn); sec.appendChild(nrow);
       el.appendChild(sec);
@@ -3757,10 +3763,10 @@
     var box=document.createElement("div"); box.className="led-notes";
     box.innerHTML='<div class="led-year-h">'+yr+'년 비고 모아보기</div>';
     var any=false;
-    for(var m=1;m<=12;m++){ var ym=yr+"-"+pad(m), ns=ledNotes(ym);
-      LEDGER_GROUPS.forEach(function(g){ if(!ns[g.k]) return; any=true;
+    for(var m=1;m<=12;m++){ var ym=yr+"-"+pad(m);
+      LEDGER_GROUPS.forEach(function(g){ var nt=ledNoteEff(ym, g.k); if(!nt) return; any=true;
         var it=document.createElement("div"); it.className="led-note-item"+(m===ledgerMonth?" on":""); it.setAttribute("data-m",m);
-        it.innerHTML='<span class="lni-m">'+m+'월</span><span class="lni-g">'+esc(g.n)+'</span><span class="lni-t">'+esc(ns[g.k])+'</span>';
+        it.innerHTML='<span class="lni-m">'+m+'월</span><span class="lni-g">'+esc(g.n)+'</span><span class="lni-t">'+esc(nt)+'</span>';
         it.onclick=function(){ ledgerMonth=+this.getAttribute("data-m"); renderAdminLedger(); };
         box.appendChild(it);
       });
