@@ -710,7 +710,7 @@
   .led-item .led-nm .led-memo{font-style:normal; font-size:9.5px; color:var(--accent-ink)}
   .led-in{width:84px; flex:none; font-family:inherit; font-size:12px; text-align:right; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:4px 6px; outline:0; font-variant-numeric:tabular-nums}
   .led-in:focus{border-color:var(--accent)}
-  .led-note-wrap{margin:2px 0 14px}
+  .led-note-wrap{margin:5px 0 2px}
   .led-note{width:100%; box-sizing:border-box; font-family:inherit; font-size:12px; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:5px 8px; outline:0}
   .led-year{margin-top:6px}
   .led-year-h{font-size:12px; font-weight:800; color:var(--ink); margin-bottom:6px}
@@ -730,6 +730,7 @@
   .led-note-item:hover{background:var(--surface-2)}
   .led-note-item.on{background:color-mix(in srgb,var(--accent) 10%,transparent)}
   .led-note-item .lni-m{flex:none; width:34px; font-size:11.5px; font-weight:700; color:var(--ink-2); font-variant-numeric:tabular-nums}
+  .led-note-item .lni-g{flex:none; width:58px; font-size:10.5px; font-weight:700; color:var(--accent-ink); background:color-mix(in srgb,var(--accent) 12%,transparent); border-radius:5px; padding:1px 6px; text-align:center; align-self:center}
   .led-note-item .lni-t{flex:1; min-width:0; font-size:12.5px; color:var(--ink)}
   .led-chart-wrap{margin-top:16px; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:8px 10px}
   .led-chart-legend{display:flex; gap:12px; font-size:11px; margin-bottom:2px}
@@ -3699,6 +3700,7 @@
   function parseWon(s){ s=(s||"").toString().replace(/[^\d-]/g,""); var n=parseInt(s,10); return isNaN(n)?0:n; }
   function ledCatsOf(g){ return (state.ledgerCats||[]).filter(function(c){return c.group===g;}); }
   function ledCell(ym,id){ var m=state.ledger[ym]; return (m&&m.cells&&m.cells[id])||0; }
+  function ledNotes(ym){ var m=state.ledger[ym]; if(!m) return {}; if(!m.notes){ m.notes = m.note? {income:m.note}:{}; } return m.notes; }   // 대분류별 비고(구형 단일 note는 수입으로 이전)
   function ledMonthTotals(ym){
     var t={income:0,card:0,regular:0,invest:0,cash:0};
     (state.ledgerCats||[]).forEach(function(c){ if(t[c.group]!=null) t[c.group]+=ledCell(ym,c.id); });
@@ -3739,12 +3741,14 @@
         inp.onchange=function(){ var v=parseWon(inp.value); state.ledger[ym]=state.ledger[ym]||{cells:{},note:""}; state.ledger[ym].cells=state.ledger[ym].cells||{}; if(v) state.ledger[ym].cells[c.id]=v; else delete state.ledger[ym].cells[c.id]; save(); renderAdminLedger(); };
         item.appendChild(inp); grid.appendChild(item);
       });
-      sec.appendChild(grid); el.appendChild(sec);
+      sec.appendChild(grid);
+      // 대분류 비고 (그룹 끝)
+      var nrow=document.createElement("div"); nrow.className="led-note-wrap";
+      var gn=document.createElement("input"); gn.type="text"; gn.className="led-note"; gn.placeholder=g.n+" 비고"; gn.value=ledNotes(ym)[g.k]||"";
+      gn.onchange=function(){ var mm=state.ledger[ym]=state.ledger[ym]||{cells:{},notes:{}}; mm.notes=ledNotes(ym); var v=gn.value.trim(); if(v) mm.notes[g.k]=v; else delete mm.notes[g.k]; save(); };
+      nrow.appendChild(gn); sec.appendChild(nrow);
+      el.appendChild(sec);
     });
-    var noteWrap=document.createElement("div"); noteWrap.className="led-note-wrap";
-    var note=document.createElement("input"); note.type="text"; note.className="led-note"; note.placeholder="이 달 비고"; note.value=(state.ledger[ym]&&state.ledger[ym].note)||"";
-    note.onchange=function(){ state.ledger[ym]=state.ledger[ym]||{cells:{},note:""}; state.ledger[ym].note=note.value.trim(); save(); };
-    noteWrap.appendChild(note); el.appendChild(noteWrap);
     el.appendChild(buildLedgerYear(yr));
     el.appendChild(buildLedgerNotes(yr));
     el.appendChild(buildLedgerChart(yr));
@@ -3753,13 +3757,15 @@
     var box=document.createElement("div"); box.className="led-notes";
     box.innerHTML='<div class="led-year-h">'+yr+'년 비고 모아보기</div>';
     var any=false;
-    for(var m=1;m<=12;m++){ var ym=yr+"-"+pad(m), mn=state.ledger[ym]; if(!(mn&&mn.note)) continue; any=true;
-      var it=document.createElement("div"); it.className="led-note-item"+(m===ledgerMonth?" on":""); it.setAttribute("data-m",m);
-      it.innerHTML='<span class="lni-m">'+m+'월</span><span class="lni-t">'+esc(mn.note)+'</span>';
-      it.onclick=function(){ ledgerMonth=+this.getAttribute("data-m"); renderAdminLedger(); };
-      box.appendChild(it);
+    for(var m=1;m<=12;m++){ var ym=yr+"-"+pad(m), ns=ledNotes(ym);
+      LEDGER_GROUPS.forEach(function(g){ if(!ns[g.k]) return; any=true;
+        var it=document.createElement("div"); it.className="led-note-item"+(m===ledgerMonth?" on":""); it.setAttribute("data-m",m);
+        it.innerHTML='<span class="lni-m">'+m+'월</span><span class="lni-g">'+esc(g.n)+'</span><span class="lni-t">'+esc(ns[g.k])+'</span>';
+        it.onclick=function(){ ledgerMonth=+this.getAttribute("data-m"); renderAdminLedger(); };
+        box.appendChild(it);
+      });
     }
-    if(!any){ var em=document.createElement("div"); em.className="led-empty"; em.textContent="이 해 비고가 없어요. (각 달 하단 ‘이 달 비고’에 적으면 여기 모여요)"; box.appendChild(em); }
+    if(!any){ var em=document.createElement("div"); em.className="led-empty"; em.textContent="이 해 비고가 없어요. (각 대분류 아래 ‘…비고’에 적으면 여기 모여요)"; box.appendChild(em); }
     return box;
   }
   function buildLedgerYear(yr){
@@ -3811,8 +3817,8 @@
       var mt=c0.match(/(?:(\d{2,4})\s*년)?\s*(\d{1,2})\s*월/); if(!mt) return;
       var y=mt[1]? (mt[1].length===2?"20"+mt[1]:mt[1]) : String(baseYear), ym=y+"-"+pad(+mt[2]);
       var cells={}; Object.keys(map).forEach(function(ci){ var v=parseWon(cols[+ci]); if(v) cells[map[ci]]=v; });
-      var note=(cols[2]||"").trim();
-      if(Object.keys(cells).length || note){ state.ledger[ym]={cells:cells, note:note}; count++; }
+      var notes={}; var inc=[cols[2],cols[9]].map(function(x){return (x||"").trim();}).filter(Boolean).join(" / "); if(inc) notes.income=inc; var csh=(cols[27]||"").trim(); if(csh) notes.cash=csh;
+      if(Object.keys(cells).length || Object.keys(notes).length){ state.ledger[ym]={cells:cells, notes:notes}; count++; }
     });
     if(count){ save(); renderAdminLedger(); }
     return count;
