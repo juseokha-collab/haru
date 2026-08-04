@@ -1244,6 +1244,16 @@
   state.relNames = state.relNames || {};   // 관계(그룹) 표시명 사용자 지정
   state.ledger = state.ledger || {};        // 가계부: {"YYYY-MM":{cells:{catId:금액}, note}}
   state.ledgerCats = (state.ledgerCats && state.ledgerCats.length) ? state.ledgerCats : defaultLedgerCats();
+  (function(){ var cats=state.ledgerCats||[], uk=null, comm=null;   // 영국·통신/교통 → 정기지출 첫/둘째로 이전(1회)
+    cats.forEach(function(c){ if(c.id==="c_uk")uk=c; else if(c.id==="c_comm")comm=c; });
+    if((uk&&uk.group!=="regular")||(comm&&comm.group!=="regular")){
+      if(uk)uk.group="regular"; if(comm)comm.group="regular";
+      var rest=cats.filter(function(c){ return c!==uk&&c!==comm; }), idx=rest.length;
+      for(var i=0;i<rest.length;i++){ if(rest[i].group==="regular"){ idx=i; break; } }
+      var ins=[]; if(uk)ins.push(uk); if(comm)ins.push(comm);
+      state.ledgerCats=rest.slice(0,idx).concat(ins).concat(rest.slice(idx));
+    }
+  })();
   var draft = { date: todayStr(), people: [], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), drinks:emptyDrinks(), exercise:emptyExercise(), golfScore:{}, thoughts:"", learning:"" };
   var hiddenRels = {fam:true, work:true}, hideRest=true, hideGolf=true, drinkPeriod="week", weightPeriod="month", view="graph", recapMonth="", minMeet=2, minMeetIdx=1, meetExact=false, calMonth="", searchQ="", graphYear=String(new Date().getFullYear());
 
@@ -3693,8 +3703,8 @@
   var LEDGER_GROUPS=[{k:"income",n:"수입"},{k:"card",n:"카드지출"},{k:"regular",n:"정기지출"},{k:"invest",n:"투자"},{k:"cash",n:"현금"}];
   function defaultLedgerCats(){ return [
     {id:"sal",group:"income",name:"급여",day:20},{id:"sal2",group:"income",name:"급여외",day:14},{id:"rent",group:"income",name:"임대소득",day:30},{id:"ssj",group:"income",name:"상원/상진",day:1},{id:"inc_etc",group:"income",name:"기타"},{id:"pension",group:"income",name:"연금",day:20,memo:"하나"},
-    {id:"c_shinhan",group:"card",name:"신한",day:25},{id:"c_hyundai",group:"card",name:"현대",day:25,memo:"K뱅크"},{id:"c_samsung",group:"card",name:"삼성",day:26,memo:"모니모"},{id:"c_hana",group:"card",name:"하나",day:25},{id:"c_kb",group:"card",name:"KB",day:26,memo:"K뱅크"},{id:"c_uk",group:"card",name:"영국"},{id:"c_comm",group:"card",name:"통신/교통",memo:"12/15/21"},
-    {id:"r_kdb",group:"regular",name:"KDB생명",day:30,memo:"카뱅"},{id:"r_saving",group:"regular",name:"적금 신한",day:20},
+    {id:"c_shinhan",group:"card",name:"신한",day:25},{id:"c_hyundai",group:"card",name:"현대",day:25,memo:"K뱅크"},{id:"c_samsung",group:"card",name:"삼성",day:26,memo:"모니모"},{id:"c_hana",group:"card",name:"하나",day:25},{id:"c_kb",group:"card",name:"KB",day:26,memo:"K뱅크"},
+    {id:"c_uk",group:"regular",name:"영국"},{id:"c_comm",group:"regular",name:"통신/교통",memo:"12/15/21"},{id:"r_kdb",group:"regular",name:"KDB생명",day:30,memo:"카뱅"},{id:"r_saving",group:"regular",name:"적금 신한",day:20},
     {id:"i_stock",group:"invest",name:"주식/IRP"},{id:"i_coin",group:"invest",name:"코인"},
     {id:"h_tax",group:"cash",name:"세금"},{id:"h_holiday",group:"cash",name:"명절"},{id:"h_personal",group:"cash",name:"개인"},{id:"h_event",group:"cash",name:"축/조의"},{id:"h_eeum",group:"cash",name:"e음"},{id:"h_etc",group:"cash",name:"기타"}
   ]; }
