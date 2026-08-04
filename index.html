@@ -643,7 +643,7 @@
   .linkbtn{border:0; background:none; color:var(--accent-ink); font:inherit; font-size:inherit; text-decoration:underline; cursor:pointer; padding:0}
   .relmodal{max-width:420px}
   /* 관리자 모드 */
-  .admin-modal{max-width:760px; width:100%; padding:0; overflow:hidden; position:relative}
+  .admin-modal{max-width:880px; width:100%; padding:0; overflow:hidden; position:relative}
   .admin-head{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:14px 18px 0}
   .admin-tabs{display:inline-flex; align-items:center; flex-wrap:wrap; background:var(--surface-2); border:1px solid var(--border); border-radius:9px; padding:2px; gap:2px}
   .admin-tabs button{border:0; background:none; font-family:inherit; font-size:13px; color:var(--ink-3); padding:6px 14px; border-radius:7px; cursor:pointer; font-weight:600}
@@ -703,7 +703,7 @@
   .led-grp{margin-bottom:10px}
   .led-grp-h{display:flex; align-items:baseline; justify-content:space-between; font-size:11px; font-weight:800; letter-spacing:.03em; color:var(--ink-3); text-transform:uppercase; margin-bottom:5px; padding-bottom:3px; border-bottom:1px solid var(--border)}
   .led-grp-h b{font-size:12px; color:var(--ink-2); font-variant-numeric:tabular-nums}
-  .led-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:6px}
+  .led-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(195px,1fr)); gap:6px}
   .led-item{display:flex; align-items:center; gap:6px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:4px 6px 4px 9px}
   .led-item .led-nm{flex:1; min-width:0; font-size:12px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .led-item .led-nm .led-day{font-style:normal; font-size:9.5px; color:var(--ink-3); background:var(--surface); border-radius:4px; padding:0 3px; margin-left:2px}
@@ -734,6 +734,20 @@
   .led-svg .led-bar-inc{fill:#5FBFA0} .led-svg .led-bar-exp{fill:#E58A8A}
   .led-svg .led-axl{fill:var(--ink-3); font-size:9px}
   .led-empty{padding:20px 8px; text-align:center; color:var(--ink-3); font-size:12.5px}
+  .ledcat-modal{max-width:520px; width:100%}
+  .ledcat-body{max-height:60vh; overflow-y:auto; margin-top:6px}
+  .ledcat-grp{margin-bottom:12px}
+  .ledcat-grp-h{font-size:11px; font-weight:800; letter-spacing:.03em; color:var(--ink-3); text-transform:uppercase; margin-bottom:5px}
+  .ledcat-row{display:flex; align-items:center; gap:6px; margin-bottom:5px}
+  .ledcat-row input{font-family:inherit; font-size:12px; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:5px 7px; outline:0}
+  .ledcat-row input:focus{border-color:var(--accent)}
+  .ledcat-nm{flex:1; min-width:0}
+  .ledcat-day{width:60px; flex:none; text-align:center}
+  .ledcat-memo{width:110px; flex:none}
+  .ledcat-del{flex:none; width:26px; height:28px; border:1px solid var(--border); background:var(--surface); border-radius:6px; color:var(--ink-3); font-size:15px; line-height:1; cursor:pointer}
+  .ledcat-del:hover{border-color:var(--c-fam); color:var(--c-fam)}
+  .ledcat-add{width:100%; border:1px dashed var(--border); background:transparent; color:var(--ink-2); font-family:inherit; font-size:12px; font-weight:600; padding:5px; border-radius:7px; cursor:pointer; margin-top:2px}
+  .ledcat-add:hover{border-color:var(--accent); color:var(--accent-ink)}
   .amc-btn{width:20px; height:20px; border:0; background:none; color:var(--ink-3); font-size:12px; line-height:1; cursor:pointer; border-radius:5px; padding:0}
   .amc-btn:hover{background:var(--surface); color:var(--ink)}
   .amc-btn.danger:hover{color:var(--c-fam)}
@@ -3691,6 +3705,8 @@
     el.innerHTML="";
     var head=document.createElement("div"); head.className="led-head"; head.innerHTML='<h3>가계부</h3>';
     var nav=document.createElement("div"); nav.className="led-nav";
+    var cfg=document.createElement("button"); cfg.type="button"; cfg.className="led-imp"; cfg.textContent="⚙ 항목"; cfg.title="항목 추가·이름·결제일 편집";
+    cfg.onclick=openLedgerCats; nav.appendChild(cfg);
     var imp=document.createElement("button"); imp.type="button"; imp.className="led-imp"; imp.textContent="엑셀 붙여넣기"; imp.title="엑셀 표를 붙여 한 번에 가져오기";
     imp.onclick=function(){ openLedgerImport(yr); };
     nav.appendChild(imp);
@@ -3780,6 +3796,40 @@
     });
     if(count){ save(); renderAdminLedger(); }
     return count;
+  }
+  function openLedgerCats(){
+    var back=document.createElement("div"); back.className="modal-back";
+    var modal=document.createElement("div"); modal.className="modal ledcat-modal";
+    modal.innerHTML='<div class="modal-title">가계부 항목 편집</div><div class="modal-msg">이름·결제일(1~31)·메모를 바꾸거나, 그룹별로 항목을 추가/삭제하세요.</div>';
+    var body=document.createElement("div"); body.className="ledcat-body";
+    function render(){
+      body.innerHTML="";
+      LEDGER_GROUPS.forEach(function(g){
+        var sec=document.createElement("div"); sec.className="ledcat-grp";
+        var gh=document.createElement("div"); gh.className="ledcat-grp-h"; gh.textContent=g.n; sec.appendChild(gh);
+        ledCatsOf(g.k).forEach(function(c){
+          var row=document.createElement("div"); row.className="ledcat-row";
+          var nm=document.createElement("input"); nm.type="text"; nm.className="ledcat-nm"; nm.value=c.name||""; nm.placeholder="이름"; nm.onchange=function(){ c.name=nm.value.trim()||c.name; };
+          var day=document.createElement("input"); day.type="number"; day.className="ledcat-day"; day.min="1"; day.max="31"; day.value=c.day||""; day.placeholder="결제일"; day.title="결제/입금 일"; day.onchange=function(){ var v=parseInt(day.value,10); if(v>=1&&v<=31) c.day=v; else delete c.day; };
+          var memo=document.createElement("input"); memo.type="text"; memo.className="ledcat-memo"; memo.value=c.memo||""; memo.placeholder="메모(계좌 등)"; memo.onchange=function(){ var v=memo.value.trim(); if(v) c.memo=v; else delete c.memo; };
+          var del=document.createElement("button"); del.type="button"; del.className="ledcat-del"; del.textContent="×"; del.title="항목 삭제";
+          del.onclick=function(){ askConfirm({ title:"항목 삭제", message:"‘"+(c.name||"")+"’ 항목을 삭제할까요?\n(입력된 금액 데이터는 유지되지만 합계에서 제외됩니다)", okText:"삭제", danger:true, onOk:function(){ state.ledgerCats=state.ledgerCats.filter(function(x){return x!==c;}); render(); } }); };
+          row.appendChild(nm); row.appendChild(day); row.appendChild(memo); row.appendChild(del); sec.appendChild(row);
+        });
+        var add=document.createElement("button"); add.type="button"; add.className="ledcat-add"; add.textContent="+ "+g.n+" 항목 추가";
+        add.onclick=function(){ state.ledgerCats.push({id:"lc"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36), group:g.k, name:"새 항목"}); render(); };
+        sec.appendChild(add); body.appendChild(sec);
+      });
+    }
+    render();
+    var acts=document.createElement("div"); acts.className="modal-actions";
+    function close(){ back.remove(); }
+    var cancelB=document.createElement("button"); cancelB.type="button"; cancelB.className="btn"; cancelB.textContent="닫기"; cancelB.onclick=function(){ close(); };
+    var saveB=document.createElement("button"); saveB.type="button"; saveB.className="btn primary"; saveB.textContent="저장";
+    saveB.onclick=function(){ save(); renderAdminLedger(); updateSkyDate(); close(); };
+    acts.appendChild(cancelB); acts.appendChild(saveB);
+    modal.appendChild(body); modal.appendChild(acts); back.appendChild(modal); document.body.appendChild(back);
+    back.addEventListener("click",function(e){ if(e.target===back){ save(); renderAdminLedger(); close(); } });
   }
 
   // 같은 날짜에 기록이 둘 이상이면 하나로 병합(끼니는 빈 슬롯으로 이동, 골프 라운드는 슬롯별 스코어로 보존)
