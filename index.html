@@ -702,6 +702,9 @@
   .agr-del:hover{border-color:var(--c-fam); color:var(--c-fam)}
   .agr-date{font-size:12.5px; font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums}
   .agr-place{font-size:12px; color:var(--ink-2)}
+  .agr-line2{display:flex; align-items:flex-start; gap:8px}
+  .agr-line2 .agr-scores{flex:1; min-width:0}
+  .agr-line2 .agr-add{align-self:center}
   .agr-scores{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:6px}
   .agr-sc{display:flex; align-items:center; gap:4px; background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:3px 4px 3px 9px}
   .agr-sc.low{background:rgba(91,174,110,.16); border-color:#5BAE6E}
@@ -765,8 +768,8 @@
   .golf-admin-bar .gab-wl .gab-wl-n{color:#5BAE6E; font-weight:800}
   .golf-admin-bar .gab-wl .gab-wl-r{color:var(--ink-3); font-size:11.5px; font-weight:400}
   .golf-admin-bar .gab-wl.muted{color:var(--ink-3)}
-  .golf-admin-bar .gab-saveall{margin-left:auto; border:1px solid var(--accent); background:var(--accent); color:#fff; font-family:inherit; font-size:12.5px; font-weight:800; padding:6px 18px; border-radius:8px; cursor:pointer}
-  .golf-admin-bar .gab-saveall:hover{filter:brightness(1.06)}
+  .golf-admin-bar .gab-saveall{margin-left:auto; border:1px solid color-mix(in srgb,var(--accent) 45%,transparent); background:color-mix(in srgb,var(--accent) 22%,var(--surface)); color:var(--accent-ink); font-family:inherit; font-size:11px; font-weight:700; padding:4px 12px; border-radius:7px; cursor:pointer}
+  .golf-admin-bar .gab-saveall:hover{background:color-mix(in srgb,var(--accent) 34%,var(--surface))}
   .agr-head .agr-holes-in{flex:none; font-family:inherit; font-size:11.5px; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:3px 4px; outline:0; cursor:pointer}
   .adm-golf-row.is-draft{border-color:var(--accent); border-style:dashed; background:var(--surface)}
   .admin-toast{position:absolute; left:50%; bottom:18px; transform:translate(-50%,10px); background:#1f9d55; color:#fff; font-size:12.5px; font-weight:700; padding:8px 18px; border-radius:999px; box-shadow:0 6px 20px rgba(0,0,0,.22); opacity:0; transition:opacity .24s, transform .24s; pointer-events:none; z-index:5}
@@ -2580,14 +2583,11 @@
     var isLow=function(v){ return minV!=null && v!=null && v!=="" && +v===minV; };
     sc.appendChild(makeScoreCell("나", gs["나"], true, isLow(gs["나"])));
     r.ppl.forEach(function(n){ sc.appendChild(makeScoreCell(n, gs[n], false, isLow(gs[n]))); });
-    var acts=document.createElement("div"); acts.className="agr-acts";
     var addBtn=document.createElement("button"); addBtn.type="button"; addBtn.className="agr-add"; addBtn.textContent="+ 동반자";
     addBtn.onclick=function(){ var c=makeScoreCell("", "", false); sc.appendChild(c); var ni=c.querySelector(".agr-nm-in"); if(ni) ni.focus(); };
-    var saveBtn=document.createElement("button"); saveBtn.type="button"; saveBtn.className="agr-save"; saveBtn.textContent="저장";
     row._apply=function(){ return applyGolfRound(e, r.place, dIn, pIn, sc, hSel, r.slot, r.draftRef); };
-    saveBtn.onclick=function(){ var ent=row._apply(); save(); refresh(); rebuild(); renderAdminGolf(); golfToast("✓ 저장 완료 · "+((ent&&ent.date)||dIn.value)); };
-    acts.appendChild(addBtn); acts.appendChild(saveBtn);
-    row.appendChild(head); row.appendChild(sc); row.appendChild(acts);
+    var line2=document.createElement("div"); line2.className="agr-line2"; line2.appendChild(sc); line2.appendChild(addBtn);   // 점수 + 동반자 한 줄
+    row.appendChild(head); row.appendChild(line2);
     delR.onclick=function(){
       if(isDraft){ var i=golfDrafts.indexOf(r.draftRef); if(i>=0) golfDrafts.splice(i,1); renderAdminGolf(); return; }
       askConfirm({ title:"골프 라운드 삭제", message:e.date+" · "+r.place+" 라운드를 삭제할까요?\n이 라운드의 골프 내용만 정리돼요.", okText:"삭제", danger:true, onOk:function(){ deleteGolfRound(e, r.place, r.slot); renderAdminGolf(); golfToast("✓ 라운드 삭제됨"); } });
