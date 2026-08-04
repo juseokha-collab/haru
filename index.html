@@ -743,7 +743,7 @@
   .gc-chart{margin-top:2px; position:relative; overflow-x:auto; overflow-y:hidden}
   .gc-svg{display:block; height:225px}
   .gc-hit{fill:transparent; cursor:pointer}
-  .gc-tip{position:absolute; transform:translate(-50%,-100%); background:#222733; color:#fff; font-size:11px; font-weight:600; white-space:nowrap; padding:4px 9px; border-radius:7px; box-shadow:0 4px 14px rgba(0,0,0,.25); pointer-events:none; z-index:6}
+  .gc-tip{position:fixed; transform:translate(-50%,-100%); background:#222733; color:#fff; font-size:11px; font-weight:600; white-space:nowrap; padding:4px 9px; border-radius:7px; box-shadow:0 4px 14px rgba(0,0,0,.25); pointer-events:none; z-index:60}
   .gc-tip[hidden]{display:none}
   .gc-line{fill:none; stroke:var(--accent); stroke-width:2; stroke-linejoin:round; stroke-linecap:round}
   .gc-area{fill:var(--accent); opacity:.09; stroke:none}
@@ -2486,7 +2486,7 @@
     else chart.innerHTML=golfChartSvg(myPts, avg, golfCompare?cmpPts:[], golfCompare);
     var tipEl=document.createElement("div"); tipEl.className="gc-tip"; tipEl.hidden=true; chart.appendChild(tipEl);
     Array.prototype.forEach.call(chart.querySelectorAll("[data-tip]"), function(c){
-      c.addEventListener("mouseenter", function(){ var r=c.getBoundingClientRect(), cr=chart.getBoundingClientRect(); tipEl.textContent=c.getAttribute("data-tip"); tipEl.hidden=false; tipEl.style.left=(r.left+r.width/2-cr.left+chart.scrollLeft)+"px"; tipEl.style.top=(r.top-cr.top-8+chart.scrollTop)+"px"; });
+      c.addEventListener("mouseenter", function(){ var r=c.getBoundingClientRect(); tipEl.textContent=c.getAttribute("data-tip"); tipEl.hidden=false; var half=tipEl.offsetWidth/2+6; var cx=Math.max(half, Math.min((window.innerWidth||document.documentElement.clientWidth)-half, r.left+r.width/2)); tipEl.style.left=cx+"px"; tipEl.style.top=(r.top-8)+"px"; });
       c.addEventListener("mouseleave", function(){ tipEl.hidden=true; });
     });
     requestAnimationFrame(function(){ chart.scrollLeft=chart.scrollWidth; }); // 최근(오른쪽)으로
@@ -2527,7 +2527,7 @@
       s+='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="3.5" class="gc-dot"/>';
       s+='<text x="'+cx.toFixed(1)+'" y="'+(cy-7).toFixed(1)+'" text-anchor="middle" class="gc-pt">'+o.avg.toFixed(1)+'</text>';
       s+='<text x="'+cx.toFixed(1)+'" y="'+(H-8)+'" text-anchor="middle" class="gc-axl">'+o.y+'</text>';
-      s+='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="12" class="gc-hit" data-tip="'+esc(o.y+"년 · "+o.rounds+"라운딩 · "+o.courses+"골프장 · 함께 "+o.comps+"명")+'"/>';
+      s+='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="12" class="gc-hit" data-tip="'+esc(o.y+"년 · "+o.rounds+"라운딩 · "+o.courses+"골프장 · 동반자 "+o.comps+"명")+'"/>';
     });
     s+='</svg>';
     return s;
