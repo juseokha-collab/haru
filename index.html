@@ -783,14 +783,11 @@
   .adm-golf-row{background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:8px 12px}
   .gc-mbox{background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:10px 12px 12px}
   .gc-mbox-h{font-size:11px; font-weight:800; letter-spacing:.03em; color:var(--ink-3); text-transform:uppercase; margin-bottom:8px}
-  .gc-round{padding:7px 2px; border-top:1px solid var(--border)}
-  .gc-round:first-of-type{border-top:0}
-  .gc-rtop{display:flex; align-items:baseline; gap:12px}
-  .gc-dp2{flex:none; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:58%}
+  .gc-round{display:grid; grid-template-rows:auto auto; align-items:baseline; column-gap:14px; row-gap:2px; padding:3px 2px}
+  .gc-dp2{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:190px}
   .gc-dp2 .gc-d{font-size:11px; color:var(--ink-3); font-variant-numeric:tabular-nums}
   .gc-dp2 .gc-pp{font-size:13px; color:var(--ink); margin-left:3px}
-  .gc-rtop .gsum-edit{margin-left:auto; align-self:center}
-  .gc-players{display:flex; flex-wrap:wrap; gap:5px 14px; padding-left:70px; margin-top:4px}
+  .gc-round .gsum-edit{align-self:center; justify-self:start}
   .gc-pl{font-size:12.5px; color:var(--ink-2); font-variant-numeric:tabular-nums; white-space:nowrap}
   .gc-pl .gc-nm{color:var(--ink); margin-right:2px}
   .gc-pl .gc-v{color:var(--ink)}
@@ -2734,14 +2731,16 @@
     var players=[["나",gs["나"]]].concat(r.ppl.map(function(n){return [n,gs[n]];}));
     var vals=[]; players.forEach(function(p){ var v=p[1]; if(v!=null&&v!==""&&!isNaN(+v)) vals.push(+v); });
     var minV=vals.length?Math.min.apply(null,vals):null;
-    function chip(p){ var v=p[1], has=(v!=null&&v!==""&&!isNaN(+v)), win=has&&+v===minV; var sp=document.createElement("span"); sp.className="gc-pl"+(win?" win":""); sp.innerHTML='<span class="gc-nm">'+esc(p[0])+'</span> <span class="gc-v">'+(has?(+v):"")+'</span>'; return sp; }
+    // 2행 그리드(열=인물, 아래로 채움) · col1=날짜/골프장, col2=나, col3=✏️, col4~=동반자 열
     var row=document.createElement("div"); row.className="gc-round";
-    var top=document.createElement("div"); top.className="gc-rtop";
-    var dp=document.createElement("span"); dp.className="gc-dp2"; dp.innerHTML='<span class="gc-d">'+(r.date||"").slice(2).replace(/-/g,".")+'</span> <span class="gc-pp" title="'+esc(r.place||"")+'">'+esc(r.place||"")+(holes!==18?'('+holes+'홀)':'')+'</span>';
-    top.appendChild(dp); top.appendChild(chip(players[0]));   // 날짜·골프장 · 나 점수
-    var ed=document.createElement("button"); ed.type="button"; ed.className="gsum-edit"; ed.textContent="✏️"; ed.title="수정"; ed.onclick=function(){ openGolfEdit(r); }; top.appendChild(ed);
-    row.appendChild(top);
-    if(players.length>1){ var comps=document.createElement("div"); comps.className="gc-players"; players.slice(1).forEach(function(p){ comps.appendChild(chip(p)); }); row.appendChild(comps); }
+    var dp=document.createElement("span"); dp.className="gc-dp2"; dp.style.gridColumn="1"; dp.style.gridRow="1";
+    dp.innerHTML='<span class="gc-d">'+(r.date||"").slice(2).replace(/-/g,".")+'</span> <span class="gc-pp" title="'+esc(r.place||"")+'">'+esc(r.place||"")+(holes!==18?'('+holes+'홀)':'')+'</span>';
+    row.appendChild(dp);
+    var ed=document.createElement("button"); ed.type="button"; ed.className="gsum-edit"; ed.textContent="✏️"; ed.title="수정"; ed.style.gridColumn="3"; ed.style.gridRow="1"; ed.onclick=function(){ openGolfEdit(r); }; row.appendChild(ed);
+    players.forEach(function(p,i){ var pci=Math.floor(i/2), col=(pci===0)?2:(3+pci), rr=(i%2)+1;
+      var v=p[1], has=(v!=null&&v!==""&&!isNaN(+v)), win=has&&+v===minV;
+      var sp=document.createElement("span"); sp.className="gc-pl"+(win?" win":""); sp.style.gridColumn=col; sp.style.gridRow=rr;
+      sp.innerHTML='<span class="gc-nm">'+esc(p[0])+'</span> <span class="gc-v">'+(has?(+v):"")+'</span>'; row.appendChild(sp); });
     return row;
   }
   // 편집 폼(날짜·골프장·홀·나/동반자 점수·동반자 추가) — form._apply로 커밋
