@@ -653,6 +653,12 @@
   .adm-sec-h b{color:var(--ink-3); font-weight:600}
   .adm-empty{font-size:12px; color:var(--ink-3); padding:2px 2px 6px}
   .adm-plist{display:grid; grid-template-columns:repeat(auto-fill,minmax(275px,1fr)); gap:6px}
+  /* 서브그룹 박스: 박스 축소 + 이름 간격 축소 + 2명 사이 간격 확보 */
+  .pp-sbox{border:1px solid var(--border); border-radius:9px; padding:4px 8px; margin-bottom:7px; background:color-mix(in srgb, var(--chipc,#8a94b0) 6%, var(--surface))}
+  .pp-sbox .adm-plist{gap:2px 24px}
+  .pp-sbox .adm-prow{background:transparent; border:0; border-radius:6px; padding:3px 4px; gap:5px}
+  .pp-sbox .adm-prow:hover{background:color-mix(in srgb, var(--chipc,#8a94b0) 12%, transparent)}
+  .pp-sbox .adm-prow .adm-nm .adm-subtag{margin-left:1px}
   .adm-subdiv{height:0; border-top:1px dashed color-mix(in srgb, var(--chipc,#8a94b0) 45%, transparent); margin:8px 2px}
   .adm-prow{display:flex; align-items:center; gap:5px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:5px 6px 5px 10px}
   .adm-prow .adm-nm{flex:1; min-width:0; font-size:12.5px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
@@ -2384,14 +2390,13 @@
         row.appendChild(del);
         return row;
       };
-      // 서브그룹이 바뀌면 새 줄(별도 그리드) + 그룹색 흐린 구분선
-      var curSub=null, plist=null, first=true;
+      // 서브그룹별로 하나의 박스로 묶기(2명/줄 유지)
+      var curSub=null, plist=null;
       list.forEach(function(n){
         var s=(state.people[n]||{}).sub||"";
         if(s!==curSub){ curSub=s;
-          if(!first){ var dv=document.createElement("div"); dv.className="adm-subdiv"; dv.style.setProperty("--chipc", REL[r].color); sec.appendChild(dv); }
-          first=false;
-          plist=document.createElement("div"); plist.className="adm-plist"; sec.appendChild(plist);
+          var box=document.createElement("div"); box.className="pp-sbox"; box.style.setProperty("--chipc", REL[r].color);
+          plist=document.createElement("div"); plist.className="adm-plist"; box.appendChild(plist); sec.appendChild(box);
         }
         plist.appendChild(mkRow(n));
       });
