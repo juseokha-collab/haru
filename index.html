@@ -478,7 +478,10 @@
   .wt-empty{font-size:11px; color:var(--ink-3); padding:16px 2px; text-align:center}
   /* Things To Do */
   .todo-list{padding:11px 12px 12px; display:flex; flex-direction:column; gap:4px}
-  .todo-row{display:grid; grid-template-columns:auto 1fr auto auto; align-items:center; gap:6px}
+  .todo-row{display:grid; grid-template-columns:auto 1fr auto auto auto; align-items:center; gap:6px; padding:1px 4px; border-radius:6px}
+  .todo-row.flagged{background:color-mix(in srgb,#E6A23C 12%,transparent); box-shadow:inset 3px 0 0 #E6A23C}   /* 색상 구분 강조 */
+  .todo-row .td-flag{-webkit-appearance:none; appearance:none; width:15px; height:15px; flex:none; margin:0; border:1.5px solid var(--border); border-radius:4px; background:var(--surface); cursor:pointer}
+  .todo-row .td-flag:checked{background:#E6A23C; border-color:#E6A23C}
   .todo-row .td-del{width:14px; height:14px; flex:none; border:0; background:none; color:var(--ink-3); font-size:14px; line-height:1; cursor:pointer; padding:0}
   .todo-row .td-del:hover{color:var(--c-fam)}
   .todo-row .td-chk{width:13px; height:13px; flex:none; accent-color:var(--accent); cursor:pointer; margin:0}
@@ -3652,7 +3655,7 @@
     var rowCount=Math.max(5, Math.min(10, filled.length+1));   // 다 채우면 빈칸 하나씩 추가(최대 10)
     for(var i=0;i<rowCount;i++){
       var it=filled[i]||{done:false,task:"",due:"",id:""};
-      var row=document.createElement("div"); row.className="todo-row"+(it.done?" done":""); row.setAttribute("data-id", it.id||"");
+      var row=document.createElement("div"); row.className="todo-row"+(it.done?" done":"")+(it.flag?" flagged":""); row.setAttribute("data-id", it.id||"");
       var chk=document.createElement("input"); chk.type="checkbox"; chk.className="td-chk"; chk.checked=!!it.done;
       var task=document.createElement("input"); task.type="text"; task.className="td-task"; task.placeholder="할 일"; task.autocomplete="off"; task.value=it.task||"";
       var del=document.createElement("button"); del.type="button"; del.className="td-del"; del.setAttribute("aria-label","삭제"); del.textContent="×";
@@ -3664,19 +3667,21 @@
       else dlabel.textContent="기한";
       if(it.due && !it.done && Math.round((parseD(it.due)-parseD(todayStr()))/864e5)<=7) dlabel.classList.add("soon");   // 기한 7일 이내(지난 것 포함) 강조
       dwrap.appendChild(due); dwrap.appendChild(dlabel);
+      var flag=document.createElement("input"); flag.type="checkbox"; flag.className="td-flag"; flag.checked=!!it.flag; flag.title="색상 표시(구분)";   // 행 색상 강조
+      flag.onchange=function(r){ return function(){ r.classList.toggle("flagged", r.querySelector(".td-flag").checked); saveTodos(); }; }(row);
       chk.onchange=function(r){ return function(){ r.classList.toggle("done", r.querySelector(".td-chk").checked); saveTodos(); }; }(row);
       task.onchange=function(){ saveTodos(); renderTodos(); };   // 마지막 칸을 채우면 새 빈칸 생성
       dlabel.onclick=function(inp){ return function(){ try{ inp.showPicker(); }catch(e){ try{ inp.focus(); inp.click(); }catch(_){} } }; }(due);
       due.onchange=function(){ saveTodos(); renderTodos(); };   // 기한 바뀌면 월.일 라벨·날짜순 재정렬
       del.onclick=function(rw,tk,dz){ return function(){ var tv=tk.value.trim(); if(tv) completePlanFor(rw.getAttribute("data-id"), tv, dz.value); tk.value=""; dz.value=""; rw.querySelector(".td-chk").checked=false; rw.removeAttribute("data-id"); saveTodos(); renderTodos(); }; }(row,task,due);
-      row.appendChild(chk); row.appendChild(task); row.appendChild(del); row.appendChild(dwrap);
+      row.appendChild(chk); row.appendChild(task); row.appendChild(del); row.appendChild(dwrap); row.appendChild(flag);
       el.appendChild(row);
     }
   }
   function genPid(){ return "p"+Date.now().toString(36)+Math.floor(Math.random()*1e5).toString(36); }
   function saveTodos(){
     var rows=document.querySelectorAll("#todoList .todo-row"), arr=[];
-    Array.prototype.forEach.call(rows,function(r){ var task=r.querySelector(".td-task").value.trim(), due=r.querySelector(".td-due").value; if(task||due){ var id=r.getAttribute("data-id"); if(!id && task){ id=genPid(); r.setAttribute("data-id",id); } arr.push({ id:id||"", done:r.querySelector(".td-chk").checked, task:task, due:due }); } });
+    Array.prototype.forEach.call(rows,function(r){ var task=r.querySelector(".td-task").value.trim(), due=r.querySelector(".td-due").value; if(task||due){ var id=r.getAttribute("data-id"); if(!id && task){ id=genPid(); r.setAttribute("data-id",id); } arr.push({ id:id||"", done:r.querySelector(".td-chk").checked, task:task, due:due, flag:!!(r.querySelector(".td-flag")&&r.querySelector(".td-flag").checked) }); } });
     state.todos=sortTodos(arr);
     syncPlansFromTodos();
     save();
@@ -3686,7 +3691,7 @@
   // 할 일을 적으면 일정관리에 함께 남고(srcId로 연결), Things to do에서 ×로 지우면 '완료'로 기록
   function syncPlansFromTodos(){
     state.plans=state.plans||[];
-    (state.todos||[]).forEach(function(t){ if(!t.task||!t.id) return; var pl=state.plans.filter(function(p){return p.srcId===t.id;})[0]; if(pl){ pl.task=t.task; pl.due=t.due||""; if(!pl.done) pl.done=!!t.done; } else { state.plans.unshift({ id:genPid(), srcId:t.id, task:t.task, due:t.due||"", done:!!t.done, result:"", repeat:null, ts:Date.now() }); } });
+    (state.todos||[]).forEach(function(t){ if(!t.task||!t.id) return; var pl=state.plans.filter(function(p){return p.srcId===t.id;})[0]; if(pl){ pl.task=t.task; pl.due=t.due||""; pl.flag=!!t.flag; if(!pl.done) pl.done=!!t.done; } else { state.plans.unshift({ id:genPid(), srcId:t.id, task:t.task, due:t.due||"", done:!!t.done, flag:!!t.flag, result:"", repeat:null, ts:Date.now() }); } });
   }
   function completePlanFor(id, task, due){   // Things to do에서 삭제 → 연결된 일정을 '완료'로
     state.plans=state.plans||[];
@@ -4171,7 +4176,9 @@
     else { if(home.nextElementSibling!==ex) home.parentNode.insertBefore(ex, home.nextElementSibling); }
   }
   placeExerciseForViewport();
-  loadPhotoDates().then(function(){ var te=existingFor(todayStr()); if(te) editEntry(te, true); else { var _lb=lastBody(); draft.exercise=draft.exercise||emptyExercise(); if(draft.exercise.weight==null||draft.exercise.weight==="") draft.exercise.weight=_lb.weight; if(draft.exercise.waist==null||draft.exercise.waist==="") draft.exercise.waist=_lb.waist; if(!draft.schedule){ var _due=dueTodoText(todayStr()); if(_due) draft.schedule=_due; } loadDraft(); } refresh(); });
+  loadPhotoDates().then(function(){ var te=existingFor(todayStr()); if(te) editEntry(te, true); else { var _lb=lastBody(); draft.exercise=draft.exercise||emptyExercise(); if(draft.exercise.weight==null||draft.exercise.weight==="") draft.exercise.weight=_lb.weight; if(draft.exercise.waist==null||draft.exercise.waist==="") draft.exercise.waist=_lb.waist; loadDraft(); }
+    if(!(draft.schedule||"").trim()){ var _due=dueTodoText(todayStr()); if(_due){ draft.schedule=_due; var _sc=$("#schedule"); if(_sc) _sc.value=_due; } }   // 오늘 기한 Things to do → 주요일정 기본값(기존 기록이라도 비어 있으면)
+    refresh(); });
   resize(); rebuild();
   var _rzT=null;
   window.addEventListener("resize",function(){ resize(); wake(); placeExerciseForViewport(); if(_rzT)clearTimeout(_rzT); _rzT=setTimeout(function(){ syncTimelineHeight(); renderWeightChart(); renderStats(); },120); });
