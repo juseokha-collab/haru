@@ -949,6 +949,8 @@
     .adm-find{ flex-basis:120px; }
     /* 가계부: 편집 버튼 줄(항목·엑셀)은 PC에서만 → 모바일은 상단 월 셀렉트만 사용 */
     .led-head{ display:none; }
+    /* 비고 모아보기: 모바일에서도 한 줄에 2건 들어가도록 열 최소폭 축소 */
+    .ledn-notes{ grid-template-columns:repeat(auto-fill,minmax(138px,1fr)); column-gap:8px; }
   }
 
   @media (prefers-reduced-motion:reduce){ *{scroll-behavior:auto} .modal-input.shake{animation:none} }
