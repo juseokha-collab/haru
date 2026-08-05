@@ -783,7 +783,7 @@
   .adm-golf-row{background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:8px 12px}
   .gc-mbox{background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:10px 12px 12px}
   .gc-mbox-h{font-size:11px; font-weight:800; letter-spacing:.03em; color:var(--ink-3); text-transform:uppercase; margin-bottom:8px}
-  .gc-mgrid2{display:grid; align-items:baseline; column-gap:13px; row-gap:1px; padding:2px}
+  .gc-mgrid2{display:grid; align-items:baseline; column-gap:13px; row-gap:0; padding:1px 2px; line-height:1.25}
   .gc-dp2{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:190px}
   .gc-dp2 .gc-d{font-size:11px; color:var(--ink-3); font-variant-numeric:tabular-nums}
   .gc-dp2 .gc-pp{font-size:13px; color:var(--ink); margin-left:3px}
@@ -2733,7 +2733,7 @@
     var players=[["나",gs["나"]]].concat(r.ppl.map(function(n){return [n,gs[n]];}));
     var vals=[]; players.forEach(function(p){ var v=p[1]; if(v!=null&&v!==""&&!isNaN(+v)) vals.push(+v); });
     var minV=vals.length?Math.min.apply(null,vals):null;
-    var base=ri*2, sep=(ri>0?"5px":"");   // 라운드 사이 간격(구분선 대신 여백)
+    var base=ri*2, sep=(ri>0?"3px":"");   // 라운드 사이 간격(구분선 대신 여백)
     var dp=document.createElement("span"); dp.className="gc-dp2"; dp.style.gridColumn="1"; dp.style.gridRow=String(base+1); if(sep)dp.style.marginTop=sep;
     dp.innerHTML='<span class="gc-d">'+(r.date||"").slice(2).replace(/-/g,".")+'</span> <span class="gc-pp" title="'+esc(r.place||"")+'">'+esc(r.place||"")+(holes!==18?'('+holes+'홀)':'')+'</span>';
     grid.appendChild(dp);
