@@ -714,6 +714,19 @@
   .led-item{display:flex; align-items:center; gap:6px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:4px 6px 4px 9px}
   .led-item.led-hot{background:color-mix(in srgb,var(--accent) 12%,var(--surface-2)); border-color:color-mix(in srgb,var(--accent) 32%,transparent)}
   .led-item.led-hot .led-nm{color:var(--accent-ink)}
+  .led-item .led-nm{cursor:pointer}
+  .led-item.led-sel{outline:2px solid color-mix(in srgb,var(--accent) 55%,transparent); outline-offset:-1px}
+  .led-bar-wrap{margin:6px 2px 14px}
+  .led-bar-cap{font-size:11px; color:var(--ink-3); margin-bottom:3px}
+  .led-bar-cap b{color:var(--ink-2); font-weight:700}
+  .led-bar-cap .lbc-range{margin-left:5px; font-variant-numeric:tabular-nums}
+  .led-bar-cap .lbc-reset{margin-left:6px; border:1px solid var(--border); background:var(--surface); color:var(--ink-2); font-family:inherit; font-size:10px; border-radius:5px; padding:1px 7px; cursor:pointer}
+  .led-bar-svg{display:block; width:100%; height:70px}
+  .led-bar-svg .lb-axis{stroke:var(--ink-3); stroke-dasharray:3 3; stroke-width:1; opacity:.55}
+  .led-bar-svg .lb-bar.up{fill:#5FBFA0}
+  .led-bar-svg .lb-bar.down{fill:#E58A8A}
+  .led-bar-svg .lb-bar.cur{stroke:var(--ink); stroke-width:1.2}
+  .led-bar-x{display:flex; justify-content:space-between; font-size:10px; color:var(--ink-3); margin-top:2px; font-variant-numeric:tabular-nums}
   .led-item .led-nm{flex:1; min-width:0; font-size:12px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .led-item .led-nm .led-day{font-style:normal; font-size:9.5px; color:var(--ink-3); background:var(--surface); border-radius:4px; padding:0 3px; margin-left:2px}
   .led-item .led-nm .led-memo{font-style:normal; font-size:9.5px; color:var(--accent-ink)}
@@ -2865,7 +2878,7 @@
   }
   if($("#adminBtn")) $("#adminBtn").onclick=function(){ openAdmin("plan"); };
   document.addEventListener("click", function(e){ if(e.target && e.target.closest && e.target.closest("#adminBtnM")) openAdmin("plan"); });   // 모바일 관리 버튼(로그인 영역에서 동적 생성)
-  var adminYear=String(new Date().getFullYear()), adminFindQ="", adminSubFilter={}, adminTab="plan", golfSearchQ="", ledgerMonth=new Date().getMonth()+1;   // 기본 = 올해
+  var adminYear=String(new Date().getFullYear()), adminFindQ="", adminSubFilter={}, adminTab="plan", golfSearchQ="", ledgerMonth=new Date().getMonth()+1, ledChartSel={};   // 기본 = 올해 · ledChartSel: 대분류별 추이 대상(null=합계)
   function setAdminFindPh(){ var fi=$("#adminFind"); if(fi) fi.placeholder = (adminTab==="golf")? "🔍 골프장 찾기" : "🔍 이름 찾기"; }
   (function(){ var fi=$("#adminFind"); if(!fi) return; fi.addEventListener("input",function(){ var v=this.value.trim();
     if(adminTab==="golf"){ golfSearchQ=v; renderAdminGolf(); return; }
@@ -3767,9 +3780,10 @@
       var gh=document.createElement("div"); gh.className="led-grp-h"; gh.innerHTML='<span>'+esc(g.n)+'</span><b>'+fmtWon(gt)+'</b>'; sec.appendChild(gh);
       var grid=document.createElement("div"); grid.className="led-grid";
       cats.forEach(function(c){
-        var v0=ledCell(ym,c.id), avg=ledCatAvg(c.id), hot=(v0>0 && avg>0 && v0>=1.5*avg);
-        var item=document.createElement("label"); item.className="led-item"+(hot?" led-hot":"");
+        var v0=ledCell(ym,c.id), avg=ledCatAvg(c.id), hot=(v0>0 && avg>0 && v0>=1.5*avg), selc=(ledChartSel[g.k]===c.id);
+        var item=document.createElement("div"); item.className="led-item"+(hot?" led-hot":"")+(selc?" led-sel":"");
         item.innerHTML='<span class="led-nm">'+esc(c.name)+(c.day?' <i class="led-day">'+c.day+'일</i>':'')+(c.memo?' <i class="led-memo">'+esc(c.memo)+'</i>':'')+'</span>';
+        var nmEl=item.querySelector(".led-nm"); if(nmEl){ nmEl.title="이 항목 추이 보기"; nmEl.onclick=function(){ ledChartSel[g.k]=(ledChartSel[g.k]===c.id)?null:c.id; renderAdminLedger(); }; }
         var inp=document.createElement("input"); inp.type="text"; inp.className="led-in"; inp.inputMode="numeric"; inp.value=v0?fmtWon(v0):""; inp.placeholder="0";
         inp.onchange=function(){ var v=parseWon(inp.value); state.ledger[ym]=state.ledger[ym]||{cells:{},note:""}; state.ledger[ym].cells=state.ledger[ym].cells||{}; if(v) state.ledger[ym].cells[c.id]=v; else delete state.ledger[ym].cells[c.id]; save(); renderAdminLedger(); };
         item.appendChild(inp); grid.appendChild(item);
@@ -3780,11 +3794,36 @@
       var gn=document.createElement("input"); gn.type="text"; gn.className="led-note"; gn.placeholder=g.n+" 비고"; gn.value=ledNoteEff(ym, g.k);
       gn.onchange=function(){ var mm=state.ledger[ym]=state.ledger[ym]||{cells:{},notes:{}}; mm.notes=ledNotes(ym); var v=gn.value.trim(); if(v) mm.notes[g.k]=v; else delete mm.notes[g.k]; save(); };
       nrow.appendChild(gn); sec.appendChild(nrow);
+      sec.appendChild(buildLedgerBar(g.k, yr, ledgerMonth, ledChartSel[g.k]));   // 13개월 추이(평균 기준 상/하)
       el.appendChild(sec);
     });
     el.appendChild(buildLedgerYear(yr));
     el.appendChild(buildLedgerNotes(yr));
     el.appendChild(buildLedgerChart(yr));
+  }
+  function ledGroupMonthVal(gk, ym, selId){ if(selId) return ledCell(ym,selId); var s=0; ledCatsOf(gk).forEach(function(c){ s+=ledCell(ym,c.id); }); return s; }
+  // 대분류(또는 선택 항목) 13개월 추이: 1년전 같은 달~이번달, 평균 기준 위/아래 막대
+  function buildLedgerBar(gk, yr, mon, selId){
+    var wrap=document.createElement("div"); wrap.className="led-bar-wrap";
+    var months=[]; for(var k=12;k>=0;k--){ var d=new Date(+yr, (mon-1)-k, 1); months.push(d.getFullYear()+"-"+pad(d.getMonth()+1)); }
+    var vals=months.map(function(ym){ return ledGroupMonthVal(gk,ym,selId); });
+    var selName="합계", canReset=false;
+    if(selId){ var c=ledCatsOf(gk).filter(function(x){return x.id===selId;})[0]; if(c){ selName=c.name; canReset=true; } }
+    var cap=document.createElement("div"); cap.className="led-bar-cap";
+    cap.innerHTML='<b>'+esc(selName)+'</b> 추이 <span class="lbc-range">'+months[0].slice(2).replace("-",".")+"~"+months[12].slice(2).replace("-",".")+'</span>'+(canReset?' <button type="button" class="lbc-reset">합계로</button>':'');
+    wrap.appendChild(cap);
+    if(canReset){ var rb=cap.querySelector(".lbc-reset"); if(rb) rb.onclick=function(){ ledChartSel[gk]=null; renderAdminLedger(); }; }
+    if(!vals.some(function(v){return v;})){ var em=document.createElement("div"); em.className="led-empty"; em.style.padding="8px"; em.textContent="데이터가 쌓이면 추이가 표시돼요"; wrap.appendChild(em); return wrap; }
+    var avg=vals.reduce(function(a,b){return a+b;},0)/vals.length, maxDev=1; vals.forEach(function(v){ maxDev=Math.max(maxDev, Math.abs(v-avg)); });
+    var W=600, H=70, pl=4, pr=4, cy=H/2, half=H/2-6, n=13, gap=3, bw=(W-pl-pr-gap*(n-1))/n;
+    var s='<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" class="led-bar-svg" preserveAspectRatio="none">';
+    s+='<line x1="'+pl+'" y1="'+cy+'" x2="'+(W-pr)+'" y2="'+cy+'" class="lb-axis"/>';
+    months.forEach(function(ym,i){ var v=vals[i], dev=v-avg, bh=Math.max(1,Math.round(Math.abs(dev)/maxDev*half)), x=pl+i*(bw+gap), y=dev>=0?cy-bh:cy;
+      s+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+bh+'" class="lb-bar '+(dev>=0?"up":"down")+(i===n-1?" cur":"")+'"><title>'+ym.slice(2).replace("-",".")+" · "+fmtWon(v)+'</title></rect>'; });
+    s+='</svg>';
+    var sw=document.createElement("div"); sw.className="led-bar-svgwrap"; sw.innerHTML=s; wrap.appendChild(sw);
+    var xl=document.createElement("div"); xl.className="led-bar-x"; xl.innerHTML='<span>'+months[0].slice(2).replace("-",".")+'</span><span>평균 '+fmtWon(avg)+'</span><span>'+months[12].slice(2).replace("-",".")+'</span>'; wrap.appendChild(xl);
+    return wrap;
   }
   function buildLedgerNotes(yr){
     var box=document.createElement("div"); box.className="led-notes";
