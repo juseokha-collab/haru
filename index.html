@@ -904,9 +904,16 @@
     /* 관리자 모달: 모바일 대응 */
     .admin-modal{ max-width:100%; }
     .admin-head{ flex-wrap:wrap; padding:12px 12px 0; }
+    /* 1줄: 연도 + 이름찾기 + × / 2줄: 탭 버튼 */
+    .admin-head .adm-yearsel{ order:1; }
+    .admin-head #adminFind{ order:2; }
+    .admin-head #adminClose{ order:3; }
+    .admin-head #adminTabs{ order:4; flex-basis:100%; justify-content:flex-start; }
     .admin-body{ padding:12px 12px 14px; max-height:74vh; }
     .adm-plist{ grid-template-columns:1fr; }
     .adm-find{ flex-basis:120px; }
+    /* 가계부: 항목·엑셀 버튼은 PC에서만 → 가계부 · 월이동만 한 줄로 */
+    .led-imp{ display:none; }
   }
 
   @media (prefers-reduced-motion:reduce){ *{scroll-behavior:auto} .modal-input.shake{animation:none} }
@@ -1189,8 +1196,9 @@
 <div class="modal-back" id="adminModal" hidden>
   <div class="modal admin-modal" role="dialog" aria-modal="true">
     <div class="admin-head">
+      <select id="adminYearSel" class="adm-yearsel" title="연도"></select>
       <div class="admin-tabs" id="adminTabs">
-        <select id="adminYearSel" class="adm-yearsel" title="연도"></select><button type="button" class="on" data-at="plan">일정관리</button><button type="button" data-at="people">인맥 관리</button><button type="button" data-at="golf">골프 스코어</button><button type="button" data-at="ledger">가계부</button>
+        <button type="button" class="on" data-at="plan">일정관리</button><button type="button" data-at="people">인맥 관리</button><button type="button" data-at="golf">골프 스코어</button><button type="button" data-at="ledger">가계부</button>
       </div>
       <input class="modal-find adm-find" id="adminFind" placeholder="🔍 이름 찾기" autocomplete="off">
       <button class="x" id="adminClose" aria-label="닫기">&times;</button>
