@@ -711,7 +711,8 @@
   .led-s i{display:block; font-size:10.5px; font-style:normal; color:var(--ink-3); margin-bottom:3px}
   .led-s b{font-size:14px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums}
   .led-s.net{background:color-mix(in srgb,var(--accent) 10%,var(--surface-2)); border-color:color-mix(in srgb,var(--accent) 30%,transparent)}
-  .led-s b.pos{color:#2f8f52} .led-s b.neg{color:#d06666}
+  .led-s b.pos{color:#2f8f52} .led-s b.neg{color:#e23b3b}
+  .won-neg{color:#e23b3b} .led-in.neg{color:#e23b3b}
   .led-grp{margin-bottom:10px}
   .led-grp-h{display:flex; align-items:baseline; justify-content:space-between; font-size:11px; font-weight:800; letter-spacing:.03em; color:var(--ink-3); text-transform:uppercase; margin-bottom:5px; padding-bottom:3px; border-bottom:1px solid var(--border)}
   .led-grp-h b{font-size:12px; color:var(--ink-2); font-variant-numeric:tabular-nums}
@@ -762,7 +763,7 @@
   .lyr:not(.lyr-head):hover{background:var(--surface-2)}
   .lyr.on{background:color-mix(in srgb,var(--accent) 10%,transparent)}
   .lyr.lyr-tot{font-weight:800; background:var(--surface-2)}
-  .lyr .pos{color:#2f8f52} .lyr .neg{color:#d06666}
+  .lyr .pos{color:#2f8f52} .lyr .neg{color:#e23b3b}
   .led-notes{margin-top:16px}
   .ledn-row{display:flex; gap:10px; align-items:flex-start; padding:5px 4px; border-bottom:1px solid var(--border); cursor:pointer}
   .ledn-row:hover{background:var(--surface-2)}
@@ -3774,6 +3775,7 @@
     {id:"h_tax",group:"cash",name:"세금"},{id:"h_holiday",group:"cash",name:"명절"},{id:"h_personal",group:"cash",name:"개인"},{id:"h_event",group:"cash",name:"축/조의"},{id:"h_eeum",group:"cash",name:"e음"},{id:"h_etc",group:"cash",name:"기타"}
   ]; }
   function fmtWon(n){ n=Math.round(n||0); var s=Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,","); return (n<0?"-":"")+s; }
+  function wonH(n){ n=Math.round(n||0); var s=fmtWon(n); return n<0?'<span class="won-neg">'+s+'</span>':s; }
   function parseWon(s){ s=(s||"").toString().replace(/[,\s]/g,""); var m=s.match(/[+-]?\d+/g); if(!m) return 0; var sum=0; for(var i=0;i<m.length;i++){ sum+=parseInt(m[i],10)||0; } return sum; }   // 콤마 제거 + '+/-' 식 합산(100000+10000 → 110000)
   function ledCatsOf(g){ return (state.ledgerCats||[]).filter(function(c){return c.group===g;}); }
   function ledCell(ym,id){ var m=state.ledger[ym]; return (m&&m.cells&&m.cells[id])||0; }
@@ -3798,20 +3800,21 @@
     head.appendChild(cfg); head.appendChild(imp); el.appendChild(head);
     var t=ledMonthTotals(ym);
     var sum=document.createElement("div"); sum.className="led-sum";
-    sum.innerHTML='<div class="led-s"><i>수입</i><b>'+fmtWon(t.income)+'</b></div><div class="led-s"><i>지출</i><b>'+fmtWon(t.expense)+'</b></div><div class="led-s"><i>투자</i><b>'+fmtWon(t.invest)+'</b></div><div class="led-s net"><i>수지</i><b class="'+(t.net<0?"neg":"pos")+'">'+fmtWon(t.net)+'</b></div>';
+    sum.innerHTML='<div class="led-s"><i>수입</i><b>'+wonH(t.income)+'</b></div><div class="led-s"><i>지출</i><b>'+wonH(t.expense)+'</b></div><div class="led-s"><i>투자</i><b>'+wonH(t.invest)+'</b></div><div class="led-s net"><i>수지</i><b class="'+(t.net<0?"neg":"pos")+'">'+fmtWon(t.net)+'</b></div>';
     el.appendChild(sum);
     LEDGER_GROUPS.forEach(function(g){
       var cats=ledCatsOf(g.k); if(!cats.length) return;
       var gt=0; cats.forEach(function(c){ gt+=ledCell(ym,c.id); });
       var sec=document.createElement("div"); sec.className="led-grp";
-      var gh=document.createElement("div"); gh.className="led-grp-h"; gh.innerHTML='<span>'+esc(g.n)+'</span><b>'+fmtWon(gt)+'</b>'; sec.appendChild(gh);
+      var gh=document.createElement("div"); gh.className="led-grp-h"; gh.innerHTML='<span>'+esc(g.n)+'</span><b>'+wonH(gt)+'</b>'; sec.appendChild(gh);
       var grid=document.createElement("div"); grid.className="led-grid";
       cats.forEach(function(c){
         var v0=ledCell(ym,c.id), avg=ledCatAvg(c.id), hot=(v0>0 && avg>0 && v0>=1.5*avg), selc=(ledChartSel[g.k]===c.id);
         var item=document.createElement("div"); item.className="led-item"+(hot?" led-hot":"")+(selc?" led-sel":"");
         item.innerHTML='<span class="led-nm">'+esc(c.name)+(c.day?' <i class="led-day">'+c.day+'일</i>':'')+(c.memo?' <i class="led-memo">'+esc(c.memo)+'</i>':'')+'</span>';
         var nmEl=item.querySelector(".led-nm"); if(nmEl){ nmEl.title="이 항목 추이 보기"; nmEl.onclick=function(){ ledChartSel[g.k]=(ledChartSel[g.k]===c.id)?null:c.id; renderAdminLedger(); }; }
-        var inp=document.createElement("input"); inp.type="text"; inp.className="led-in"; inp.inputMode="numeric"; inp.value=v0?fmtWon(v0):""; inp.placeholder="0";
+        var inp=document.createElement("input"); inp.type="text"; inp.className="led-in"+(v0<0?" neg":""); inp.inputMode="numeric"; inp.value=v0?fmtWon(v0):""; inp.placeholder="0";
+        inp.oninput=function(){ inp.classList.toggle("neg", parseWon(inp.value)<0); };
         inp.onchange=function(){ var v=parseWon(inp.value); state.ledger[ym]=state.ledger[ym]||{cells:{},note:""}; state.ledger[ym].cells=state.ledger[ym].cells||{}; if(v) state.ledger[ym].cells[c.id]=v; else delete state.ledger[ym].cells[c.id]; save(); renderAdminLedger(); };
         item.appendChild(inp);
         if(g.k==="card" && c.target>0){   // 카드 이번달 실적 진행률
@@ -3849,7 +3852,7 @@
     var pv=[]; months.forEach(function(ym,i){ if(present[i]) pv.push(vals[i]); });
     var avg=pv.length? pv.reduce(function(a,b){return a+b;},0)/pv.length : 0;
     var cap=document.createElement("div"); cap.className="led-bar-cap";
-    cap.innerHTML='<b>'+esc(selName)+'</b> 추이 <span class="lbc-range">'+months[0].slice(2).replace("-",".")+"~"+months[12].slice(2).replace("-",".")+'</span>'+(pv.length?' <span class="lbc-avg">평균 '+fmtWon(avg)+'</span>':'')+(canReset?' <button type="button" class="lbc-reset">합계로</button>':'');
+    cap.innerHTML='<b>'+esc(selName)+'</b> 추이 <span class="lbc-range">'+months[0].slice(2).replace("-",".")+"~"+months[12].slice(2).replace("-",".")+'</span>'+(pv.length?' <span class="lbc-avg">평균 '+wonH(avg)+'</span>':'')+(canReset?' <button type="button" class="lbc-reset">합계로</button>':'');
     wrap.appendChild(cap);
     if(canReset){ var rb=cap.querySelector(".lbc-reset"); if(rb) rb.onclick=function(){ ledChartSel[gk]=null; renderAdminLedger(); }; }
     if(!pv.length){ var em=document.createElement("div"); em.className="led-empty"; em.style.padding="8px"; em.textContent="데이터가 쌓이면 추이가 표시돼요"; wrap.appendChild(em); return wrap; }
@@ -3894,11 +3897,11 @@
     for(var m=1;m<=12;m++){ var ym=yr+"-"+pad(m), t=ledMonthTotals(ym); if(!(t.income||t.expense||t.invest)) continue; any=true;
       tot.income+=t.income; tot.expense+=t.expense; tot.invest+=t.invest; tot.net+=t.net;
       var row=document.createElement("div"); row.className="lyr"+(m===ledgerMonth?" on":""); row.setAttribute("data-m",m);
-      row.innerHTML='<span>'+m+'월</span><span>'+fmtWon(t.income)+'</span><span>'+fmtWon(t.expense)+'</span><span>'+fmtWon(t.invest)+'</span><span class="'+(t.net<0?"neg":"pos")+'">'+fmtWon(t.net)+'</span>';
+      row.innerHTML='<span>'+m+'월</span><span>'+wonH(t.income)+'</span><span>'+wonH(t.expense)+'</span><span>'+wonH(t.invest)+'</span><span class="'+(t.net<0?"neg":"pos")+'">'+fmtWon(t.net)+'</span>';
       row.onclick=function(){ ledgerMonth=+this.getAttribute("data-m"); renderAdminLedger(); };
       tbl.appendChild(row);
     }
-    if(any){ var trow=document.createElement("div"); trow.className="lyr lyr-tot"; trow.innerHTML='<span>합계</span><span>'+fmtWon(tot.income)+'</span><span>'+fmtWon(tot.expense)+'</span><span>'+fmtWon(tot.invest)+'</span><span class="'+(tot.net<0?"neg":"pos")+'">'+fmtWon(tot.net)+'</span>'; tbl.appendChild(trow); }
+    if(any){ var trow=document.createElement("div"); trow.className="lyr lyr-tot"; trow.innerHTML='<span>합계</span><span>'+wonH(tot.income)+'</span><span>'+wonH(tot.expense)+'</span><span>'+wonH(tot.invest)+'</span><span class="'+(tot.net<0?"neg":"pos")+'">'+fmtWon(tot.net)+'</span>'; tbl.appendChild(trow); }
     else { var em=document.createElement("div"); em.className="led-empty"; em.textContent="이 해 입력이 없어요."; tbl.appendChild(em); }
     box.appendChild(tbl); return box;
   }
