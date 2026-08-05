@@ -3654,7 +3654,10 @@
       var del=document.createElement("button"); del.type="button"; del.className="td-del"; del.setAttribute("aria-label","삭제"); del.textContent="×";
       var dwrap=document.createElement("span"); dwrap.className="td-datewrap";
       var due=document.createElement("input"); due.type="date"; due.className="td-due"; due.value=it.due||"";
-      var dlabel=document.createElement("span"); dlabel.className="td-date"+(it.due?"":" empty"); dlabel.textContent=it.due? it.due.slice(5).replace("-",".") : "기한";
+      var dlabel=document.createElement("span"); dlabel.className="td-date"+(it.due?"":" empty");
+      if(it.due){ var dd=Math.round((parseD(it.due)-parseD(todayStr()))/864e5);   // 남은 일수: 0=오늘,1=내일,2~7=D-2~D-7, 그 외=월.일
+        dlabel.textContent = dd===0?"오늘" : dd===1?"내일" : (dd>=2&&dd<=7)?("D-"+dd) : it.due.slice(5).replace("-","."); }
+      else dlabel.textContent="기한";
       if(it.due && !it.done && Math.round((parseD(it.due)-parseD(todayStr()))/864e5)<=7) dlabel.classList.add("soon");   // 기한 7일 이내(지난 것 포함) 강조
       dwrap.appendChild(due); dwrap.appendChild(dlabel);
       chk.onchange=function(r){ return function(){ r.classList.toggle("done", r.querySelector(".td-chk").checked); saveTodos(); }; }(row);
