@@ -733,6 +733,7 @@
   .led-bar-cap{font-size:11px; color:var(--ink-3); margin-bottom:3px}
   .led-bar-cap b{color:var(--ink-2); font-weight:700}
   .led-bar-cap .lbc-range{margin-left:5px; font-variant-numeric:tabular-nums}
+  .led-bar-cap .lbc-avg{margin-left:6px; color:var(--ink-2); font-variant-numeric:tabular-nums}
   .led-bar-cap .lbc-reset{margin-left:6px; border:1px solid var(--border); background:var(--surface); color:var(--ink-2); font-family:inherit; font-size:10px; border-radius:5px; padding:1px 7px; cursor:pointer}
   .led-bar-svg{display:block; width:100%; height:70px}
   .led-bar-svg .lb-axis{stroke:var(--ink-3); stroke-dasharray:3 3; stroke-width:1; opacity:.55}
@@ -3841,13 +3842,14 @@
     var vals=months.map(function(ym){ return ledGroupMonthVal(gk,ym,selId); });
     var selName="합계", canReset=false;
     if(selId){ var c=ledCatsOf(gk).filter(function(x){return x.id===selId;})[0]; if(c){ selName=c.name; canReset=true; } }
+    var pv=[]; months.forEach(function(ym,i){ if(present[i]) pv.push(vals[i]); });
+    var avg=pv.length? pv.reduce(function(a,b){return a+b;},0)/pv.length : 0;
     var cap=document.createElement("div"); cap.className="led-bar-cap";
-    cap.innerHTML='<b>'+esc(selName)+'</b> 추이 <span class="lbc-range">'+months[0].slice(2).replace("-",".")+"~"+months[12].slice(2).replace("-",".")+'</span>'+(canReset?' <button type="button" class="lbc-reset">합계로</button>':'');
+    cap.innerHTML='<b>'+esc(selName)+'</b> 추이 <span class="lbc-range">'+months[0].slice(2).replace("-",".")+"~"+months[12].slice(2).replace("-",".")+'</span>'+(pv.length?' <span class="lbc-avg">평균 '+fmtWon(avg)+'</span>':'')+(canReset?' <button type="button" class="lbc-reset">합계로</button>':'');
     wrap.appendChild(cap);
     if(canReset){ var rb=cap.querySelector(".lbc-reset"); if(rb) rb.onclick=function(){ ledChartSel[gk]=null; renderAdminLedger(); }; }
-    var pv=[]; months.forEach(function(ym,i){ if(present[i]) pv.push(vals[i]); });
     if(!pv.length){ var em=document.createElement("div"); em.className="led-empty"; em.style.padding="8px"; em.textContent="데이터가 쌓이면 추이가 표시돼요"; wrap.appendChild(em); return wrap; }
-    var avg=pv.reduce(function(a,b){return a+b;},0)/pv.length, maxDev=1; pv.forEach(function(v){ maxDev=Math.max(maxDev, Math.abs(v-avg)); });
+    var maxDev=1; pv.forEach(function(v){ maxDev=Math.max(maxDev, Math.abs(v-avg)); });
     var W=600, H=84, pl=4, pr=4, cy=H/2, half=H/2-4, n=13, gap=3, bw=(W-pl-pr-gap*(n-1))/n;
     var s='<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" class="led-bar-svg" preserveAspectRatio="none">';
     s+='<line x1="'+pl+'" y1="'+cy+'" x2="'+(W-pr)+'" y2="'+cy+'" class="lb-axis"/>';
@@ -3859,7 +3861,7 @@
     s+='</svg>';
     var sw=document.createElement("div"); sw.className="led-bar-svgwrap"; sw.innerHTML=s; wrap.appendChild(sw);
     Array.prototype.forEach.call(sw.querySelectorAll("[data-ym]"), function(el){ el.style.cursor="pointer"; el.onclick=function(){ var ym2=el.getAttribute("data-ym"); adminYear=ym2.slice(0,4); ledgerMonth=+ym2.slice(5); renderAdminYearSel(); renderAdminLedger(); }; });
-    var xl=document.createElement("div"); xl.className="led-bar-x"; xl.innerHTML='<span>'+months[0].slice(2).replace("-",".")+'</span><span>평균 '+fmtWon(avg)+'</span><span>'+months[12].slice(2).replace("-",".")+'</span>'; wrap.appendChild(xl);
+    var xl=document.createElement("div"); xl.className="led-bar-x"; xl.innerHTML='<span>'+months[0].slice(2).replace("-",".")+'</span><span>'+months[12].slice(2).replace("-",".")+'</span>'; wrap.appendChild(xl);
     return wrap;
   }
   function buildLedgerNotes(yr){
