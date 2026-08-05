@@ -780,6 +780,9 @@
   .ledcat-nm{flex:1; min-width:0}
   .ledcat-day{width:60px; flex:none; text-align:center}
   .ledcat-memo{width:110px; flex:none}
+  .ledcat-mv{flex:none; display:inline-flex; flex-direction:column; gap:2px}
+  .ledcat-mv .ledcat-mvb{border:1px solid var(--border); background:var(--surface); color:var(--ink-3); font-size:7px; line-height:1; padding:2px 5px; cursor:pointer; border-radius:4px}
+  .ledcat-mv .ledcat-mvb:hover{border-color:var(--accent); color:var(--accent-ink)}
   .ledcat-del{flex:none; width:26px; height:28px; border:1px solid var(--border); background:var(--surface); border-radius:6px; color:var(--ink-3); font-size:15px; line-height:1; cursor:pointer}
   .ledcat-del:hover{border-color:var(--c-fam); color:var(--c-fam)}
   .ledcat-add{width:100%; border:1px dashed var(--border); background:transparent; color:var(--ink-2); font-family:inherit; font-size:12px; font-weight:600; padding:5px; border-radius:7px; cursor:pointer; margin-top:2px}
@@ -3919,6 +3922,12 @@
     var modal=document.createElement("div"); modal.className="modal ledcat-modal force-light";
     modal.innerHTML='<div class="modal-title">가계부 항목 편집</div><div class="modal-msg">이름·결제일(1~31)·메모를 바꾸거나, 그룹별로 항목을 추가/삭제하세요.</div>';
     var body=document.createElement("div"); body.className="ledcat-body";
+    function moveCat(item, dir){   // 전체 표시순서에서 한 칸 이동(경계 넘으면 그룹 변경)
+      var list=[]; LEDGER_GROUPS.forEach(function(g){ ledCatsOf(g.k).forEach(function(c){ list.push(c); }); });
+      var i=list.indexOf(item), j=i+dir; if(i<0||j<0||j>=list.length) return;
+      var other=list[j]; if(other.group!==item.group) item.group=other.group;
+      list[i]=other; list[j]=item; state.ledgerCats=list; save(); render();
+    }
     function render(){
       body.innerHTML="";
       LEDGER_GROUPS.forEach(function(g){
@@ -3929,9 +3938,13 @@
           var nm=document.createElement("input"); nm.type="text"; nm.className="ledcat-nm"; nm.value=c.name||""; nm.placeholder="이름"; nm.onchange=function(){ c.name=nm.value.trim()||c.name; };
           var day=document.createElement("input"); day.type="number"; day.className="ledcat-day"; day.min="1"; day.max="31"; day.value=c.day||""; day.placeholder="결제일"; day.title="결제/입금 일"; day.onchange=function(){ var v=parseInt(day.value,10); if(v>=1&&v<=31) c.day=v; else delete c.day; };
           var memo=document.createElement("input"); memo.type="text"; memo.className="ledcat-memo"; memo.value=c.memo||""; memo.placeholder="메모(계좌 등)"; memo.onchange=function(){ var v=memo.value.trim(); if(v) c.memo=v; else delete c.memo; };
+          var mv=document.createElement("span"); mv.className="ledcat-mv";
+          var up=document.createElement("button"); up.type="button"; up.className="ledcat-mvb"; up.textContent="▲"; up.title="위로 이동(그룹 넘김 가능)"; up.onclick=function(){ moveCat(c,-1); };
+          var dn=document.createElement("button"); dn.type="button"; dn.className="ledcat-mvb"; dn.textContent="▼"; dn.title="아래로 이동(그룹 넘김 가능)"; dn.onclick=function(){ moveCat(c,1); };
+          mv.appendChild(up); mv.appendChild(dn);
           var del=document.createElement("button"); del.type="button"; del.className="ledcat-del"; del.textContent="×"; del.title="항목 삭제";
           del.onclick=function(){ askConfirm({ title:"항목 삭제", message:"‘"+(c.name||"")+"’ 항목을 삭제할까요?\n(입력된 금액 데이터는 유지되지만 합계에서 제외됩니다)", okText:"삭제", danger:true, onOk:function(){ state.ledgerCats=state.ledgerCats.filter(function(x){return x!==c;}); render(); } }); };
-          row.appendChild(nm); row.appendChild(day); row.appendChild(memo); row.appendChild(del); sec.appendChild(row);
+          row.appendChild(nm); row.appendChild(day); row.appendChild(memo); row.appendChild(mv); row.appendChild(del); sec.appendChild(row);
         });
         var add=document.createElement("button"); add.type="button"; add.className="ledcat-add"; add.textContent="+ "+g.n+" 항목 추가";
         add.onclick=function(){ state.ledgerCats.push({id:"lc"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36), group:g.k, name:"새 항목"}); render(); };
@@ -3941,7 +3954,7 @@
     render();
     var acts=document.createElement("div"); acts.className="modal-actions";
     function close(){ back.remove(); }
-    var cancelB=document.createElement("button"); cancelB.type="button"; cancelB.className="btn"; cancelB.textContent="닫기"; cancelB.onclick=function(){ close(); };
+    var cancelB=document.createElement("button"); cancelB.type="button"; cancelB.className="btn"; cancelB.textContent="닫기"; cancelB.onclick=function(){ renderAdminLedger(); close(); };
     var saveB=document.createElement("button"); saveB.type="button"; saveB.className="btn primary"; saveB.textContent="저장";
     saveB.onclick=function(){ save(); renderAdminLedger(); updateSkyDate(); close(); };
     acts.appendChild(cancelB); acts.appendChild(saveB);
