@@ -2216,6 +2216,10 @@
 
   function loadDraft(){ var scs=document.querySelectorAll(".meal-same"); for(var si=0;si<scs.length;si++) scs[si].checked=false; loadPhotoForDate(draft.date); $("#date").value=draft.date; $("#schedule").value=draft.schedule||""; $("#schedMark").checked=!!draft.mark; loadMeals(draft.meals); draft.bizmeets=(draft.bizmeets&&draft.bizmeets.length)?draft.bizmeets:[draft.bizmeet||emptyBiz()]; loadBiz(draft.bizmeets[0]); renderBizExtras(); loadDrinks(draft.drinks); loadExercise(draft.exercise); $("#thoughts").value=draft.thoughts; $("#learning").value=draft.learning; renderDraftChips(); renderGolfScore(); var _ed=$("#editing"); _ed.textContent = existingFor(draft.date)?"수정중":""; _ed.className="sub"; }
   function existingFor(date){ return state.entries.filter(function(e){return e.date===date;})[0]; }
+  function dueTodoText(date){   // 해당 날짜가 기한인 미완료 Things to do → "⏰ 내용" 목록(주요일정 기본값용)
+    var arr=(state.todos||[]).filter(function(x){ return x.task && x.task.trim() && x.due===date && !x.done; }).map(function(x){ return "⏰ "+x.task.trim(); });
+    return arr.join(" · ");
+  }
 
   function saveEntry(){
     draft.date=$("#date").value||todayStr();
@@ -4167,7 +4171,7 @@
     else { if(home.nextElementSibling!==ex) home.parentNode.insertBefore(ex, home.nextElementSibling); }
   }
   placeExerciseForViewport();
-  loadPhotoDates().then(function(){ var te=existingFor(todayStr()); if(te) editEntry(te, true); else { var _lb=lastBody(); draft.exercise=draft.exercise||emptyExercise(); if(draft.exercise.weight==null||draft.exercise.weight==="") draft.exercise.weight=_lb.weight; if(draft.exercise.waist==null||draft.exercise.waist==="") draft.exercise.waist=_lb.waist; loadDraft(); } refresh(); });
+  loadPhotoDates().then(function(){ var te=existingFor(todayStr()); if(te) editEntry(te, true); else { var _lb=lastBody(); draft.exercise=draft.exercise||emptyExercise(); if(draft.exercise.weight==null||draft.exercise.weight==="") draft.exercise.weight=_lb.weight; if(draft.exercise.waist==null||draft.exercise.waist==="") draft.exercise.waist=_lb.waist; if(!draft.schedule){ var _due=dueTodoText(todayStr()); if(_due) draft.schedule=_due; } loadDraft(); } refresh(); });
   resize(); rebuild();
   var _rzT=null;
   window.addEventListener("resize",function(){ resize(); wake(); placeExerciseForViewport(); if(_rzT)clearTimeout(_rzT); _rzT=setTimeout(function(){ syncTimelineHeight(); renderWeightChart(); renderStats(); },120); });
