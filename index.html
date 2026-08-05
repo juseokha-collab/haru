@@ -764,12 +764,14 @@
   .lyr.lyr-tot{font-weight:800; background:var(--surface-2)}
   .lyr .pos{color:#2f8f52} .lyr .neg{color:#d06666}
   .led-notes{margin-top:16px}
-  .led-note-item{display:flex; gap:9px; align-items:baseline; padding:5px 6px; border-radius:7px; cursor:pointer; border-bottom:1px solid var(--border)}
-  .led-note-item:hover{background:var(--surface-2)}
-  .led-note-item.on{background:color-mix(in srgb,var(--accent) 10%,transparent)}
-  .led-note-item .lni-m{flex:none; width:34px; font-size:11.5px; font-weight:700; color:var(--ink-2); font-variant-numeric:tabular-nums}
-  .led-note-item .lni-g{flex:none; width:58px; font-size:10.5px; font-weight:700; color:var(--accent-ink); background:color-mix(in srgb,var(--accent) 12%,transparent); border-radius:5px; padding:1px 6px; text-align:center; align-self:center}
-  .led-note-item .lni-t{flex:1; min-width:0; font-size:12.5px; color:var(--ink)}
+  .ledn-row{display:flex; gap:10px; align-items:flex-start; padding:5px 4px; border-bottom:1px solid var(--border); cursor:pointer}
+  .ledn-row:hover{background:var(--surface-2)}
+  .ledn-row.on{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+  .ledn-m{flex:none; width:34px; font-size:11.5px; font-weight:700; color:var(--ink-2); font-variant-numeric:tabular-nums; padding-top:2px}
+  .ledn-notes{flex:1; min-width:0; display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:3px 12px}
+  .ledn-item{min-width:0; display:flex; align-items:baseline; gap:5px; font-size:12px; color:var(--ink); overflow:hidden; white-space:nowrap}
+  .ledn-item .lni-g{flex:none; font-size:10px; font-weight:700; color:var(--accent-ink); background:color-mix(in srgb,var(--accent) 12%,transparent); border-radius:5px; padding:1px 6px}
+  .ledn-item .lni-t{min-width:0; overflow:hidden; text-overflow:ellipsis}
   .led-chart-wrap{margin-top:16px; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:8px 10px}
   .led-chart-legend{display:flex; gap:12px; font-size:11px; margin-bottom:2px}
   .led-chart-legend .lg{display:inline-flex; align-items:center; gap:4px; color:var(--ink-2)}
@@ -3869,12 +3871,14 @@
     box.innerHTML='<div class="led-year-h">'+yr+'년 비고 모아보기</div>';
     var any=false;
     for(var m=1;m<=12;m++){ var ym=yr+"-"+pad(m);
-      LEDGER_GROUPS.forEach(function(g){ var nt=ledNoteEff(ym, g.k); if(!nt) return; any=true;
-        var it=document.createElement("div"); it.className="led-note-item"+(m===ledgerMonth?" on":""); it.setAttribute("data-m",m);
-        it.innerHTML='<span class="lni-m">'+m+'월</span><span class="lni-g">'+esc(g.n)+'</span><span class="lni-t">'+esc(nt)+'</span>';
-        it.onclick=function(){ ledgerMonth=+this.getAttribute("data-m"); renderAdminLedger(); };
-        box.appendChild(it);
-      });
+      var items=[]; LEDGER_GROUPS.forEach(function(g){ var nt=ledNoteEff(ym, g.k); if(nt) items.push({g:g.n, t:nt}); });
+      if(!items.length) continue; any=true;
+      var row=document.createElement("div"); row.className="ledn-row"+(m===ledgerMonth?" on":""); row.setAttribute("data-m",m);
+      row.onclick=function(){ ledgerMonth=+this.getAttribute("data-m"); renderAdminLedger(); };
+      var ml=document.createElement("span"); ml.className="ledn-m"; ml.textContent=m+"월"; row.appendChild(ml);
+      var ntw=document.createElement("div"); ntw.className="ledn-notes";
+      items.forEach(function(it){ var sp=document.createElement("span"); sp.className="ledn-item"; sp.title=it.g+" · "+it.t; sp.innerHTML='<b class="lni-g">'+esc(it.g)+'</b> <span class="lni-t">'+esc(it.t)+'</span>'; ntw.appendChild(sp); });
+      row.appendChild(ntw); box.appendChild(row);
     }
     if(!any){ var em=document.createElement("div"); em.className="led-empty"; em.textContent="이 해 비고가 없어요. (각 대분류 아래 ‘…비고’에 적으면 여기 모여요)"; box.appendChild(em); }
     return box;
