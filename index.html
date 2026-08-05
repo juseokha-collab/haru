@@ -693,7 +693,7 @@
   .adm-mgmt-chip .amc-btn.danger:hover{color:var(--c-fam)}
   .gc-yr-badge{font-size:12px; font-weight:800; color:var(--accent-ink); background:color-mix(in srgb,var(--accent) 16%,transparent); border-radius:7px; padding:4px 10px}
   /* 가계부 */
-  .led-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px}
+  .led-head{display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-bottom:8px}
   .led-head h3{margin:0; font-size:15px; font-weight:800; color:var(--ink)}
   .led-nav{display:flex; align-items:center; gap:8px}
   .led-navb{width:26px; height:26px; border:1px solid var(--border); background:var(--surface); color:var(--ink); border-radius:7px; cursor:pointer; font-size:15px; line-height:1}
@@ -925,8 +925,8 @@
     .admin-body{ padding:12px 12px 14px; max-height:74vh; }
     .adm-plist{ grid-template-columns:1fr; }
     .adm-find{ flex-basis:120px; }
-    /* 가계부: 항목·엑셀 버튼은 PC에서만 → 가계부 · 월이동만 한 줄로 */
-    .led-imp{ display:none; }
+    /* 가계부: 편집 버튼 줄(항목·엑셀)은 PC에서만 → 모바일은 상단 월 셀렉트만 사용 */
+    .led-head{ display:none; }
   }
 
   @media (prefers-reduced-motion:reduce){ *{scroll-behavior:auto} .modal-input.shake{animation:none} }
@@ -2890,7 +2890,16 @@
     var sel=$("#adminYearSel"); if(!sel) return;
     var years={}; state.entries.forEach(function(e){ var y=(e.date||"").slice(0,4); if(/^\d{4}$/.test(y)) years[y]=1; });
     (state.plans||[]).forEach(function(p){ var y=(p.due||"").slice(0,4); if(/^\d{4}$/.test(y)) years[y]=1; });
+    Object.keys(state.ledger||{}).forEach(function(ym){ var y=ym.slice(0,4); if(/^\d{4}$/.test(y)) years[y]=1; });
+    var thisY=String(new Date().getFullYear()); years[thisY]=1;
     var list=Object.keys(years).sort().reverse();
+    if(adminTab==="ledger"){   // 가계부: 월 선택(YYYY-MM) — 상단 하나로 연/월 지정
+      if(adminYear==="all") adminYear=thisY;
+      var opts=""; list.forEach(function(y){ for(var m=12;m>=1;m--){ opts+='<option value="'+y+'-'+pad(m)+'">'+y+'.'+pad(m)+'월</option>'; } });
+      sel.innerHTML=opts; sel.value=adminYear+"-"+pad(ledgerMonth);
+      sel.onchange=function(){ var p=this.value.split("-"); adminYear=p[0]; ledgerMonth=+p[1]; renderAdminLedger(); };
+      return;
+    }
     if(adminYear!=="all" && !years[adminYear]){ adminYear="all"; golfChartPeriod="yearly"; }
     sel.innerHTML='<option value="all">전체 연도</option>'+list.map(function(y){ return '<option value="'+y+'">'+y+'년</option>'; }).join("");
     sel.value=adminYear;
@@ -2903,7 +2912,7 @@
     back.addEventListener("click",function(e){ if(e.target===back) close(); });
     $("#adminTabs").addEventListener("click",function(e){ var b=e.target.closest("button"); if(!b) return; var at=b.getAttribute("data-at");
       var tabs=this.children; for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle("on", tabs[i]===b);
-      adminTab=at; adminFindQ=""; golfSearchQ=""; var _fi=$("#adminFind"); if(_fi) _fi.value=""; setAdminFindPh();
+      adminTab=at; adminFindQ=""; golfSearchQ=""; var _fi=$("#adminFind"); if(_fi) _fi.value=""; setAdminFindPh(); renderAdminYearSel();
       $("#adminPeople").hidden = (at!=="people"); $("#adminGolf").hidden = (at!=="golf"); $("#adminPlan").hidden = (at!=="plan"); $("#adminLedger").hidden = (at!=="ledger");
       if(at==="plan") renderAdminPlan(); else if(at==="golf") renderAdminGolf(); else if(at==="people") renderAdminPeople(); else if(at==="ledger") renderAdminLedger(); });
   })();
@@ -3756,19 +3765,11 @@
     var el=$("#adminLedger"); if(!el) return;
     var yr=adminYear==="all"?String(new Date().getFullYear()):adminYear, ym=yr+"-"+pad(ledgerMonth);
     el.innerHTML="";
-    var head=document.createElement("div"); head.className="led-head"; head.innerHTML='<h3>가계부</h3>';
-    var nav=document.createElement("div"); nav.className="led-nav";
-    var cfg=document.createElement("button"); cfg.type="button"; cfg.className="led-imp"; cfg.textContent="⚙ 항목"; cfg.title="항목 추가·이름·결제일 편집";
-    cfg.onclick=openLedgerCats; nav.appendChild(cfg);
-    var imp=document.createElement("button"); imp.type="button"; imp.className="led-imp"; imp.textContent="엑셀 붙여넣기"; imp.title="엑셀 표를 붙여 한 번에 가져오기";
-    imp.onclick=function(){ openLedgerImport(yr); };
-    nav.appendChild(imp);
-    var prev=document.createElement("button"); prev.type="button"; prev.className="led-navb"; prev.textContent="‹";
-    var mlabel=document.createElement("span"); mlabel.className="led-mlabel"; mlabel.textContent=yr+". "+pad(ledgerMonth)+"월";
-    var next=document.createElement("button"); next.type="button"; next.className="led-navb"; next.textContent="›";
-    prev.onclick=function(){ ledgerMonth--; if(ledgerMonth<1)ledgerMonth=12; renderAdminLedger(); };
-    next.onclick=function(){ ledgerMonth++; if(ledgerMonth>12)ledgerMonth=1; renderAdminLedger(); };
-    nav.appendChild(prev); nav.appendChild(mlabel); nav.appendChild(next); head.appendChild(nav); el.appendChild(head);
+    // 상단 헤더: 월 선택은 상단 셀렉트(2026.08월)로 통합, 여기엔 PC 편집 버튼만
+    var head=document.createElement("div"); head.className="led-head";
+    var cfg=document.createElement("button"); cfg.type="button"; cfg.className="led-imp"; cfg.textContent="⚙ 항목"; cfg.title="항목 추가·이름·결제일 편집"; cfg.onclick=openLedgerCats;
+    var imp=document.createElement("button"); imp.type="button"; imp.className="led-imp"; imp.textContent="엑셀 붙여넣기"; imp.title="엑셀 표를 붙여 한 번에 가져오기"; imp.onclick=function(){ openLedgerImport(yr); };
+    head.appendChild(cfg); head.appendChild(imp); el.appendChild(head);
     var t=ledMonthTotals(ym);
     var sum=document.createElement("div"); sum.className="led-sum";
     sum.innerHTML='<div class="led-s"><i>수입</i><b>'+fmtWon(t.income)+'</b></div><div class="led-s"><i>지출</i><b>'+fmtWon(t.expense)+'</b></div><div class="led-s"><i>투자</i><b>'+fmtWon(t.invest)+'</b></div><div class="led-s net"><i>수지</i><b class="'+(t.net<0?"neg":"pos")+'">'+fmtWon(t.net)+'</b></div>';
@@ -3802,10 +3803,12 @@
     el.appendChild(buildLedgerChart(yr));
   }
   function ledGroupMonthVal(gk, ym, selId){ if(selId) return ledCell(ym,selId); var s=0; ledCatsOf(gk).forEach(function(c){ s+=ledCell(ym,c.id); }); return s; }
-  // 대분류(또는 선택 항목) 13개월 추이: 1년전 같은 달~이번달, 평균 기준 위/아래 막대
+  function ledMonthHasData(ym){ var m=state.ledger[ym]; return !!(m && m.cells && Object.keys(m.cells).length); }
+  // 대분류(또는 선택 항목) 13개월 추이: 1년전 같은 달~이번달, 기록 있는 달만 평균/막대(없는 달은 공란), 변동폭 확대
   function buildLedgerBar(gk, yr, mon, selId){
     var wrap=document.createElement("div"); wrap.className="led-bar-wrap";
     var months=[]; for(var k=12;k>=0;k--){ var d=new Date(+yr, (mon-1)-k, 1); months.push(d.getFullYear()+"-"+pad(d.getMonth()+1)); }
+    var present=months.map(ledMonthHasData);
     var vals=months.map(function(ym){ return ledGroupMonthVal(gk,ym,selId); });
     var selName="합계", canReset=false;
     if(selId){ var c=ledCatsOf(gk).filter(function(x){return x.id===selId;})[0]; if(c){ selName=c.name; canReset=true; } }
@@ -3813,12 +3816,16 @@
     cap.innerHTML='<b>'+esc(selName)+'</b> 추이 <span class="lbc-range">'+months[0].slice(2).replace("-",".")+"~"+months[12].slice(2).replace("-",".")+'</span>'+(canReset?' <button type="button" class="lbc-reset">합계로</button>':'');
     wrap.appendChild(cap);
     if(canReset){ var rb=cap.querySelector(".lbc-reset"); if(rb) rb.onclick=function(){ ledChartSel[gk]=null; renderAdminLedger(); }; }
-    if(!vals.some(function(v){return v;})){ var em=document.createElement("div"); em.className="led-empty"; em.style.padding="8px"; em.textContent="데이터가 쌓이면 추이가 표시돼요"; wrap.appendChild(em); return wrap; }
-    var avg=vals.reduce(function(a,b){return a+b;},0)/vals.length, maxDev=1; vals.forEach(function(v){ maxDev=Math.max(maxDev, Math.abs(v-avg)); });
-    var W=600, H=70, pl=4, pr=4, cy=H/2, half=H/2-6, n=13, gap=3, bw=(W-pl-pr-gap*(n-1))/n;
+    var pv=[]; months.forEach(function(ym,i){ if(present[i]) pv.push(vals[i]); });
+    if(!pv.length){ var em=document.createElement("div"); em.className="led-empty"; em.style.padding="8px"; em.textContent="데이터가 쌓이면 추이가 표시돼요"; wrap.appendChild(em); return wrap; }
+    var avg=pv.reduce(function(a,b){return a+b;},0)/pv.length, maxDev=1; pv.forEach(function(v){ maxDev=Math.max(maxDev, Math.abs(v-avg)); });
+    var W=600, H=84, pl=4, pr=4, cy=H/2, half=H/2-4, n=13, gap=3, bw=(W-pl-pr-gap*(n-1))/n;
     var s='<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" class="led-bar-svg" preserveAspectRatio="none">';
     s+='<line x1="'+pl+'" y1="'+cy+'" x2="'+(W-pr)+'" y2="'+cy+'" class="lb-axis"/>';
-    months.forEach(function(ym,i){ var v=vals[i], dev=v-avg, bh=Math.max(1,Math.round(Math.abs(dev)/maxDev*half)), x=pl+i*(bw+gap), y=dev>=0?cy-bh:cy;
+    months.forEach(function(ym,i){ var x=pl+i*(bw+gap);
+      if(!present[i]) return;   // 기록 없는 달은 공란
+      var v=vals[i], dev=v-avg, mag=Math.abs(dev)/maxDev;
+      var bh=Math.max(2,Math.round(Math.sqrt(mag)*half)), y=dev>=0?cy-bh:cy;   // sqrt로 작은 변동도 잘 보이게
       s+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+bh+'" class="lb-bar '+(dev>=0?"up":"down")+(i===n-1?" cur":"")+'"><title>'+ym.slice(2).replace("-",".")+" · "+fmtWon(v)+'</title></rect>'; });
     s+='</svg>';
     var sw=document.createElement("div"); sw.className="led-bar-svgwrap"; sw.innerHTML=s; wrap.appendChild(sw);
