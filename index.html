@@ -729,6 +729,31 @@
   .led-prog-lbl .lp-rem{font-weight:700; color:#C96F6F}
   .led-prog-lbl .lp-ok{font-weight:700; color:#3FA35A}
   .ledcat-tg{width:82px; flex:none; text-align:right}
+  .ledcat-tg.ro{background:var(--surface-2); color:var(--ink-3); cursor:default}
+  /* 카드 자동이체 명세(인라인 확장) */
+  .led-ap-tog{flex-basis:100%; display:flex; align-items:center; justify-content:space-between; gap:6px; margin-top:3px; background:none; border:0; border-top:1px dashed var(--border); padding:4px 1px 1px; font-family:inherit; font-size:10.5px; color:var(--ink-3); cursor:pointer}
+  .led-ap-tog:hover{color:var(--ink-2)}
+  .led-ap-tog .led-ap-cap em{font-style:normal; color:var(--ink-2); font-variant-numeric:tabular-nums}
+  .led-ap-tog .led-ap-car{font-size:9px}
+  .led-ap-list{flex-basis:100%; margin:2px 0 1px; padding:3px 2px 1px; border-top:1px solid var(--border)}
+  .led-ap-row{display:grid; grid-template-columns:34px 1fr auto; align-items:baseline; gap:6px; font-size:11px; padding:1.5px 0; color:var(--ink-2)}
+  .led-ap-row .lap-d{color:var(--ink-3); font-variant-numeric:tabular-nums}
+  .led-ap-row .lap-n{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .led-ap-row .lap-n .lap-m{font-style:normal; font-size:9.5px; color:var(--ink-3); margin-left:3px}
+  .led-ap-row .lap-a{text-align:right; font-variant-numeric:tabular-nums}
+  .led-ap-row.ex{color:var(--ink-3)} .led-ap-row.ex .lap-n, .led-ap-row.ex .lap-a{text-decoration:line-through; opacity:.7}
+  .led-ap-edit{margin-top:3px; background:var(--surface); border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:10.5px; color:var(--ink-2); padding:2px 8px; cursor:pointer}
+  .led-ap-edit:hover{border-color:var(--accent); color:var(--accent-ink)}
+  /* 자동이체 편집 모달 */
+  .ap-row{display:grid; grid-template-columns:44px 1fr 96px 1fr 26px; gap:6px; align-items:center; padding:3px 0}
+  .ap-row.ap-head{font-size:11px; color:#8a8f98; padding-bottom:1px}
+  .ap-row.ap-head>span:nth-child(3){text-align:right} .ap-row.ap-head>span:nth-child(1){text-align:center}
+  .ap-row input{font-family:inherit; font-size:12.5px; border:1px solid #dcdfe4; border-radius:6px; padding:5px 7px; outline:0; background:#fff; color:#1c1f24; min-width:0}
+  .ap-row input:focus{border-color:#4a90d9}
+  .ap-row .ap-d{text-align:center} .ap-row .ap-a{text-align:right; font-variant-numeric:tabular-nums}
+  .ap-row.ex input.ap-n, .ap-row.ex input.ap-a{text-decoration:line-through; color:#9aa0a8}
+  .ap-sum{flex:1; font-size:12.5px; color:#3a3f46} .ap-sum b{font-variant-numeric:tabular-nums; color:#1c1f24}
+  .ap-sum .ap-ex{color:#C96F6F}
   .led-item.led-hot{background:color-mix(in srgb,var(--accent) 12%,var(--surface-2)); border-color:color-mix(in srgb,var(--accent) 32%,transparent)}
   .led-item.led-hot .led-nm{color:var(--accent-ink)}
   .led-item .led-nm{cursor:pointer}
@@ -1315,6 +1340,25 @@
   })();
   (function(){ var seed={ c_shinhan:{target:300000,fixed:73704}, c_hyundai:{target:500000,fixed:219793}, c_samsung:{target:500000,fixed:341920}, c_kb:{target:300000,fixed:271770} };   // 카드 실적목표·고정(자동이체) 최초 1회 시드
     (state.ledgerCats||[]).forEach(function(c){ var s=seed[c.id]; if(!s)return; if(c.target===undefined) c.target=s.target; if(c.fixed===undefined) c.fixed=s.fixed; });
+  })();
+  (function(){ var cats=state.ledgerCats||[];   // 카드 순서 신한·현대·삼성·KB·하나 로 정렬(1회) + 자동이체 명세 시드
+    var order=["c_shinhan","c_hyundai","c_samsung","c_kb","c_hana"], byId={}; cats.forEach(function(c){ byId[c.id]=c; });
+    if(order.every(function(id){return byId[id];})){
+      var cardSet={}; order.forEach(function(id){cardSet[id]=1;});
+      var firstCardIdx=-1; for(var i=0;i<cats.length;i++){ if(cats[i].group==="card"){ firstCardIdx=i; break; } }
+      var seq=order.map(function(id){return byId[id];}), curOrder=cats.filter(function(c){return c.group==="card";}).map(function(c){return c.id;}).join(",");
+      if(firstCardIdx>=0 && curOrder!==order.join(",")){
+        var rest=cats.filter(function(c){ return !cardSet[c.id]; });
+        state.ledgerCats=rest.slice(0,firstCardIdx).concat(seq).concat(rest.slice(firstCardIdx)); cats=state.ledgerCats;
+      }
+    }
+    var ap={
+      c_shinhan:[{day:5,name:"강화 전력",amt:5070},{day:10,name:"삼천리도시가스",amt:12650},{day:11,name:"마이HP",amt:17850},{day:13,name:"하나운전자상해",amt:23634},{day:25,name:"전력공사 4건",amt:14500}],
+      c_hyundai:[{day:10,name:"진아 삼성화재",amt:70000},{day:14,name:"진아KB손해보험",amt:114593},{day:20,name:"강화 KT인터넷",amt:35200}],
+      c_samsung:[{day:5,name:"프리드라이프",amt:50000},{day:8,name:"★제미나이",amt:7500},{day:11,name:"마이HP",amt:68450},{day:16,name:"★와우맴버",amt:7890},{day:20,name:"현대해상",amt:58950},{day:20,name:"KB손보",amt:42740},{day:26,name:"현대해상암",amt:106390},{day:27,name:"★유트부",amt:14900,memo:"실적제외"}],
+      c_kb:[{day:1,name:"★구글플레이 클로드",amt:30000},{day:11,name:"SKT 인터넷",amt:11550},{day:17,name:"★넷플릭스",amt:13500,memo:"실적제외"},{day:20,name:"AIA",amt:28620},{day:20,name:"AIA",amt:201600}]
+    };
+    cats.forEach(function(c){ if(ap[c.id] && c.autopay===undefined){ c.autopay=ap[c.id].map(function(a){ return {day:a.day,name:a.name,amt:a.amt,memo:a.memo||""}; }); } });
   })();
   var draft = { date: todayStr(), people: [], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), drinks:emptyDrinks(), exercise:emptyExercise(), golfScore:{}, thoughts:"", learning:"" };
   var hiddenRels = {fam:true, work:true}, hideRest=true, hideGolf=true, drinkPeriod="week", weightPeriod="month", view="graph", recapMonth="", minMeet=2, minMeetIdx=1, meetExact=false, calMonth="", searchQ="", graphYear=String(new Date().getFullYear());
@@ -2910,7 +2954,7 @@
   }
   if($("#adminBtn")) $("#adminBtn").onclick=function(){ openAdmin("plan"); };
   document.addEventListener("click", function(e){ if(e.target && e.target.closest && e.target.closest("#adminBtnM")) openAdmin("plan"); });   // 모바일 관리 버튼(로그인 영역에서 동적 생성)
-  var adminYear=String(new Date().getFullYear()), adminFindQ="", adminSubFilter={}, adminTab="plan", golfSearchQ="", ledgerMonth=new Date().getMonth()+1, ledChartSel={};   // 기본 = 올해 · ledChartSel: 대분류별 추이 대상(null=합계)
+  var adminYear=String(new Date().getFullYear()), adminFindQ="", adminSubFilter={}, adminTab="plan", golfSearchQ="", ledgerMonth=new Date().getMonth()+1, ledChartSel={}, ledApOpen={};   // 기본 = 올해 · ledChartSel: 대분류별 추이 대상(null=합계) · ledApOpen: 카드 자동이체 명세 펼침 상태
   function setAdminFindPh(){ var fi=$("#adminFind"); if(fi) fi.placeholder = (adminTab==="golf")? "🔍 골프장 찾기" : "🔍 이름 찾기"; }
   (function(){ var fi=$("#adminFind"); if(!fi) return; fi.addEventListener("input",function(){ var v=this.value.trim();
     if(adminTab==="golf"){ golfSearchQ=v; renderAdminGolf(); return; }
@@ -3775,7 +3819,7 @@
   var LEDGER_GROUPS=[{k:"income",n:"수입"},{k:"card",n:"카드지출"},{k:"regular",n:"정기지출"},{k:"invest",n:"투자"},{k:"cash",n:"현금"}];
   function defaultLedgerCats(){ return [
     {id:"sal",group:"income",name:"급여",day:20},{id:"sal2",group:"income",name:"급여외",day:14},{id:"rent",group:"income",name:"임대소득",day:30},{id:"ssj",group:"income",name:"상원/상진",day:1},{id:"inc_etc",group:"income",name:"기타"},{id:"pension",group:"income",name:"연금",day:20,memo:"하나"},
-    {id:"c_shinhan",group:"card",name:"신한",day:25},{id:"c_hyundai",group:"card",name:"현대",day:25,memo:"K뱅크"},{id:"c_samsung",group:"card",name:"삼성",day:26,memo:"모니모"},{id:"c_hana",group:"card",name:"하나",day:25},{id:"c_kb",group:"card",name:"KB",day:26,memo:"K뱅크"},
+    {id:"c_shinhan",group:"card",name:"신한",day:25},{id:"c_hyundai",group:"card",name:"현대",day:25,memo:"K뱅크"},{id:"c_samsung",group:"card",name:"삼성",day:26,memo:"모니모"},{id:"c_kb",group:"card",name:"KB",day:26,memo:"K뱅크"},{id:"c_hana",group:"card",name:"하나",day:25},
     {id:"c_uk",group:"regular",name:"영국"},{id:"c_comm",group:"regular",name:"통신/교통",memo:"12/15/21"},{id:"r_kdb",group:"regular",name:"KDB생명",day:30,memo:"카뱅"},{id:"r_saving",group:"regular",name:"적금 신한",day:20},
     {id:"i_stock",group:"invest",name:"주식/IRP"},{id:"i_coin",group:"invest",name:"코인"},
     {id:"h_tax",group:"cash",name:"세금"},{id:"h_holiday",group:"cash",name:"명절"},{id:"h_personal",group:"cash",name:"개인"},{id:"h_event",group:"cash",name:"축/조의"},{id:"h_eeum",group:"cash",name:"e음"},{id:"h_etc",group:"cash",name:"기타"}
@@ -3784,6 +3828,8 @@
   function wonH(n){ n=Math.round(n||0); var s=fmtWon(n); return n<0?'<span class="won-neg">'+s+'</span>':s; }
   function parseWon(s){ s=(s||"").toString().replace(/[,\s]/g,""); var m=s.match(/[+-]?\d+/g); if(!m) return 0; var sum=0; for(var i=0;i<m.length;i++){ sum+=parseInt(m[i],10)||0; } return sum; }   // 콤마 제거 + '+/-' 식 합산(100000+10000 → 110000)
   function ledCatsOf(g){ return (state.ledgerCats||[]).filter(function(c){return c.group===g;}); }
+  function apExcluded(memo){ return /실적제외/.test((memo||"").replace(/\s/g,"")); }   // 비고에 '실적제외' → 실적 합계 제외
+  function cardFixed(c){ if(c.autopay&&c.autopay.length){ var s=0; c.autopay.forEach(function(a){ if(!apExcluded(a.memo)) s+=(+a.amt||0); }); return s; } return c.fixed||0; }   // 고정(자동)=명세 합계(실적제외 빼고), 명세 없으면 손입력값
   function ledCell(ym,id){ var m=state.ledger[ym]; return (m&&m.cells&&m.cells[id])||0; }
   function ledNotes(ym){ var m=state.ledger[ym]; if(!m) return {}; if(!m.notes){ m.notes = m.note? {income:m.note}:{}; } return m.notes; }   // 대분류별 비고(구형 단일 note는 수입으로 이전)
   var LEDGER_NOTE_DEFAULTS={ regular:{1:"자차연납/면허세(지방세)",2:"면세사업장신고(~2/10)",3:"자동차보험(3/4)",5:"종득세 양세무",6:"종합소득세 납부",7:"주민/재산",8:"해마루 수수료",11:"종합소득세"} };
@@ -3823,14 +3869,34 @@
         inp.oninput=function(){ inp.classList.toggle("neg", parseWon(inp.value)<0); };
         inp.onchange=function(){ var v=parseWon(inp.value); state.ledger[ym]=state.ledger[ym]||{cells:{},note:""}; state.ledger[ym].cells=state.ledger[ym].cells||{}; if(v) state.ledger[ym].cells[c.id]=v; else delete state.ledger[ym].cells[c.id]; save(); renderAdminLedger(); };
         item.appendChild(inp);
+        var fixed=cardFixed(c);
         if(g.k==="card" && c.target>0){   // 카드 이번달 실적 진행률 (고정 자동이체 반영)
-          var fixed=c.fixed||0, filled=Math.max(v0||0, fixed);   // 고정합계는 최소 채움으로 보장
+          var filled=Math.max(v0||0, fixed);   // 고정합계는 최소 채움으로 보장
           var pct=Math.round(filled/c.target*100), bw=Math.min(100,Math.max(0,pct));
           var fxpct=fixed>0?Math.min(100,Math.max(0,Math.round(fixed/c.target*100))):0;   // 고정분 위치(진행바 눈금)
           var remain=Math.max(0,c.target-filled), done=pct>=100;
           var prog=document.createElement("div"); prog.className="led-prog";
           prog.innerHTML='<div class="led-prog-track"><i class="'+(done?"done":"")+'" style="width:'+bw+'%"></i>'+(fxpct>0&&fxpct<100?'<u class="led-prog-fx" style="left:'+fxpct+'%" title="고정 자동이체 '+fmtWon(fixed)+'"></u>':'')+'</div><span class="led-prog-lbl'+(done?" done":"")+'">'+pct+'% <em>/ '+fmtWon(c.target)+'</em>'+(done?' <b class="lp-ok">달성</b>':' <b class="lp-rem">남은 '+fmtWon(remain)+'</b>')+'</span>';
           item.appendChild(prog);
+        }
+        if(g.k==="card"){   // 자동이체 명세(인라인 확장)
+          var ap=c.autopay||[], open=!!ledApOpen[c.id];
+          var tog=document.createElement("button"); tog.type="button"; tog.className="led-ap-tog"+(open?" open":"");
+          tog.innerHTML='<span class="led-ap-cap">자동이체 '+ap.length+'건 <em>· 고정 '+fmtWon(fixed)+'</em></span><span class="led-ap-car">'+(open?"▾":"▸")+'</span>';
+          tog.onclick=function(){ ledApOpen[c.id]=!ledApOpen[c.id]; renderAdminLedger(); };
+          item.appendChild(tog);
+          if(open){
+            var list=document.createElement("div"); list.className="led-ap-list";
+            ap.slice().sort(function(a,b){ return (a.day||99)-(b.day||99); }).forEach(function(a){
+              var ex=apExcluded(a.memo);
+              var r=document.createElement("div"); r.className="led-ap-row"+(ex?" ex":"");
+              r.innerHTML='<span class="lap-d">'+(a.day?a.day+"일":"—")+'</span><span class="lap-n">'+esc(a.name||"")+(a.memo?' <i class="lap-m">'+esc(a.memo)+'</i>':'')+'</span><span class="lap-a">'+fmtWon(+a.amt||0)+'</span>';
+              list.appendChild(r);
+            });
+            var ed=document.createElement("button"); ed.type="button"; ed.className="led-ap-edit"; ed.textContent="✏ 자동이체 편집"; ed.onclick=function(){ openAutopay(c); };
+            list.appendChild(ed);
+            item.appendChild(list);
+          }
         }
         grid.appendChild(item);
       });
@@ -3974,7 +4040,9 @@
           var day=document.createElement("input"); day.type="number"; day.className="ledcat-day"; day.min="1"; day.max="31"; day.value=c.day||""; day.placeholder="결제일"; day.title="결제/입금 일"; day.onchange=function(){ var v=parseInt(day.value,10); if(v>=1&&v<=31) c.day=v; else delete c.day; };
           var memo=document.createElement("input"); memo.type="text"; memo.className="ledcat-memo"; memo.value=c.memo||""; memo.placeholder="메모(계좌 등)"; memo.onchange=function(){ var v=memo.value.trim(); if(v) c.memo=v; else delete c.memo; };
           var tg=null,fx=null; if(g.k==="card"){ tg=document.createElement("input"); tg.type="text"; tg.className="ledcat-tg"; tg.inputMode="numeric"; tg.value=c.target?fmtWon(c.target):""; tg.placeholder="실적목표"; tg.title="이번달 실적 목표"; tg.onchange=function(){ var v=parseWon(tg.value); if(v>0) c.target=v; else delete c.target; };
-            fx=document.createElement("input"); fx.type="text"; fx.className="ledcat-tg ledcat-fx"; fx.inputMode="numeric"; fx.value=c.fixed?fmtWon(c.fixed):""; fx.placeholder="고정(자동)"; fx.title="매달 자동이체로 실적에 채워지는 고정 합계"; fx.onchange=function(){ var v=parseWon(fx.value); if(v>0) c.fixed=v; else delete c.fixed; }; }
+            fx=document.createElement("input"); fx.type="text"; fx.className="ledcat-tg ledcat-fx"; fx.inputMode="numeric";
+            if(c.autopay&&c.autopay.length){ fx.value=fmtWon(cardFixed(c)); fx.readOnly=true; fx.classList.add("ro"); fx.title="자동이체 명세 합계(실적제외 제외) — 명세에서 편집"; }
+            else { fx.value=c.fixed?fmtWon(c.fixed):""; fx.placeholder="고정(자동)"; fx.title="매달 자동이체로 실적에 채워지는 고정 합계(명세 없을 때 손입력)"; fx.onchange=function(){ var v=parseWon(fx.value); if(v>0) c.fixed=v; else delete c.fixed; }; } }
           var mv=document.createElement("span"); mv.className="ledcat-mv";
           var up=document.createElement("button"); up.type="button"; up.className="ledcat-mvb"; up.textContent="▲"; up.title="위로 이동(그룹 넘김 가능)"; up.onclick=function(){ moveCat(c,-1); };
           var dn=document.createElement("button"); dn.type="button"; dn.className="ledcat-mvb"; dn.textContent="▼"; dn.title="아래로 이동(그룹 넘김 가능)"; dn.onclick=function(){ moveCat(c,1); };
@@ -3997,6 +4065,41 @@
     acts.appendChild(cancelB); acts.appendChild(saveB);
     modal.appendChild(body); modal.appendChild(acts); back.appendChild(modal); document.body.appendChild(back);
     back.addEventListener("click",function(e){ if(e.target===back){ save(); renderAdminLedger(); close(); } });
+  }
+
+  function openAutopay(c){   // 카드 자동이체 명세 편집(일자/항목/금액/비고)
+    c.autopay=c.autopay||[];
+    var back=document.createElement("div"); back.className="modal-back";
+    var modal=document.createElement("div"); modal.className="modal ledcat-modal force-light";
+    modal.innerHTML='<div class="modal-title">'+esc(c.name)+' 자동이체 명세</div><div class="modal-msg">일자·항목·금액·비고를 편집하세요. 비고에 <b>실적제외</b>를 적으면 고정(실적) 합계에서 빠집니다.</div>';
+    var body=document.createElement("div"); body.className="ledcat-body";
+    var sumEl=document.createElement("div"); sumEl.className="ap-sum";
+    function render(){
+      body.innerHTML="";
+      var head=document.createElement("div"); head.className="ap-row ap-head"; head.innerHTML='<span>일</span><span>항목</span><span>금액</span><span>비고</span><span></span>'; body.appendChild(head);
+      c.autopay.forEach(function(a,idx){
+        var row=document.createElement("div"); row.className="ap-row"+(apExcluded(a.memo)?" ex":"");
+        var d=document.createElement("input"); d.type="number"; d.className="ap-d"; d.min="1"; d.max="31"; d.value=a.day||""; d.placeholder="일"; d.onchange=function(){ var v=parseInt(d.value,10); if(v>=1&&v<=31)a.day=v; else delete a.day; save(); };
+        var n=document.createElement("input"); n.type="text"; n.className="ap-n"; n.value=a.name||""; n.placeholder="항목"; n.onchange=function(){ a.name=n.value.trim(); save(); };
+        var am=document.createElement("input"); am.type="text"; am.className="ap-a"; am.inputMode="numeric"; am.value=a.amt?fmtWon(a.amt):""; am.placeholder="금액"; am.onchange=function(){ a.amt=parseWon(am.value)||0; save(); render(); };
+        var m=document.createElement("input"); m.type="text"; m.className="ap-m"; m.value=a.memo||""; m.placeholder="비고(실적제외 등)"; m.onchange=function(){ a.memo=m.value.trim(); save(); render(); };
+        var x=document.createElement("button"); x.type="button"; x.className="ledcat-del"; x.textContent="×"; x.title="삭제"; x.onclick=function(){ c.autopay.splice(idx,1); save(); render(); };
+        row.appendChild(d); row.appendChild(n); row.appendChild(am); row.appendChild(m); row.appendChild(x); body.appendChild(row);
+      });
+      var add=document.createElement("button"); add.type="button"; add.className="ledcat-add"; add.textContent="+ 자동이체 항목 추가";
+      add.onclick=function(){ c.autopay.push({day:"",name:"",amt:0,memo:""}); save(); render(); };
+      body.appendChild(add);
+      var ex=0; c.autopay.forEach(function(a){ if(apExcluded(a.memo)) ex+=(+a.amt||0); });
+      sumEl.innerHTML='고정(실적) 합계 <b>'+fmtWon(cardFixed(c))+'</b>'+(ex?' <span class="ap-ex">· 실적제외 '+fmtWon(ex)+'</span>':'');
+    }
+    render();
+    var acts=document.createElement("div"); acts.className="modal-actions";
+    function close(){ back.remove(); }
+    var okB=document.createElement("button"); okB.type="button"; okB.className="btn primary"; okB.textContent="닫기";
+    okB.onclick=function(){ save(); renderAdminLedger(); updateSkyDate(); close(); };
+    acts.appendChild(sumEl); acts.appendChild(okB);
+    modal.appendChild(body); modal.appendChild(acts); back.appendChild(modal); document.body.appendChild(back);
+    back.addEventListener("click",function(e){ if(e.target===back){ save(); renderAdminLedger(); updateSkyDate(); close(); } });
   }
 
   // 같은 날짜에 기록이 둘 이상이면 하나로 병합(끼니는 빈 슬롯으로 이동, 골프 라운드는 슬롯별 스코어로 보존)
