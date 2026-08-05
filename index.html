@@ -1328,38 +1328,7 @@
   state.relNames = state.relNames || {};   // 관계(그룹) 표시명 사용자 지정
   state.ledger = state.ledger || {};        // 가계부: {"YYYY-MM":{cells:{catId:금액}, note}}
   state.ledgerCats = (state.ledgerCats && state.ledgerCats.length) ? state.ledgerCats : defaultLedgerCats();
-  (function(){ var cats=state.ledgerCats||[], uk=null, comm=null;   // 영국·통신/교통 → 정기지출 첫/둘째로 이전(1회)
-    cats.forEach(function(c){ if(c.id==="c_uk")uk=c; else if(c.id==="c_comm")comm=c; });
-    if((uk&&uk.group!=="regular")||(comm&&comm.group!=="regular")){
-      if(uk)uk.group="regular"; if(comm)comm.group="regular";
-      var rest=cats.filter(function(c){ return c!==uk&&c!==comm; }), idx=rest.length;
-      for(var i=0;i<rest.length;i++){ if(rest[i].group==="regular"){ idx=i; break; } }
-      var ins=[]; if(uk)ins.push(uk); if(comm)ins.push(comm);
-      state.ledgerCats=rest.slice(0,idx).concat(ins).concat(rest.slice(idx));
-    }
-  })();
-  (function(){ var seed={ c_shinhan:{target:300000,fixed:73704}, c_hyundai:{target:500000,fixed:219793}, c_samsung:{target:500000,fixed:341920}, c_kb:{target:300000,fixed:271770} };   // 카드 실적목표·고정(자동이체) 최초 1회 시드
-    (state.ledgerCats||[]).forEach(function(c){ var s=seed[c.id]; if(!s)return; if(c.target===undefined) c.target=s.target; if(c.fixed===undefined) c.fixed=s.fixed; });
-  })();
-  (function(){ var cats=state.ledgerCats||[];   // 카드 순서 신한·현대·삼성·KB·하나 로 정렬(1회) + 자동이체 명세 시드
-    var order=["c_shinhan","c_hyundai","c_samsung","c_kb","c_hana"], byId={}; cats.forEach(function(c){ byId[c.id]=c; });
-    if(order.every(function(id){return byId[id];})){
-      var cardSet={}; order.forEach(function(id){cardSet[id]=1;});
-      var firstCardIdx=-1; for(var i=0;i<cats.length;i++){ if(cats[i].group==="card"){ firstCardIdx=i; break; } }
-      var seq=order.map(function(id){return byId[id];}), curOrder=cats.filter(function(c){return c.group==="card";}).map(function(c){return c.id;}).join(",");
-      if(firstCardIdx>=0 && curOrder!==order.join(",")){
-        var rest=cats.filter(function(c){ return !cardSet[c.id]; });
-        state.ledgerCats=rest.slice(0,firstCardIdx).concat(seq).concat(rest.slice(firstCardIdx)); cats=state.ledgerCats;
-      }
-    }
-    var ap={
-      c_shinhan:[{day:5,name:"강화 전력",amt:5070},{day:10,name:"삼천리도시가스",amt:12650},{day:11,name:"마이HP",amt:17850},{day:13,name:"하나운전자상해",amt:23634},{day:25,name:"전력공사 4건",amt:14500}],
-      c_hyundai:[{day:10,name:"진아 삼성화재",amt:70000},{day:14,name:"진아KB손해보험",amt:114593},{day:20,name:"강화 KT인터넷",amt:35200}],
-      c_samsung:[{day:5,name:"프리드라이프",amt:50000},{day:8,name:"★제미나이",amt:7500},{day:11,name:"마이HP",amt:68450},{day:16,name:"★와우맴버",amt:7890},{day:20,name:"현대해상",amt:58950},{day:20,name:"KB손보",amt:42740},{day:26,name:"현대해상암",amt:106390},{day:27,name:"★유트부",amt:14900,memo:"실적제외"}],
-      c_kb:[{day:1,name:"★구글플레이 클로드",amt:30000},{day:11,name:"SKT 인터넷",amt:11550},{day:17,name:"★넷플릭스",amt:13500,memo:"실적제외"},{day:20,name:"AIA",amt:28620},{day:20,name:"AIA",amt:201600}]
-    };
-    cats.forEach(function(c){ if(ap[c.id] && c.autopay===undefined){ c.autopay=ap[c.id].map(function(a){ return {day:a.day,name:a.name,amt:a.amt,memo:a.memo||""}; }); } });
-  })();
+  migrateLedgerCats();
   var draft = { date: todayStr(), people: [], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), drinks:emptyDrinks(), exercise:emptyExercise(), golfScore:{}, thoughts:"", learning:"" };
   var hiddenRels = {fam:true, work:true}, hideRest=true, hideGolf=true, drinkPeriod="week", weightPeriod="month", view="graph", recapMonth="", minMeet=2, minMeetIdx=1, meetExact=false, calMonth="", searchQ="", graphYear=String(new Date().getFullYear());
 
@@ -3824,6 +3793,43 @@
     {id:"i_stock",group:"invest",name:"주식/IRP"},{id:"i_coin",group:"invest",name:"코인"},
     {id:"h_tax",group:"cash",name:"세금"},{id:"h_holiday",group:"cash",name:"명절"},{id:"h_personal",group:"cash",name:"개인"},{id:"h_event",group:"cash",name:"축/조의"},{id:"h_eeum",group:"cash",name:"e음"},{id:"h_etc",group:"cash",name:"기타"}
   ]; }
+  function migrateLedgerCats(){   // 가계부 항목 마이그레이션(로컬/클라우드 로드 모두에서 실행, 멱등)
+    if(!state.ledgerCats||!state.ledgerCats.length) state.ledgerCats=defaultLedgerCats();
+    // 1) 영국·통신/교통 → 정기지출 첫/둘째로 이전
+    (function(){ var cats=state.ledgerCats, uk=null, comm=null;
+      cats.forEach(function(c){ if(c.id==="c_uk")uk=c; else if(c.id==="c_comm")comm=c; });
+      if((uk&&uk.group!=="regular")||(comm&&comm.group!=="regular")){
+        if(uk)uk.group="regular"; if(comm)comm.group="regular";
+        var rest=cats.filter(function(c){ return c!==uk&&c!==comm; }), idx=rest.length;
+        for(var i=0;i<rest.length;i++){ if(rest[i].group==="regular"){ idx=i; break; } }
+        var ins=[]; if(uk)ins.push(uk); if(comm)ins.push(comm);
+        state.ledgerCats=rest.slice(0,idx).concat(ins).concat(rest.slice(idx));
+      }
+    })();
+    // 2) 카드 실적목표·고정 시드
+    (function(){ var seed={ c_shinhan:{target:300000,fixed:73704}, c_hyundai:{target:500000,fixed:219793}, c_samsung:{target:500000,fixed:341920}, c_kb:{target:300000,fixed:271770} };
+      state.ledgerCats.forEach(function(c){ var s=seed[c.id]; if(!s)return; if(c.target===undefined) c.target=s.target; if(c.fixed===undefined) c.fixed=s.fixed; });
+    })();
+    // 3) 카드 순서(신한·현대·삼성·KB·하나) + 자동이체 명세 시드
+    (function(){ var cats=state.ledgerCats, order=["c_shinhan","c_hyundai","c_samsung","c_kb","c_hana"], byId={}; cats.forEach(function(c){ byId[c.id]=c; });
+      if(order.every(function(id){return byId[id];})){
+        var cardSet={}; order.forEach(function(id){cardSet[id]=1;});
+        var firstCardIdx=-1; for(var i=0;i<cats.length;i++){ if(cats[i].group==="card"){ firstCardIdx=i; break; } }
+        var seq=order.map(function(id){return byId[id];}), curOrder=cats.filter(function(c){return c.group==="card";}).map(function(c){return c.id;}).join(",");
+        if(firstCardIdx>=0 && curOrder!==order.join(",")){
+          var rest=cats.filter(function(c){ return !cardSet[c.id]; });
+          state.ledgerCats=rest.slice(0,firstCardIdx).concat(seq).concat(rest.slice(firstCardIdx)); cats=state.ledgerCats;
+        }
+      }
+      var ap={
+        c_shinhan:[{day:5,name:"강화 전력",amt:5070},{day:10,name:"삼천리도시가스",amt:12650},{day:11,name:"마이HP",amt:17850},{day:13,name:"하나운전자상해",amt:23634},{day:25,name:"전력공사 4건",amt:14500}],
+        c_hyundai:[{day:10,name:"진아 삼성화재",amt:70000},{day:14,name:"진아KB손해보험",amt:114593},{day:20,name:"강화 KT인터넷",amt:35200}],
+        c_samsung:[{day:5,name:"프리드라이프",amt:50000},{day:8,name:"★제미나이",amt:7500},{day:11,name:"마이HP",amt:68450},{day:16,name:"★와우맴버",amt:7890},{day:20,name:"현대해상",amt:58950},{day:20,name:"KB손보",amt:42740},{day:26,name:"현대해상암",amt:106390},{day:27,name:"★유트부",amt:14900,memo:"실적제외"}],
+        c_kb:[{day:1,name:"★구글플레이 클로드",amt:30000},{day:11,name:"SKT 인터넷",amt:11550},{day:17,name:"★넷플릭스",amt:13500,memo:"실적제외"},{day:20,name:"AIA",amt:28620},{day:20,name:"AIA",amt:201600}]
+      };
+      cats.forEach(function(c){ if(ap[c.id] && c.autopay===undefined){ c.autopay=ap[c.id].map(function(a){ return {day:a.day,name:a.name,amt:a.amt,memo:a.memo||""}; }); } });
+    })();
+  }
   function fmtWon(n){ n=Math.round(n||0); var s=Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,","); return (n<0?"-":"")+s; }
   function wonH(n){ n=Math.round(n||0); var s=fmtWon(n); return n<0?'<span class="won-neg">'+s+'</span>':s; }
   function parseWon(s){ s=(s||"").toString().replace(/[,\s]/g,""); var m=s.match(/[+-]?\d+/g); if(!m) return 0; var sum=0; for(var i=0;i<m.length;i++){ sum+=parseInt(m[i],10)||0; } return sum; }   // 콤마 제거 + '+/-' 식 합산(100000+10000 → 110000)
@@ -4173,6 +4179,7 @@
     replace:function(s, keepDraft){
       if(!s || !Array.isArray(s.entries)) return;
       state={ people:s.people||{}, entries:s.entries||[], events:s.events||[], golf:s.golf||{}, todos:s.todos||[], plans:s.plans||[], subcats:s.subcats||[], relNames:s.relNames||{}, ledger:s.ledger||{}, ledgerCats:(s.ledgerCats&&s.ledgerCats.length)?s.ledgerCats:defaultLedgerCats() };
+      migrateLedgerCats();
       mergeDuplicateDates();
       save();
       if(!keepDraft) resetDraft();
