@@ -716,8 +716,8 @@
   .led-grp{margin-bottom:10px}
   .led-grp-h{display:flex; align-items:baseline; justify-content:space-between; font-size:11px; font-weight:800; letter-spacing:.03em; color:var(--ink-3); text-transform:uppercase; margin-bottom:5px; padding-bottom:3px; border-bottom:1px solid var(--border)}
   .led-grp-h b{font-size:12px; color:var(--ink-2); font-variant-numeric:tabular-nums}
-  .led-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(195px,1fr)); gap:6px}
-  .led-item{display:flex; align-items:center; flex-wrap:wrap; gap:6px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:4px 6px 4px 9px}
+  .led-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(195px,1fr)); gap:6px; align-items:start}
+  .led-item{display:flex; align-items:center; flex-wrap:wrap; gap:6px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:4px 6px 4px 9px; align-self:start}
   .led-prog{flex-basis:100%; display:flex; align-items:center; gap:6px; margin-top:2px}
   .led-prog-track{position:relative; flex:1; height:5px; background:var(--surface); border:1px solid var(--border); border-radius:3px; overflow:hidden}
   .led-prog-track i{display:block; height:100%; background:var(--accent); border-radius:3px}
@@ -2923,7 +2923,7 @@
   }
   if($("#adminBtn")) $("#adminBtn").onclick=function(){ openAdmin("plan"); };
   document.addEventListener("click", function(e){ if(e.target && e.target.closest && e.target.closest("#adminBtnM")) openAdmin("plan"); });   // 모바일 관리 버튼(로그인 영역에서 동적 생성)
-  var adminYear=String(new Date().getFullYear()), adminFindQ="", adminSubFilter={}, adminTab="plan", golfSearchQ="", ledgerMonth=new Date().getMonth()+1, ledChartSel={}, ledApOpen={};   // 기본 = 올해 · ledChartSel: 대분류별 추이 대상(null=합계) · ledApOpen: 카드 자동이체 명세 펼침 상태
+  var adminYear=String(new Date().getFullYear()), adminFindQ="", adminSubFilter={}, adminTab="plan", golfSearchQ="", ledgerMonth=new Date().getMonth()+1, ledChartSel={}, ledApOpenAll=false;   // 기본 = 올해 · ledChartSel: 대분류별 추이 대상(null=합계) · ledApOpenAll: 카드 자동이체 명세 전체 펼침(토글 하나로 전 카드 동시)
   function setAdminFindPh(){ var fi=$("#adminFind"); if(fi) fi.placeholder = (adminTab==="golf")? "🔍 골프장 찾기" : "🔍 이름 찾기"; }
   (function(){ var fi=$("#adminFind"); if(!fi) return; fi.addEventListener("input",function(){ var v=this.value.trim();
     if(adminTab==="golf"){ golfSearchQ=v; renderAdminGolf(); return; }
@@ -3827,7 +3827,7 @@
         c_samsung:[{day:5,name:"프리드라이프",amt:50000},{day:8,name:"★제미나이",amt:7500},{day:11,name:"마이HP",amt:68450},{day:16,name:"★와우맴버",amt:7890},{day:20,name:"현대해상",amt:58950},{day:20,name:"KB손보",amt:42740},{day:26,name:"현대해상암",amt:106390},{day:27,name:"★유트부",amt:14900,memo:"실적제외"}],
         c_kb:[{day:1,name:"★구글플레이 클로드",amt:30000},{day:11,name:"SKT 인터넷",amt:11550},{day:17,name:"★넷플릭스",amt:13500,memo:"실적제외"},{day:20,name:"AIA",amt:28620},{day:20,name:"AIA",amt:201600}]
       };
-      cats.forEach(function(c){ if(ap[c.id] && c.autopay===undefined){ c.autopay=ap[c.id].map(function(a){ return {day:a.day,name:a.name,amt:a.amt,memo:a.memo||""}; }); } });
+      cats.forEach(function(c){ if(ap[c.id] && (!c.autopay || !c.autopay.length)){ c.autopay=ap[c.id].map(function(a){ return {day:a.day,name:a.name,amt:a.amt,memo:a.memo||""}; }); } });   // 빈 배열(예전에 모달만 열어 []로 저장된 경우)도 시드
     })();
   }
   function fmtWon(n){ n=Math.round(n||0); var s=Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,","); return (n<0?"-":"")+s; }
@@ -3885,11 +3885,11 @@
           prog.innerHTML='<div class="led-prog-track"><i class="'+(done?"done":"")+'" style="width:'+bw+'%"></i>'+(fxpct>0&&fxpct<100?'<u class="led-prog-fx" style="left:'+fxpct+'%" title="고정 자동이체 '+fmtWon(fixed)+'"></u>':'')+'</div><span class="led-prog-lbl'+(done?" done":"")+'">'+pct+'% <em>/ '+fmtWon(c.target)+'</em>'+(done?' <b class="lp-ok">달성</b>':' <b class="lp-rem">남은 '+fmtWon(remain)+'</b>')+'</span>';
           item.appendChild(prog);
         }
-        if(g.k==="card"){   // 자동이체 명세(인라인 확장)
-          var ap=c.autopay||[], open=!!ledApOpen[c.id];
+        if(g.k==="card"){   // 자동이체 명세(인라인 확장 · 토글 하나로 전 카드 동시)
+          var ap=c.autopay||[], open=ledApOpenAll;
           var tog=document.createElement("button"); tog.type="button"; tog.className="led-ap-tog"+(open?" open":"");
           tog.innerHTML='<span class="led-ap-cap">자동이체 '+ap.length+'건 <em>· 고정 '+fmtWon(fixed)+'</em></span><span class="led-ap-car">'+(open?"▾":"▸")+'</span>';
-          tog.onclick=function(){ ledApOpen[c.id]=!ledApOpen[c.id]; renderAdminLedger(); };
+          tog.onclick=function(){ ledApOpenAll=!ledApOpenAll; renderAdminLedger(); };
           item.appendChild(tog);
           if(open){
             var list=document.createElement("div"); list.className="led-ap-list";
