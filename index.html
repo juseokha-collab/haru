@@ -719,6 +719,7 @@
   .led-grp{margin-bottom:10px}
   .led-grp-h{display:flex; align-items:baseline; justify-content:space-between; font-size:11px; font-weight:800; letter-spacing:.03em; color:var(--ink-3); text-transform:uppercase; margin-bottom:5px; padding-bottom:3px; border-bottom:1px solid var(--border)}
   .led-grp-h b{font-size:12px; color:var(--ink-2); font-variant-numeric:tabular-nums}
+  .led-grp-h .led-grp-sub{font-weight:600; text-transform:none; letter-spacing:0; color:var(--ink-3); font-size:10.5px}
   .led-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(195px,1fr)); gap:6px; align-items:start}
   .led-item{display:flex; align-items:center; flex-wrap:wrap; gap:6px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:4px 6px 4px 9px; align-self:start}
   .led-prog{flex-basis:100%; display:flex; align-items:center; gap:6px; margin-top:2px}
@@ -3881,6 +3882,13 @@
     });
     return info;
   }
+  function cardAfterTotal(ym){   // 카드후(이체후) 잔액 합계 = 계좌별 최종 잔액을 한 번씩만(공유 계좌 중복 방지). 7월까지는 0
+    if(ym < "2026-08") return 0;
+    var chain=computeBankChain(ym), groups={}, total=0;
+    ledCatsOf("card").forEach(function(c){ var bk=(c.bank||"").trim(); if(bk){ (groups[bk]=groups[bk]||[]).push(c); } else { total += ((c.balance||0)-ledCardBill(ym,c.id)); } });
+    Object.keys(groups).forEach(function(bk){ var list=groups[bk].slice().sort(function(a,b){ return (a.day||99)-(b.day||99); }), last=list[list.length-1]; total += (chain[last.id]?chain[last.id].after:0); });
+    return total;
+  }
   function ledCell(ym,id){ var m=state.ledger[ym]; return (m&&m.cells&&m.cells[id])||0; }
   function ledCardBill(ym,id){ var m=state.ledger[ym]; if(m&&m.bills&&(id in m.bills)) return m.bills[id]||0; return ledCell(ym,id); }   // 카드 청구금액(월별). 미입력 월은 실적금액(cell)으로 대체 → 7월까지 실적=청구 자동
   function ledNotes(ym){ var m=state.ledger[ym]; if(!m) return {}; if(!m.notes){ m.notes = m.note? {income:m.note}:{}; } return m.notes; }   // 대분류별 비고(구형 단일 note는 수입으로 이전)
@@ -3911,7 +3919,8 @@
       var cats=ledCatsOf(g.k); if(!cats.length) return;
       var gt=0; cats.forEach(function(c){ gt+=(g.k==="card"?ledCardBill(ym,c.id):ledCell(ym,c.id)); });   // 카드지출 합계=청구금액 합계
       var sec=document.createElement("div"); sec.className="led-grp";
-      var gh=document.createElement("div"); gh.className="led-grp-h"; gh.innerHTML='<span>'+esc(g.n)+'</span><b>'+wonH(gt)+'</b>'; sec.appendChild(gh);
+      var ghLabel=esc(g.n); if(g.k==="card"){ ghLabel+=' <span class="led-grp-sub">(카드후 잔액 합계: '+wonH(cardAfterTotal(ym))+'원)</span>'; }
+      var gh=document.createElement("div"); gh.className="led-grp-h"; gh.innerHTML='<span>'+ghLabel+'</span><b>'+wonH(gt)+'</b>'; sec.appendChild(gh);
       var grid=document.createElement("div"); grid.className="led-grid";
       cats.forEach(function(c){
         var v0=ledCell(ym,c.id), avg=ledCatAvg(c.id), hot=(v0>0 && avg>0 && v0>=1.5*avg), selc=(ledChartSel[g.k]===c.id);
