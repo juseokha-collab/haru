@@ -744,6 +744,9 @@
   .led-bank .lb-acct:focus{border-color:var(--accent)}
   .led-bank .lb-bal{width:66px; flex:none; font-family:inherit; font-size:10px; text-align:right; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:2px 4px; outline:0; font-variant-numeric:tabular-nums}
   .led-bank .lb-bal:focus{border-color:var(--accent)}
+  .led-bank .lb-bal.neg{color:#e23b3b}
+  .led-bank .lb-bal.ro{background:var(--surface-2); color:var(--ink-3); cursor:default}
+  .led-bank .lb-bal.ro.neg{color:#e23b3b}
   .led-bank .lb-after{margin-left:auto; color:var(--ink-2); font-variant-numeric:tabular-nums; white-space:nowrap}
   .led-bank .lb-after.neg{color:#e23b3b; font-weight:700}
   .led-ap-list{flex-basis:100%; margin:2px 0 1px; padding:3px 2px 1px; border-top:1px solid var(--border)}
@@ -3850,6 +3853,7 @@
       cats.forEach(function(c){ if(ap[c.id] && (!c.autopay || !c.autopay.length)){ c.autopay=ap[c.id].map(function(a){ return {day:a.day,name:a.name,amt:a.amt,memo:a.memo||""}; }); } });   // 빈 배열(예전에 모달만 열어 []로 저장된 경우)도 시드
       var bank={ c_shinhan:"신한은행", c_hana:"하나은행", c_hyundai:"K뱅(모임)", c_samsung:"모니모" };   // 카드 자동이체 구좌 시드
       cats.forEach(function(c){ if(bank[c.id] && c.bank===undefined) c.bank=bank[c.id]; });
+      cats.forEach(function(c){ if((c.id==="c_hyundai"||c.id==="c_kb") && c.memo==="K뱅크") delete c.memo; });   // 현대·KB 카드명 옆 'K뱅크' 태그 제거(구좌는 아래 줄에 표기)
     })();
   }
   function fmtWon(n){ n=Math.round(n||0); var s=Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,","); return (n<0?"-":"")+s; }
@@ -3858,6 +3862,15 @@
   function ledCatsOf(g){ return (state.ledgerCats||[]).filter(function(c){return c.group===g;}); }
   function apExcluded(memo){ return /실적제외/.test((memo||"").replace(/\s/g,"")); }   // 비고에 '실적제외' → 실적 합계 제외
   function cardFixed(c){ if(c.autopay&&c.autopay.length){ var s=0; c.autopay.forEach(function(a){ if(!apExcluded(a.memo)) s+=(+a.amt||0); }); return s; } return c.fixed||0; }   // 고정(자동)=명세 합계(실적제외 빼고), 명세 없으면 손입력값
+  function computeBankChain(ym){   // 같은 구좌를 쓰는 카드는 결제일 순으로 잔액 연쇄: 첫 카드=입력잔액, 이후 카드=앞 카드의 카드후 잔액을 시작잔액으로
+    var cards=ledCatsOf("card").filter(function(c){ return (c.bank||"").trim(); }), groups={}, info={};
+    cards.forEach(function(c){ var bk=c.bank.trim(); (groups[bk]=groups[bk]||[]).push(c); });
+    Object.keys(groups).forEach(function(bk){
+      var list=groups[bk].slice().sort(function(a,b){ return (a.day||99)-(b.day||99); }), running=0;
+      list.forEach(function(c,i){ var v0=ledCell(ym,c.id), start=(i===0)?(c.balance||0):running, after=start-v0; info[c.id]={ primary:(i===0), start:start, after:after }; running=after; });
+    });
+    return info;
+  }
   function ledCell(ym,id){ var m=state.ledger[ym]; return (m&&m.cells&&m.cells[id])||0; }
   function ledNotes(ym){ var m=state.ledger[ym]; if(!m) return {}; if(!m.notes){ m.notes = m.note? {income:m.note}:{}; } return m.notes; }   // 대분류별 비고(구형 단일 note는 수입으로 이전)
   var LEDGER_NOTE_DEFAULTS={ regular:{1:"자차연납/면허세(지방세)",2:"면세사업장신고(~2/10)",3:"자동차보험(3/4)",5:"종득세 양세무",6:"종합소득세 납부",7:"주민/재산",8:"해마루 수수료",11:"종합소득세"} };
@@ -3872,6 +3885,7 @@
   function renderAdminLedger(){
     var el=$("#adminLedger"); if(!el) return;
     var yr=adminYear==="all"?String(new Date().getFullYear()):adminYear, ym=yr+"-"+pad(ledgerMonth);
+    var bankChain=computeBankChain(ym);   // 같은 구좌 카드 잔액 연쇄
     el.innerHTML="";
     // 상단 헤더: 월 선택은 상단 셀렉트(2026.08월)로 통합, 여기엔 PC 편집 버튼만
     var head=document.createElement("div"); head.className="led-head";
@@ -3915,11 +3929,14 @@
           item.appendChild(tog);
           // 자동이체 구좌 / 잔액 / 카드(이체)후 잔액 = 잔액 - 카드사용금액
           var brow=document.createElement("div"); brow.className="led-bank";
+          var bi=bankChain[c.id], isPrimary=!bi||bi.primary, startBal=bi?bi.start:(c.balance||0), after=bi?bi.after:((c.balance||0)-(v0||0));
           var acct=document.createElement("input"); acct.type="text"; acct.className="lb-acct"; acct.value=c.bank||""; acct.placeholder="구좌"; acct.title="자동이체 구좌";
-          acct.onchange=function(){ var v=acct.value.trim(); if(v)c.bank=v; else delete c.bank; save(); };
-          var bal=document.createElement("input"); bal.type="text"; bal.className="lb-bal"; bal.inputMode="numeric"; bal.value=c.balance?fmtWon(c.balance):""; bal.placeholder="잔액"; bal.title="구좌 잔액";
-          bal.onchange=function(){ var v=parseWon(bal.value); if(v)c.balance=v; else delete c.balance; save(); renderAdminLedger(); };
-          var after=(c.balance||0)-(v0||0);
+          acct.onchange=function(){ var v=acct.value.trim(); if(v)c.bank=v; else delete c.bank; save(); renderAdminLedger(); };
+          var bal=document.createElement("input"); bal.type="text"; bal.className="lb-bal"; bal.inputMode="text"; bal.placeholder="잔액"; bal.title=isPrimary?"구좌 잔액(마이너스 입력 가능)":"앞 카드 이체후 잔액에서 이어받음(자동)";
+          if(isPrimary){ bal.value=(c.balance!=null&&c.balance!=="")?fmtWon(c.balance):""; if((c.balance||0)<0) bal.classList.add("neg");
+            bal.oninput=function(){ bal.classList.toggle("neg", parseWon(bal.value)<0); };
+            bal.onchange=function(){ var s=bal.value.trim(); if(s===""){ delete c.balance; } else { c.balance=parseWon(bal.value); } save(); renderAdminLedger(); }; }
+          else { bal.value=fmtWon(startBal); bal.readOnly=true; bal.classList.add("ro"); if(startBal<0) bal.classList.add("neg"); }   // 같은 구좌 뒤 카드: 앞 카드 이체후 잔액 상속(수정불가)
           var aft=document.createElement("span"); aft.className="lb-after"+(after<0?" neg":""); aft.title="카드 이체 후 잔액 = 구좌 잔액 − 카드 사용금액"; aft.innerHTML=wonH(after);
           brow.appendChild(acct); brow.appendChild(bal); brow.appendChild(aft);
           item.appendChild(brow);
