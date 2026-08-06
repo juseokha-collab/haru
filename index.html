@@ -4084,9 +4084,9 @@
       if(!present[i]) return;   // 값 없는 달은 공란
       var v=vals[i], cur=(i===n-1?" cur":"");
       var dv= domId? Math.max(0, ledCell(ym,domId)) : 0, rv=v-dv;
-      if(domId && v>=0 && dv>=0 && rv>=0){   // 그 외(아래) + 주력(위) 스택
-        var yR=yOf(rv), hR=Math.max(0, zeroY-yR); if(hR>0.4) s+='<rect x="'+x.toFixed(1)+'" y="'+yR.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+hR.toFixed(1)+'" class="lb-bar2'+cur+'"></rect>';
-        var yD=yOf(v), hD=Math.max(0, yR-yD); if(hD>0.4) s+='<rect x="'+x.toFixed(1)+'" y="'+yD.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+hD.toFixed(1)+'" rx="1" class="lb-dom'+cur+'"></rect>';
+      if(domId && v>=0 && dv>=0 && rv>=0){   // 주력(바닥) + 그 외(위) 스택
+        var yD=yOf(dv), hD=Math.max(0, zeroY-yD); if(hD>0.4) s+='<rect x="'+x.toFixed(1)+'" y="'+yD.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+hD.toFixed(1)+'" class="lb-dom'+cur+'"></rect>';
+        var yR=yOf(v), hR=Math.max(0, yD-yR); if(hR>0.4) s+='<rect x="'+x.toFixed(1)+'" y="'+yR.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+hR.toFixed(1)+'" rx="1" class="lb-bar2'+cur+'"></rect>';
       } else {
         var yv=yOf(v), y=Math.min(yv,zeroY), bh=Math.max(1.5,Math.abs(yv-zeroY));
         s+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+bh.toFixed(1)+'" rx="1" class="lb-bar2'+cur+'"></rect>';
