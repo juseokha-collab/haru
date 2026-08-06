@@ -776,6 +776,16 @@
   .ap-row.ex input.ap-n, .ap-row.ex input.ap-a{text-decoration:line-through; color:#9aa0a8}
   .ap-sum{flex:1; font-size:12.5px; color:#3a3f46} .ap-sum b{font-variant-numeric:tabular-nums; color:#1c1f24}
   .ap-sum .ap-ex{color:#C96F6F}
+  /* 보유 계좌 박스 */
+  .led-acct-box{display:block; align-self:start}
+  .led-acct-box .lab-hd{font-size:10px; font-weight:800; letter-spacing:.03em; color:var(--ink-3); text-transform:uppercase; margin-bottom:5px}
+  .led-acct-box .lab-row{display:flex; align-items:center; justify-content:space-between; gap:6px; padding:2px 0}
+  .led-acct-box .lab-nm{font-size:11.5px; color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .led-acct-box .lab-bal{width:98px; flex:none; font-family:inherit; font-size:11.5px; text-align:right; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:3px 6px; outline:0; font-variant-numeric:tabular-nums}
+  .led-acct-box .lab-bal:focus{border-color:var(--accent)}
+  .led-acct-box .lab-bal.neg{color:#e23b3b}
+  .led-acct-box .lab-sum{margin-top:5px; padding-top:5px; border-top:1px solid var(--border); text-align:right; font-size:11.5px; color:var(--ink-2)}
+  .led-acct-box .lab-sum b{font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums}
   .led-item.led-hot{background:color-mix(in srgb,var(--accent) 12%,var(--surface-2)); border-color:color-mix(in srgb,var(--accent) 32%,transparent)}
   .led-item.led-hot .led-nm{color:var(--accent-ink)}
   .led-item .led-nm{cursor:pointer}
@@ -3831,6 +3841,7 @@
   ]; }
   function migrateLedgerCats(){   // 가계부 항목 마이그레이션(로컬/클라우드 로드 모두에서 실행, 멱등)
     if(!state.ledgerCats||!state.ledgerCats.length) state.ledgerCats=defaultLedgerCats();
+    if(!state.ledgerAccounts||!state.ledgerAccounts.length) state.ledgerAccounts=[{id:"a_kakaobank",name:"카카오뱅크"},{id:"a_kakaopay",name:"카카오페이"},{id:"a_samsungcma",name:"삼성CMA"}];   // 보유 계좌
     // 1) 영국·통신/교통 → 정기지출 첫/둘째로 이전
     (function(){ var cats=state.ledgerCats, uk=null, comm=null;
       cats.forEach(function(c){ if(c.id==="c_uk")uk=c; else if(c.id==="c_comm")comm=c; });
@@ -3888,12 +3899,13 @@
     });
     return info;
   }
-  function cardAfterTotal(ym){   // 카드후(이체후) 잔액 합계 = 계좌별 최종 잔액을 한 번씩만(공유 계좌 중복 방지). 7월까지는 0
+  function acctTotal(){ var s=0; (state.ledgerAccounts||[]).forEach(function(a){ s+=(+a.balance||0); }); return s; }   // 보유 계좌 잔액 합계
+  function cardAfterTotal(ym){   // 카드후(이체후) 잔액 합계 = 계좌별 최종 잔액을 한 번씩만(공유 계좌 중복 방지) + 보유 계좌 잔액. 7월까지는 0
     if(ym < "2026-08") return 0;
     var chain=computeBankChain(ym), groups={}, total=0;
     ledCatsOf("card").forEach(function(c){ var bk=(c.bank||"").trim(); if(bk){ (groups[bk]=groups[bk]||[]).push(c); } else { total += ((c.balance||0)-ledCardBill(ym,c.id)); } });
     Object.keys(groups).forEach(function(bk){ var list=groups[bk].slice().sort(function(a,b){ return (a.day||99)-(b.day||99); }), last=list[list.length-1]; total += (chain[last.id]?chain[last.id].after:0); });
-    return total;
+    return total + acctTotal();
   }
   function ledCell(ym,id){ var m=state.ledger[ym]; return (m&&m.cells&&m.cells[id])||0; }
   function ledCardBill(ym,id){ var m=state.ledger[ym]; if(m&&m.bills&&(id in m.bills)) return m.bills[id]||0; return ledCell(ym,id); }   // 카드 청구금액(월별). 미입력 월은 실적금액(cell)으로 대체 → 7월까지 실적=청구 자동
@@ -3992,6 +4004,7 @@
         }
         grid.appendChild(item);
       });
+      if(g.k==="card") grid.appendChild(buildAcctBox());   // BC 옆 빈 칸(삼성 아래)에 보유 계좌 박스
       sec.appendChild(grid);
       // 대분류 비고 (그룹 끝)
       var nrow=document.createElement("div"); nrow.className="led-note-wrap";
@@ -4009,6 +4022,22 @@
   function ledGroupMonthVal(gk, ym, selId){ if(selId) return ledCell(ym,selId); var s=0; ledCatsOf(gk).forEach(function(c){ s+=ledCell(ym,c.id); }); return s; }
   function ledMonthHasData(ym){ var m=state.ledger[ym]; return !!(m && m.cells && Object.keys(m.cells).length); }
   // 대분류(또는 선택 항목) 13개월 추이: 1년전 같은 달~이번달, 기록 있는 달만 평균/막대(없는 달은 공란), 변동폭 확대
+  function buildAcctBox(){   // 보유 계좌(카카오뱅크/페이/삼성CMA…) 잔액 입력 + 합계 → 카드후 잔액 합계에 포함
+    var box=document.createElement("div"); box.className="led-item led-acct-box";
+    var hd=document.createElement("div"); hd.className="lab-hd"; hd.textContent="보유 계좌"; box.appendChild(hd);
+    var accts=state.ledgerAccounts||[], sum=0;
+    accts.forEach(function(a){
+      sum+=(+a.balance||0);
+      var row=document.createElement("div"); row.className="lab-row";
+      var nm=document.createElement("span"); nm.className="lab-nm"; nm.textContent=a.name;
+      var inp=document.createElement("input"); inp.type="text"; inp.className="lab-bal"+((a.balance||0)<0?" neg":""); inp.inputMode="text"; inp.value=(a.balance!=null&&a.balance!=="")?fmtWon(a.balance):""; inp.placeholder="잔액";
+      inp.oninput=function(){ inp.classList.toggle("neg", parseWon(inp.value)<0); };
+      inp.onchange=function(){ var s=inp.value.trim(); if(s==="") delete a.balance; else a.balance=parseWon(inp.value); save(); renderAdminLedger(); };
+      row.appendChild(nm); row.appendChild(inp); box.appendChild(row);
+    });
+    var sm=document.createElement("div"); sm.className="lab-sum"; sm.innerHTML='합계 금액 <b>'+wonH(sum)+'</b>원'; box.appendChild(sm);
+    return box;
+  }
   function buildLedgerBar(gk, yr, mon, selId){
     var wrap=document.createElement("div"); wrap.className="led-bar-wrap";
     var months=[]; for(var k=12;k>=0;k--){ var d=new Date(+yr, (mon-1)-k, 1); months.push(d.getFullYear()+"-"+pad(d.getMonth()+1)); }
@@ -4274,7 +4303,7 @@
     get:function(){ return state; },
     replace:function(s, keepDraft){
       if(!s || !Array.isArray(s.entries)) return;
-      state={ people:s.people||{}, entries:s.entries||[], events:s.events||[], golf:s.golf||{}, todos:s.todos||[], plans:s.plans||[], subcats:s.subcats||[], relNames:s.relNames||{}, ledger:s.ledger||{}, ledgerCats:(s.ledgerCats&&s.ledgerCats.length)?s.ledgerCats:defaultLedgerCats() };
+      state={ people:s.people||{}, entries:s.entries||[], events:s.events||[], golf:s.golf||{}, todos:s.todos||[], plans:s.plans||[], subcats:s.subcats||[], relNames:s.relNames||{}, ledger:s.ledger||{}, ledgerCats:(s.ledgerCats&&s.ledgerCats.length)?s.ledgerCats:defaultLedgerCats(), ledgerAccounts:s.ledgerAccounts||[] };
       migrateLedgerCats();
       mergeDuplicateDates();
       save();
