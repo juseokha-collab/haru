@@ -739,7 +739,7 @@
   .ledcat-tg.ro{background:var(--surface-2); color:var(--ink-3); cursor:default}
   .ledcat-mon{width:118px; flex:none; font-family:inherit; font-size:11px; color:var(--ink-2); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:3px 5px; outline:0}
   .ledcat-mon:focus{border-color:var(--accent)}
-  .ledcat-per{flex:none; font-family:inherit; font-size:10.5px; color:var(--ink-3); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:3px 7px; cursor:pointer; white-space:nowrap; font-variant-numeric:tabular-nums}
+  .ledcat-per{flex:none; width:74px; box-sizing:border-box; text-align:center; font-family:inherit; font-size:10.5px; color:var(--ink-3); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:3px 5px; cursor:pointer; white-space:nowrap; font-variant-numeric:tabular-nums}
   .ledcat-per:hover{border-color:var(--accent); color:var(--accent-ink)}
   .ledcat-per.set{color:var(--accent-ink); border-color:color-mix(in srgb,var(--accent) 45%,transparent); background:color-mix(in srgb,var(--accent) 10%,transparent)}
   .ledcat-per .lcp-ic{opacity:.75}
@@ -811,11 +811,10 @@
   .lb-tip{position:absolute; z-index:6; pointer-events:none; white-space:nowrap; font-size:10.5px; font-weight:700; color:#fff; background:rgba(20,24,33,.92); border-radius:6px; padding:3px 7px; font-variant-numeric:tabular-nums; opacity:0; transition:opacity .1s; box-shadow:0 2px 6px rgba(0,0,0,.25)}
   .lb-tip.on{opacity:1}
   .led-bar-svg .lb-axis{stroke:var(--ink-3); stroke-dasharray:3 3; stroke-width:1; opacity:.55}
-  .led-bar-svg .lb-bar.up{fill:#5FBFA0}
-  .led-bar-svg .lb-bar.down{fill:#E58A8A}
-  .led-bar-svg .lb-bar.cur{stroke-width:1.5}
-  .led-bar-svg .lb-bar.up.cur{stroke:#3E9E80}
-  .led-bar-svg .lb-bar.down.cur{stroke:#C96F6F}
+  .led-bar-svg .lb-bar2{fill:#7FB6A6}
+  .led-bar-svg .lb-bar2.cur{fill:#3E9E80}
+  .led-bar-svg .lb-avgline{stroke:var(--ink-3); stroke-dasharray:4 3; stroke-width:1; opacity:.5}
+  .led-bar-svg .lb-zero{stroke:var(--ink-3); stroke-width:1; opacity:.4}
   .led-bar-x{display:flex; justify-content:space-between; font-size:10px; color:var(--ink-3); margin-top:2px; font-variant-numeric:tabular-nums}
   .led-item .led-nm{flex:1; min-width:0; font-size:12px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .led-item .led-nm .led-day{font-style:normal; font-size:9.5px; color:var(--ink-3); background:var(--surface); border-radius:4px; padding:0 3px; margin-left:2px}
@@ -851,6 +850,9 @@
   .led-chart-legend .lg{display:inline-flex; align-items:center; gap:4px; color:var(--ink-2)}
   .led-chart-legend .lg::before{content:""; width:9px; height:9px; border-radius:2px; display:inline-block}
   .led-chart-legend .lg.inc::before{background:#5FBFA0} .led-chart-legend .lg.exp::before{background:#E58A8A}
+  .led-chart-legend .lg em{font-style:normal; font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums}
+  .led-chart-svgwrap{position:relative}
+  .led-chart-svgwrap .led-bar-inc, .led-chart-svgwrap .led-bar-exp{cursor:pointer}
   .led-svg{display:block; width:100%; height:170px}
   .led-svg .led-bar-inc{fill:#5FBFA0} .led-svg .led-bar-exp{fill:#E58A8A}
   .led-svg .led-axl{fill:var(--ink-3); font-size:9px}
@@ -4052,8 +4054,8 @@
   function buildLedgerBar(gk, yr, mon, selId){
     var wrap=document.createElement("div"); wrap.className="led-bar-wrap";
     var months=[]; for(var k=12;k>=0;k--){ var d=new Date(+yr, (mon-1)-k, 1); months.push(d.getFullYear()+"-"+pad(d.getMonth()+1)); }
-    var present=months.map(ledMonthHasData);
     var vals=months.map(function(ym){ return ledGroupMonthVal(gk,ym,selId); });
+    var present=vals.map(function(v){ return v!==0; });   // 값이 입력된(0 아닌) 달만 — 미입력 달은 평균/막대에서 제외
     var selName="합계", canReset=false;
     if(selId){ var c=ledCatsOf(gk).filter(function(x){return x.id===selId;})[0]; if(c){ selName=c.name; canReset=true; } }
     var pv=[]; months.forEach(function(ym,i){ if(present[i]) pv.push(vals[i]); });
@@ -4063,17 +4065,18 @@
     wrap.appendChild(cap);
     if(canReset){ var rb=cap.querySelector(".lbc-reset"); if(rb) rb.onclick=function(){ ledChartSel[gk]=null; renderAdminLedger(); }; }
     if(!pv.length){ var em=document.createElement("div"); em.className="led-empty"; em.style.padding="8px"; em.textContent="데이터가 쌓이면 추이가 표시돼요"; wrap.appendChild(em); return wrap; }
-    var maxDev=1; pv.forEach(function(v){ maxDev=Math.max(maxDev, Math.abs(v-avg)); });
-    var W=600, H=84, pl=4, pr=4, cy=H/2, half=H/2-4, n=13, gap=3, bw=(W-pl-pr-gap*(n-1))/n;
+    var lo=0, hi=0; pv.forEach(function(v){ lo=Math.min(lo,v); hi=Math.max(hi,v); }); if(hi<=lo) hi=lo+1;   // 실제 값 기준 스케일(0 기준선)
+    var range=hi-lo, W=600, H=84, pl=4, pr=4, pt=8, pb=8, plotH=H-pt-pb, n=13, gap=3, bw=(W-pl-pr-gap*(n-1))/n;
+    var yOf=function(v){ return pt + (hi-v)/range*plotH; }, zeroY=yOf(0), avgY=yOf(avg);
     var s='<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" class="led-bar-svg" preserveAspectRatio="none">';
-    s+='<line x1="'+pl+'" y1="'+cy+'" x2="'+(W-pr)+'" y2="'+cy+'" class="lb-axis"/>';
+    if(lo<0) s+='<line x1="'+pl+'" y1="'+zeroY.toFixed(1)+'" x2="'+(W-pr)+'" y2="'+zeroY.toFixed(1)+'" class="lb-zero"/>';   // 음수 있을 때만 0선
     var hits='';
     months.forEach(function(ym,i){ var x=pl+i*(bw+gap);
-      if(!present[i]) return;   // 기록 없는 달은 공란
-      var v=vals[i], dev=v-avg, mag=Math.abs(dev)/maxDev;
-      var bh=Math.max(2,Math.round(Math.sqrt(mag)*half)), y=dev>=0?cy-bh:cy;   // sqrt로 작은 변동도 잘 보이게
-      s+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+bh+'" class="lb-bar '+(dev>=0?"up":"down")+(i===n-1?" cur":"")+'"></rect>';
+      if(!present[i]) return;   // 값 없는 달은 공란
+      var v=vals[i], yv=yOf(v), y=Math.min(yv,zeroY), bh=Math.max(1.5,Math.abs(yv-zeroY));
+      s+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+bh.toFixed(1)+'" rx="1" class="lb-bar2'+(i===n-1?" cur":"")+'"></rect>';
       hits+='<rect x="'+(x-gap/2).toFixed(1)+'" y="0" width="'+(bw+gap).toFixed(1)+'" height="'+H+'" data-ym="'+ym+'" data-val="'+v+'" class="lb-hit"></rect>'; });
+    s+='<line x1="'+pl+'" y1="'+avgY.toFixed(1)+'" x2="'+(W-pr)+'" y2="'+avgY.toFixed(1)+'" class="lb-avgline"/>';   // 평균 점선(흐리게)
     s+=hits+'</svg>';
     var sw=document.createElement("div"); sw.className="led-bar-svgwrap"; sw.innerHTML=s; wrap.appendChild(sw);
     var tip=document.createElement("div"); tip.className="lb-tip"; sw.appendChild(tip);
@@ -4125,17 +4128,29 @@
     var wrap=document.createElement("div"); wrap.className="led-chart-wrap";
     var months=[], any=false; for(var m=1;m<=12;m++){ var t=ledMonthTotals(yr+"-"+pad(m)); if(t.income||t.expense) any=true; months.push({m:m,inc:t.income,exp:t.expense}); }
     if(!any){ wrap.innerHTML='<div class="led-empty">입력이 쌓이면 수입·지출 그래프가 그려져요</div>'; return wrap; }
+    var incV=months.filter(function(o){return o.inc>0;}).map(function(o){return o.inc;});   // 입력된(0 아닌) 달만 평균
+    var expV=months.filter(function(o){return o.exp>0;}).map(function(o){return o.exp;});
+    var incAvg=incV.length? incV.reduce(function(a,b){return a+b;},0)/incV.length : 0;
+    var expAvg=expV.length? expV.reduce(function(a,b){return a+b;},0)/expV.length : 0;
     var W=Math.max(300,Math.min(680,(window.innerWidth||760)-90)), H=170, pl=8, pr=8, pb=18, pt=8;
     var maxV=1; months.forEach(function(o){ maxV=Math.max(maxV,o.inc,o.exp); });
     var bw=(W-pl-pr)/12, yBot=H-pb, ih=yBot-pt, yOf=function(v){ return yBot-(v/maxV)*ih; };
-    var s='<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" class="led-svg">';
+    var s='<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" class="led-svg" preserveAspectRatio="none">';
     months.forEach(function(o,i){ var cx=pl+bw*i+bw/2, bwi=bw*0.28;
-      if(o.inc) s+='<rect x="'+(cx-bwi-1).toFixed(1)+'" y="'+yOf(o.inc).toFixed(1)+'" width="'+bwi.toFixed(1)+'" height="'+(yBot-yOf(o.inc)).toFixed(1)+'" rx="1.5" class="led-bar-inc"/>';
-      if(o.exp) s+='<rect x="'+(cx+1).toFixed(1)+'" y="'+yOf(o.exp).toFixed(1)+'" width="'+bwi.toFixed(1)+'" height="'+(yBot-yOf(o.exp)).toFixed(1)+'" rx="1.5" class="led-bar-exp"/>';
+      if(o.inc) s+='<rect x="'+(cx-bwi-1).toFixed(1)+'" y="'+yOf(o.inc).toFixed(1)+'" width="'+bwi.toFixed(1)+'" height="'+(yBot-yOf(o.inc)).toFixed(1)+'" rx="1.5" class="led-bar-inc" data-t="'+o.m+'월 수입" data-v="'+o.inc+'"/>';
+      if(o.exp) s+='<rect x="'+(cx+1).toFixed(1)+'" y="'+yOf(o.exp).toFixed(1)+'" width="'+bwi.toFixed(1)+'" height="'+(yBot-yOf(o.exp)).toFixed(1)+'" rx="1.5" class="led-bar-exp" data-t="'+o.m+'월 지출" data-v="'+o.exp+'"/>';
       s+='<text x="'+cx.toFixed(1)+'" y="'+(H-5)+'" text-anchor="middle" class="led-axl">'+o.m+'</text>';
     });
     s+='</svg>';
-    wrap.innerHTML='<div class="led-chart-legend"><span class="lg inc">수입</span><span class="lg exp">지출</span></div>'+s;
+    var leg='<div class="led-chart-legend"><span class="lg inc">수입 <em>평균 '+fmtWon(incAvg)+'원</em></span><span class="lg exp">지출 <em>평균 '+fmtWon(expAvg)+'원</em></span></div>';
+    var svgwrap=document.createElement("div"); svgwrap.className="led-chart-svgwrap"; svgwrap.innerHTML=s;
+    var tip=document.createElement("div"); tip.className="lb-tip"; svgwrap.appendChild(tip);
+    Array.prototype.forEach.call(svgwrap.querySelectorAll("[data-v]"), function(el){
+      el.onmouseenter=function(){ tip.textContent=el.getAttribute("data-t")+" · "+fmtWon(+el.getAttribute("data-v")); tip.classList.add("on"); };
+      el.onmousemove=function(ev){ var r=svgwrap.getBoundingClientRect(), tw=tip.offsetWidth, th=tip.offsetHeight, x=ev.clientX-r.left, y=ev.clientY-r.top; tip.style.left=Math.max(2,Math.min(x-tw/2,r.width-tw-2))+"px"; tip.style.top=Math.max(2,Math.min(y-th-6,r.height-th-2))+"px"; };
+      el.onmouseleave=function(){ tip.classList.remove("on"); };
+    });
+    var legEl=document.createElement("div"); legEl.innerHTML=leg; wrap.appendChild(legEl.firstChild); wrap.appendChild(svgwrap);
     return wrap;
   }
   // 엑셀(탭구분) 월별 행 붙여넣기 → 항목 매핑해서 가져오기
