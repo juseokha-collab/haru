@@ -739,6 +739,10 @@
   .ledcat-tg.ro{background:var(--surface-2); color:var(--ink-3); cursor:default}
   .ledcat-mon{width:118px; flex:none; font-family:inherit; font-size:11px; color:var(--ink-2); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:3px 5px; outline:0}
   .ledcat-mon:focus{border-color:var(--accent)}
+  .ledcat-per{flex:none; font-family:inherit; font-size:10.5px; color:var(--ink-3); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:3px 7px; cursor:pointer; white-space:nowrap; font-variant-numeric:tabular-nums}
+  .ledcat-per:hover{border-color:var(--accent); color:var(--accent-ink)}
+  .ledcat-per.set{color:var(--accent-ink); border-color:color-mix(in srgb,var(--accent) 45%,transparent); background:color-mix(in srgb,var(--accent) 10%,transparent)}
+  .ledcat-per .lcp-ic{opacity:.75}
   /* 카드 자동이체 명세(인라인 확장) */
   .led-ap-tog{flex-basis:100%; display:flex; align-items:center; justify-content:space-between; gap:6px; margin-top:3px; background:none; border:0; border-top:1px dashed var(--border); padding:4px 1px 1px; font-family:inherit; font-size:10.5px; color:var(--ink-3); cursor:pointer}
   .led-ap-tog:hover{color:var(--ink-2)}
@@ -3898,7 +3902,7 @@
   function apExcluded(memo){ return /실적제외/.test((memo||"").replace(/\s/g,"")); }   // 비고에 '실적제외' → 실적 합계 제외
   function cardFixed(c){ if(c.autopay&&c.autopay.length){ var s=0; c.autopay.forEach(function(a){ if(!apExcluded(a.memo)) s+=(+a.amt||0); }); return s; } return c.fixed||0; }   // 고정(자동)=명세 합계(실적제외 빼고), 명세 없으면 손입력값
   function computeBankChain(ym){   // 같은 구좌 카드는 결제일 순으로 잔액 연쇄: 첫 카드=입력잔액, 이후 카드=앞 카드의 이체후 잔액을 시작잔액으로. 이체후 = 잔액 − 청구금액
-    var cards=ledCatsOf("card").filter(function(c){ return (c.bank||"").trim(); }), groups={}, info={};
+    var cards=ledCatsOf("card").filter(function(c){ return (c.bank||"").trim() && catActive(c,ym); }), groups={}, info={};
     cards.forEach(function(c){ var bk=c.bank.trim(); (groups[bk]=groups[bk]||[]).push(c); });
     Object.keys(groups).forEach(function(bk){
       var list=groups[bk].slice().sort(function(a,b){ return (a.day||99)-(b.day||99); }), running=0;
@@ -3910,7 +3914,7 @@
   function cardAfterTotal(ym){   // 카드후(이체후) 잔액 합계 = 계좌별 최종 잔액을 한 번씩만(공유 계좌 중복 방지) + 보유 계좌 잔액. 7월까지는 0
     if(ym < "2026-08") return 0;
     var chain=computeBankChain(ym), groups={}, total=0;
-    ledCatsOf("card").forEach(function(c){ var bk=(c.bank||"").trim(); if(bk){ (groups[bk]=groups[bk]||[]).push(c); } else { total += ((c.balance||0)-ledCardBill(ym,c.id)); } });
+    ledCatsOf("card").filter(function(c){ return catActive(c,ym); }).forEach(function(c){ var bk=(c.bank||"").trim(); if(bk){ (groups[bk]=groups[bk]||[]).push(c); } else { total += ((c.balance||0)-ledCardBill(ym,c.id)); } });
     Object.keys(groups).forEach(function(bk){ var list=groups[bk].slice().sort(function(a,b){ return (a.day||99)-(b.day||99); }), last=list[list.length-1]; total += (chain[last.id]?chain[last.id].after:0); });
     return total + acctTotal();
   }
@@ -3922,7 +3926,7 @@
   function ledCatAvg(id){ var sum=0,n=0; Object.keys(state.ledger||{}).forEach(function(ym){ var v=(state.ledger[ym].cells||{})[id]; if(v>0){ sum+=v; n++; } }); return n? sum/n : 0; }
   function ledMonthTotals(ym){
     var t={income:0,card:0,regular:0,invest:0,cash:0};
-    (state.ledgerCats||[]).forEach(function(c){ if(t[c.group]!=null) t[c.group]+=(c.group==="card"?ledCardBill(ym,c.id):ledCell(ym,c.id)); });   // 카드는 청구금액 기준(미입력 월=실적금액)
+    (state.ledgerCats||[]).forEach(function(c){ if(t[c.group]!=null && catActive(c,ym)) t[c.group]+=(c.group==="card"?ledCardBill(ym,c.id):ledCell(ym,c.id)); });   // 카드는 청구금액 기준(미입력 월=실적금액), 활성 기간 항목만
     t.expense=t.card+t.regular+t.cash; t.net=t.income-t.expense-t.invest;   // 투자=지출성(양수 지출/음수 수입)
     return t;
   }
@@ -4158,7 +4162,7 @@
   function openLedgerCats(){
     var back=document.createElement("div"); back.className="modal-back";
     var modal=document.createElement("div"); modal.className="modal ledcat-modal force-light";
-    modal.innerHTML='<div class="modal-title">가계부 항목 편집</div><div class="modal-msg">이름·결제일(1~31)·메모를 바꾸거나, 그룹별로 항목을 추가/삭제하세요. <b>시작월~종료월</b>을 지정하면 그 기간에만 항목이 표시됩니다(예: 해지한 적금은 종료월 지정 → 다음 달부터 숨김, 과거 기록은 유지).</div>';
+    modal.innerHTML='<div class="modal-title">가계부 항목 편집</div><div class="modal-msg">이름·결제일(1~31)·메모를 바꾸거나, 그룹별로 항목을 추가/삭제하세요. <b>기간 ✎</b>에서 종료월을 지정하면 다음 달부터 항목이 숨겨집니다(과거 기록 유지). 새 항목은 추가한 달부터 표시돼요.</div>';
     var body=document.createElement("div"); body.className="ledcat-body";
     function moveCat(item, dir){   // 전체 표시순서에서 한 칸 이동(경계 넘으면 그룹 변경)
       var list=[]; LEDGER_GROUPS.forEach(function(g){ ledCatsOf(g.k).forEach(function(c){ list.push(c); }); });
@@ -4180,18 +4184,17 @@
             fx=document.createElement("input"); fx.type="text"; fx.className="ledcat-tg ledcat-fx"; fx.inputMode="numeric";
             if(c.autopay&&c.autopay.length){ fx.value=fmtWon(cardFixed(c)); fx.readOnly=true; fx.classList.add("ro"); fx.title="자동이체 명세 합계(실적제외 제외) — 명세에서 편집"; }
             else { fx.value=c.fixed?fmtWon(c.fixed):""; fx.placeholder="고정(자동)"; fx.title="매달 자동이체로 실적에 채워지는 고정 합계(명세 없을 때 손입력)"; fx.onchange=function(){ var v=parseWon(fx.value); if(v>0) c.fixed=v; else delete c.fixed; }; } }
-          var st=document.createElement("input"); st.type="month"; st.className="ledcat-mon"; st.value=c.start||""; st.title="시작월(이전 달엔 숨김) · 비우면 처음부터"; st.onchange=function(){ var v=st.value; if(v) c.start=v; else delete c.start; };
-          var en=document.createElement("input"); en.type="month"; en.className="ledcat-mon"; en.value=c.end||""; en.title="종료월(다음 달부터 숨김) · 비우면 계속"; en.onchange=function(){ var v=en.value; c.end=v||""; };
+          var per=document.createElement("button"); per.type="button"; per.className="ledcat-per"+(c.end?" set":""); per.title="표시 기간(종료월) 편집"; per.innerHTML=(c.end?'~'+esc(c.end.slice(2).replace("-","."))+' ':'기간 ')+'<span class="lcp-ic">✎</span>'; per.onclick=function(){ openCatPeriod(c, render); };
           var mv=document.createElement("span"); mv.className="ledcat-mv";
           var up=document.createElement("button"); up.type="button"; up.className="ledcat-mvb"; up.textContent="▲"; up.title="위로 이동(그룹 넘김 가능)"; up.onclick=function(){ moveCat(c,-1); };
           var dn=document.createElement("button"); dn.type="button"; dn.className="ledcat-mvb"; dn.textContent="▼"; dn.title="아래로 이동(그룹 넘김 가능)"; dn.onclick=function(){ moveCat(c,1); };
           mv.appendChild(up); mv.appendChild(dn);
           var del=document.createElement("button"); del.type="button"; del.className="ledcat-del"; del.textContent="×"; del.title="항목 삭제";
           del.onclick=function(){ askConfirm({ title:"항목 삭제", message:"‘"+(c.name||"")+"’ 항목을 삭제할까요?\n(입력된 금액 데이터는 유지되지만 합계에서 제외됩니다)", okText:"삭제", danger:true, onOk:function(){ state.ledgerCats=state.ledgerCats.filter(function(x){return x!==c;}); render(); } }); };
-          row.appendChild(nm); row.appendChild(day); row.appendChild(memo); if(tg) row.appendChild(tg); if(fx) row.appendChild(fx); row.appendChild(st); row.appendChild(en); row.appendChild(mv); row.appendChild(del); sec.appendChild(row);
+          row.appendChild(nm); row.appendChild(day); row.appendChild(memo); if(tg) row.appendChild(tg); if(fx) row.appendChild(fx); row.appendChild(per); row.appendChild(mv); row.appendChild(del); sec.appendChild(row);
         });
         var add=document.createElement("button"); add.type="button"; add.className="ledcat-add"; add.textContent="+ "+g.n+" 항목 추가";
-        add.onclick=function(){ state.ledgerCats.push({id:"lc"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36), group:g.k, name:"새 항목"}); render(); };
+        add.onclick=function(){ state.ledgerCats.push({id:"lc"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36), group:g.k, name:"새 항목", start:todayStr().slice(0,7)}); render(); };   // 새 항목은 추가한 달부터 표시(이전 달엔 숨김)
         sec.appendChild(add); body.appendChild(sec);
       });
     }
@@ -4206,6 +4209,22 @@
     back.addEventListener("click",function(e){ if(e.target===back){ save(); renderAdminLedger(); close(); } });
   }
 
+  function openCatPeriod(c, onSave){   // 항목 표시 기간(종료월)만 편집 — 시작월은 새 항목 추가 시 자동 지정
+    var back=document.createElement("div"); back.className="modal-back";
+    var modal=document.createElement("div"); modal.className="modal ledcat-modal force-light"; modal.style.maxWidth="360px";
+    modal.innerHTML='<div class="modal-title">'+esc(c.name||"항목")+' 표시 기간</div><div class="modal-msg">종료월을 지정하면 <b>그 다음 달부터</b> 이 항목이 숨겨집니다. (과거 기록은 유지) 비우면 계속 표시됩니다.</div>';
+    var body=document.createElement("div"); body.style.padding="2px";
+    var lbl=document.createElement("label"); lbl.style.cssText="display:flex; align-items:center; gap:10px; font-size:13px; color:#3a3f46";
+    lbl.appendChild(document.createTextNode("종료월"));
+    var mon=document.createElement("input"); mon.type="month"; mon.className="ledcat-mon"; mon.style.width="160px"; mon.value=c.end||"";
+    lbl.appendChild(mon); body.appendChild(lbl);
+    var acts=document.createElement("div"); acts.className="modal-actions";
+    var clr=document.createElement("button"); clr.type="button"; clr.className="btn"; clr.textContent="종료 해제"; clr.onclick=function(){ delete c.end; save(); if(onSave)onSave(); renderAdminLedger(); back.remove(); };
+    var ok=document.createElement("button"); ok.type="button"; ok.className="btn primary"; ok.textContent="저장"; ok.onclick=function(){ var v=mon.value; if(v) c.end=v; else delete c.end; save(); if(onSave)onSave(); renderAdminLedger(); back.remove(); };
+    acts.appendChild(clr); acts.appendChild(ok);
+    modal.appendChild(body); modal.appendChild(acts); back.appendChild(modal); document.body.appendChild(back);
+    back.addEventListener("click",function(e){ if(e.target===back) back.remove(); });
+  }
   function openAutopay(c){   // 카드 자동이체 명세 편집(일자/항목/금액/비고)
     c.autopay=c.autopay||[];
     var back=document.createElement("div"); back.className="modal-back";
