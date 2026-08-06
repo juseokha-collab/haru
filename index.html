@@ -738,7 +738,13 @@
   .led-ap-tog:hover{color:var(--ink-2)}
   .led-ap-tog .led-ap-cap em{font-style:normal; color:var(--ink-2); font-variant-numeric:tabular-nums}
   .led-ap-tog .led-ap-car{font-size:9px}
-  /* 카드 자동이체 구좌 / 잔액 / 카드후 잔액 */
+  /* 카드 청구금액 줄 */
+  .led-bill{flex-basis:100%; display:flex; align-items:center; gap:5px; margin-top:3px; font-size:10.5px; color:var(--ink-3)}
+  .led-bill .lb-lbl{color:var(--ink-3)}
+  .led-bill .lb-bill{flex:1; min-width:0; font-family:inherit; font-size:10.5px; text-align:right; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:2px 6px; outline:0; font-variant-numeric:tabular-nums}
+  .led-bill .lb-bill:focus{border-color:var(--accent)}
+  .led-bill .lb-bill.neg{color:#e23b3b}
+  /* 카드 자동이체 구좌 / 잔액 / 이체후 잔액 */
   .led-bank{flex-basis:100%; display:flex; align-items:center; flex-wrap:nowrap; gap:4px; margin-top:3px; font-size:10.5px; color:var(--ink-3)}
   .led-bank .lb-acct{width:50px; flex:none; font-family:inherit; font-size:10px; color:var(--ink-2); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:2px 4px; outline:0}
   .led-bank .lb-acct:focus{border-color:var(--accent)}
@@ -3862,12 +3868,12 @@
   function ledCatsOf(g){ return (state.ledgerCats||[]).filter(function(c){return c.group===g;}); }
   function apExcluded(memo){ return /실적제외/.test((memo||"").replace(/\s/g,"")); }   // 비고에 '실적제외' → 실적 합계 제외
   function cardFixed(c){ if(c.autopay&&c.autopay.length){ var s=0; c.autopay.forEach(function(a){ if(!apExcluded(a.memo)) s+=(+a.amt||0); }); return s; } return c.fixed||0; }   // 고정(자동)=명세 합계(실적제외 빼고), 명세 없으면 손입력값
-  function computeBankChain(ym){   // 같은 구좌를 쓰는 카드는 결제일 순으로 잔액 연쇄: 첫 카드=입력잔액, 이후 카드=앞 카드의 카드후 잔액을 시작잔액으로
+  function computeBankChain(ym){   // 같은 구좌 카드는 결제일 순으로 잔액 연쇄: 첫 카드=입력잔액, 이후 카드=앞 카드의 이체후 잔액을 시작잔액으로. 이체후 = 잔액 − 청구금액
     var cards=ledCatsOf("card").filter(function(c){ return (c.bank||"").trim(); }), groups={}, info={};
     cards.forEach(function(c){ var bk=c.bank.trim(); (groups[bk]=groups[bk]||[]).push(c); });
     Object.keys(groups).forEach(function(bk){
       var list=groups[bk].slice().sort(function(a,b){ return (a.day||99)-(b.day||99); }), running=0;
-      list.forEach(function(c,i){ var v0=ledCell(ym,c.id), start=(i===0)?(c.balance||0):running, after=start-v0; info[c.id]={ primary:(i===0), start:start, after:after }; running=after; });
+      list.forEach(function(c,i){ var bill=(c.bill||0), start=(i===0)?(c.balance||0):running, after=start-bill; info[c.id]={ primary:(i===0), start:start, after:after }; running=after; });
     });
     return info;
   }
@@ -3927,9 +3933,16 @@
           tog.innerHTML='<span class="led-ap-cap">자동이체 '+ap.length+'건 <em>· 고정 '+fmtWon(fixed)+'</em></span><span class="led-ap-car">'+(open?"▾":"▸")+'</span>';
           tog.onclick=function(){ ledApOpenAll=!ledApOpenAll; renderAdminLedger(); };
           item.appendChild(tog);
-          // 자동이체 구좌 / 잔액 / 카드(이체)후 잔액 = 잔액 - 카드사용금액
+          // 청구금액(카드사 실제 이체 금액, 실적금액과 다를 수 있음)
+          var crow=document.createElement("div"); crow.className="led-bill";
+          var cl=document.createElement("span"); cl.className="lb-lbl"; cl.textContent="청구금액";
+          var bill=document.createElement("input"); bill.type="text"; bill.className="lb-bill"; bill.inputMode="text"; bill.value=(c.bill!=null&&c.bill!=="")?fmtWon(c.bill):""; bill.placeholder="0"; bill.title="카드 청구(이체) 금액"; if((c.bill||0)<0) bill.classList.add("neg");
+          bill.oninput=function(){ bill.classList.toggle("neg", parseWon(bill.value)<0); };
+          bill.onchange=function(){ var s=bill.value.trim(); if(s===""){ delete c.bill; } else { c.bill=parseWon(bill.value); } save(); renderAdminLedger(); };
+          crow.appendChild(cl); crow.appendChild(bill); item.appendChild(crow);
+          // 자동이체 구좌 / 잔액 / 이체후 잔액 = 은행잔액 − 청구금액 (같은 구좌면 앞 카드에서 이어받음)
           var brow=document.createElement("div"); brow.className="led-bank";
-          var bi=bankChain[c.id], isPrimary=!bi||bi.primary, startBal=bi?bi.start:(c.balance||0), after=bi?bi.after:((c.balance||0)-(v0||0));
+          var bi=bankChain[c.id], isPrimary=!bi||bi.primary, startBal=bi?bi.start:(c.balance||0), after=bi?bi.after:((c.balance||0)-(c.bill||0));
           var acct=document.createElement("input"); acct.type="text"; acct.className="lb-acct"; acct.value=c.bank||""; acct.placeholder="구좌"; acct.title="자동이체 구좌";
           acct.onchange=function(){ var v=acct.value.trim(); if(v)c.bank=v; else delete c.bank; save(); renderAdminLedger(); };
           var bal=document.createElement("input"); bal.type="text"; bal.className="lb-bal"; bal.inputMode="text"; bal.placeholder="잔액"; bal.title=isPrimary?"구좌 잔액(마이너스 입력 가능)":"앞 카드 이체후 잔액에서 이어받음(자동)";
@@ -3937,7 +3950,7 @@
             bal.oninput=function(){ bal.classList.toggle("neg", parseWon(bal.value)<0); };
             bal.onchange=function(){ var s=bal.value.trim(); if(s===""){ delete c.balance; } else { c.balance=parseWon(bal.value); } save(); renderAdminLedger(); }; }
           else { bal.value=fmtWon(startBal); bal.readOnly=true; bal.classList.add("ro"); if(startBal<0) bal.classList.add("neg"); }   // 같은 구좌 뒤 카드: 앞 카드 이체후 잔액 상속(수정불가)
-          var aft=document.createElement("span"); aft.className="lb-after"+(after<0?" neg":""); aft.title="카드 이체 후 잔액 = 구좌 잔액 − 카드 사용금액"; aft.innerHTML=wonH(after);
+          var aft=document.createElement("span"); aft.className="lb-after"+(after<0?" neg":""); aft.title="이체 후 잔액 = 구좌 잔액 − 청구금액"; aft.innerHTML=wonH(after);
           brow.appendChild(acct); brow.appendChild(bal); brow.appendChild(aft);
           item.appendChild(brow);
           if(open){
