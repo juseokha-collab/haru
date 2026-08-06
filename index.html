@@ -688,6 +688,8 @@
   .adm-monthnav .amn-b{border:0; background:none; color:var(--ink-2); font-size:12px; line-height:1; padding:4px 6px; cursor:pointer; border-radius:5px}
   .adm-monthnav .amn-b:hover{background:var(--surface-2); color:var(--ink)}
   .adm-monthnav .amn-l{font-size:12.5px; font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums; min-width:60px; text-align:center}
+  .adm-monthnav .amn-today{border:1px solid var(--border); background:var(--surface-2); color:var(--ink-2); font-family:inherit; font-size:10.5px; font-weight:700; line-height:1; padding:3px 7px; margin-left:2px; cursor:pointer; border-radius:5px}
+  .adm-monthnav .amn-today:hover{border-color:var(--accent); color:var(--accent-ink)}
   .adm-mgmt{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid var(--border)}
   .adm-mgmt-box{flex:1; min-width:220px}
   .adm-mgmt-h{font-size:11px; font-weight:800; letter-spacing:.03em; color:var(--ink-3); text-transform:uppercase; margin-bottom:6px}
@@ -735,6 +737,8 @@
   .led-prog-lbl .lp-ok{font-weight:700; color:#3FA35A}
   .ledcat-tg{width:82px; flex:none; text-align:right}
   .ledcat-tg.ro{background:var(--surface-2); color:var(--ink-3); cursor:default}
+  .ledcat-mon{width:118px; flex:none; font-family:inherit; font-size:11px; color:var(--ink-2); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:3px 5px; outline:0}
+  .ledcat-mon:focus{border-color:var(--accent)}
   /* 카드 자동이체 명세(인라인 확장) */
   .led-ap-tog{flex-basis:100%; display:flex; align-items:center; justify-content:space-between; gap:6px; margin-top:3px; background:none; border:0; border-top:1px dashed var(--border); padding:4px 1px 1px; font-family:inherit; font-size:10.5px; color:var(--ink-3); cursor:pointer}
   .led-ap-tog:hover{color:var(--ink-2)}
@@ -777,14 +781,14 @@
   .ap-sum{flex:1; font-size:12.5px; color:#3a3f46} .ap-sum b{font-variant-numeric:tabular-nums; color:#1c1f24}
   .ap-sum .ap-ex{color:#C96F6F}
   /* 보유 계좌 박스 */
-  .led-acct-box{display:block; align-self:start}
-  .led-acct-box .lab-hd{font-size:10px; font-weight:800; letter-spacing:.03em; color:var(--ink-3); text-transform:uppercase; margin-bottom:5px}
-  .led-acct-box .lab-row{display:flex; align-items:center; justify-content:space-between; gap:6px; padding:2px 0}
-  .led-acct-box .lab-nm{font-size:11.5px; color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-  .led-acct-box .lab-bal{width:98px; flex:none; font-family:inherit; font-size:11.5px; text-align:right; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:3px 6px; outline:0; font-variant-numeric:tabular-nums}
+  .led-acct-box{display:block; align-self:start; padding-top:5px}
+  .led-acct-box .lab-hd{font-size:10px; font-weight:800; letter-spacing:.03em; color:var(--ink-3); text-transform:uppercase; margin-bottom:4px}
+  .led-acct-box .lab-row{display:flex; align-items:center; justify-content:space-between; gap:5px; padding:1px 0}
+  .led-acct-box .lab-nm{font-size:10.5px; color:var(--ink-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .led-acct-box .lab-bal{width:78px; flex:none; font-family:inherit; font-size:10.5px; text-align:right; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:2px 6px; outline:0; font-variant-numeric:tabular-nums}
   .led-acct-box .lab-bal:focus{border-color:var(--accent)}
   .led-acct-box .lab-bal.neg{color:#e23b3b}
-  .led-acct-box .lab-sum{margin-top:5px; padding-top:5px; border-top:1px solid var(--border); text-align:right; font-size:11.5px; color:var(--ink-2)}
+  .led-acct-box .lab-sum{margin-top:4px; padding-top:4px; border-top:1px solid var(--border); text-align:right; font-size:10.5px; color:var(--ink-3)}
   .led-acct-box .lab-sum b{font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums}
   .led-item.led-hot{background:color-mix(in srgb,var(--accent) 12%,var(--surface-2)); border-color:color-mix(in srgb,var(--accent) 32%,transparent)}
   .led-item.led-hot .led-nm{color:var(--accent-ink)}
@@ -800,7 +804,7 @@
   .led-bar-svg{display:block; width:100%; height:70px}
   .led-bar-svg .lb-hit{fill:transparent; cursor:pointer}
   .led-bar-svg .lb-hit:hover{fill:color-mix(in srgb,var(--ink-3) 12%,transparent)}
-  .lb-tip{position:absolute; z-index:6; transform:translate(-50%,-100%); pointer-events:none; white-space:nowrap; font-size:10.5px; font-weight:700; color:#fff; background:rgba(20,24,33,.92); border-radius:6px; padding:3px 7px; font-variant-numeric:tabular-nums; opacity:0; transition:opacity .1s; box-shadow:0 2px 6px rgba(0,0,0,.25)}
+  .lb-tip{position:absolute; z-index:6; pointer-events:none; white-space:nowrap; font-size:10.5px; font-weight:700; color:#fff; background:rgba(20,24,33,.92); border-radius:6px; padding:3px 7px; font-variant-numeric:tabular-nums; opacity:0; transition:opacity .1s; box-shadow:0 2px 6px rgba(0,0,0,.25)}
   .lb-tip.on{opacity:1}
   .led-bar-svg .lb-axis{stroke:var(--ink-3); stroke-dasharray:3 3; stroke-width:1; opacity:.55}
   .led-bar-svg .lb-bar.up{fill:#5FBFA0}
@@ -1300,7 +1304,7 @@
   <div class="modal admin-modal" role="dialog" aria-modal="true">
     <div class="admin-head">
       <select id="adminYearSel" class="adm-yearsel" title="연도"></select>
-      <span id="adminMonthNav" class="adm-monthnav" hidden><button type="button" class="amn-b" data-d="-1" title="이전 달">◀</button><span class="amn-l"></span><button type="button" class="amn-b" data-d="1" title="다음 달">▶</button></span>
+      <span id="adminMonthNav" class="adm-monthnav" hidden><button type="button" class="amn-b" data-d="-1" title="이전 달">◀</button><span class="amn-l"></span><button type="button" class="amn-b" data-d="1" title="다음 달">▶</button><button type="button" class="amn-today" title="당월로">today</button></span>
       <div class="admin-tabs" id="adminTabs">
         <button type="button" class="on" data-at="plan">일정관리</button><button type="button" data-at="people">인맥 관리</button><button type="button" data-at="golf">골프 스코어</button><button type="button" data-at="ledger">가계부</button>
       </div>
@@ -2983,7 +2987,8 @@
     if(adminTab==="ledger"){   // 가계부: 상단은 ◀ 2026.08 ▶ 월 이동
       if(adminYear==="all") adminYear=thisY;
       sel.hidden=true; if(nav){ nav.hidden=false; nav.querySelector(".amn-l").textContent=adminYear+"."+pad(ledgerMonth);
-        var bs=nav.querySelectorAll(".amn-b"); bs[0].onclick=function(){ shiftLedgerMonth(-1); }; bs[1].onclick=function(){ shiftLedgerMonth(1); }; }
+        var bs=nav.querySelectorAll(".amn-b"); bs[0].onclick=function(){ shiftLedgerMonth(-1); }; bs[1].onclick=function(){ shiftLedgerMonth(1); };
+        var td=nav.querySelector(".amn-today"); if(td) td.onclick=function(){ var d=new Date(); adminYear=String(d.getFullYear()); ledgerMonth=d.getMonth()+1; renderAdminYearSel(); renderAdminLedger(); }; }
       return;
     }
     sel.hidden=false; if(nav) nav.hidden=true;
@@ -3879,6 +3884,7 @@
       cats.forEach(function(c){ if(bank[c.id] && c.bank===undefined) c.bank=bank[c.id]; });
       cats.forEach(function(c){ if((c.id==="c_hyundai"||c.id==="c_kb") && c.memo==="K뱅크") delete c.memo; });   // 현대·KB 카드명 옆 'K뱅크' 태그 제거(구좌는 아래 줄에 표기)
     })();
+    (function(){ var c=(state.ledgerCats||[]).filter(function(x){return x.id==="r_saving";})[0]; if(c && c.end===undefined) c.end="2026-06"; })();   // 적금 신한: 6월 해지 → 7월부터 숨김(종료월 시드, 편집 가능)
     // 구형 카테고리 c.bill(청구금액) → 당월 bills로 이전(청구금액을 월별로 저장)
     (function(){ var cym=todayStr().slice(0,7);
       (state.ledgerCats||[]).forEach(function(c){ if(c.group==="card" && c.bill!=null){ var m=state.ledger[cym]=state.ledger[cym]||{cells:{},notes:{}}; m.bills=m.bills||{}; if(!(c.id in m.bills)) m.bills[c.id]=c.bill; delete c.bill; } });
@@ -3888,6 +3894,7 @@
   function wonH(n){ n=Math.round(n||0); var s=fmtWon(n); return n<0?'<span class="won-neg">'+s+'</span>':s; }
   function parseWon(s){ s=(s||"").toString().replace(/[,\s]/g,""); var m=s.match(/[+-]?\d+/g); if(!m) return 0; var sum=0; for(var i=0;i<m.length;i++){ sum+=parseInt(m[i],10)||0; } return sum; }   // 콤마 제거 + '+/-' 식 합산(100000+10000 → 110000)
   function ledCatsOf(g){ return (state.ledgerCats||[]).filter(function(c){return c.group===g;}); }
+  function catActive(c, ym){ if(c.start && ym < c.start) return false; if(c.end && ym > c.end) return false; return true; }   // 항목 활성 기간(시작월~종료월). 범위 밖 월에는 숨김(과거 기록은 그대로)
   function apExcluded(memo){ return /실적제외/.test((memo||"").replace(/\s/g,"")); }   // 비고에 '실적제외' → 실적 합계 제외
   function cardFixed(c){ if(c.autopay&&c.autopay.length){ var s=0; c.autopay.forEach(function(a){ if(!apExcluded(a.memo)) s+=(+a.amt||0); }); return s; } return c.fixed||0; }   // 고정(자동)=명세 합계(실적제외 빼고), 명세 없으면 손입력값
   function computeBankChain(ym){   // 같은 구좌 카드는 결제일 순으로 잔액 연쇄: 첫 카드=입력잔액, 이후 카드=앞 카드의 이체후 잔액을 시작잔액으로. 이체후 = 잔액 − 청구금액
@@ -3934,7 +3941,7 @@
     sum.innerHTML='<div class="led-s"><i>수입</i><b>'+wonH(t.income)+'</b></div><div class="led-s"><i>지출</i><b>'+wonH(t.expense)+'</b></div><div class="led-s"><i>투자</i><b>'+wonH(t.invest)+'</b></div><div class="led-s net"><i>수지</i><b class="'+(t.net<0?"neg":"pos")+'">'+fmtWon(t.net)+'</b></div>';
     el.appendChild(sum);
     LEDGER_GROUPS.forEach(function(g){
-      var cats=ledCatsOf(g.k); if(!cats.length) return;
+      var cats=ledCatsOf(g.k).filter(function(c){ return catActive(c, ym); }); if(!cats.length) return;   // 해당 월 활성 항목만
       var gt=0; cats.forEach(function(c){ gt+=(g.k==="card"?ledCardBill(ym,c.id):ledCell(ym,c.id)); });   // 카드지출 합계=청구금액 합계
       var sec=document.createElement("div"); sec.className="led-grp";
       var ghLabel=esc(g.n); if(g.k==="card"){ ghLabel+=' <span class="led-grp-sub">(카드후 잔액 합계: <b class="led-grp-subamt">'+wonH(cardAfterTotal(ym))+'</b>원)</span>'; }
@@ -4069,7 +4076,8 @@
     Array.prototype.forEach.call(sw.querySelectorAll("[data-ym]"), function(el){
       el.onclick=function(){ var ym2=el.getAttribute("data-ym"); adminYear=ym2.slice(0,4); ledgerMonth=+ym2.slice(5); renderAdminYearSel(); renderAdminLedger(); };
       el.onmouseenter=function(){ tip.textContent=el.getAttribute("data-ym").slice(2).replace("-",".")+" · "+fmtWon(+el.getAttribute("data-val")); tip.classList.add("on"); };
-      el.onmousemove=function(ev){ var r=sw.getBoundingClientRect(); tip.style.left=(ev.clientX-r.left)+"px"; tip.style.top=(ev.clientY-r.top-10)+"px"; };
+      el.onmousemove=function(ev){ var r=sw.getBoundingClientRect(), tw=tip.offsetWidth, th=tip.offsetHeight, x=ev.clientX-r.left, y=ev.clientY-r.top;   // 툴팁이 차트 박스를 벗어나지 않게 위치 제한
+        tip.style.left=Math.max(2, Math.min(x-tw/2, r.width-tw-2))+"px"; tip.style.top=Math.max(2, Math.min(y-th-6, r.height-th-2))+"px"; };
       el.onmouseleave=function(){ tip.classList.remove("on"); };
     });
     var xl=document.createElement("div"); xl.className="led-bar-x"; xl.innerHTML='<span>'+months[0].slice(2).replace("-",".")+'</span><span>'+months[12].slice(2).replace("-",".")+'</span>'; wrap.appendChild(xl);
@@ -4150,7 +4158,7 @@
   function openLedgerCats(){
     var back=document.createElement("div"); back.className="modal-back";
     var modal=document.createElement("div"); modal.className="modal ledcat-modal force-light";
-    modal.innerHTML='<div class="modal-title">가계부 항목 편집</div><div class="modal-msg">이름·결제일(1~31)·메모를 바꾸거나, 그룹별로 항목을 추가/삭제하세요.</div>';
+    modal.innerHTML='<div class="modal-title">가계부 항목 편집</div><div class="modal-msg">이름·결제일(1~31)·메모를 바꾸거나, 그룹별로 항목을 추가/삭제하세요. <b>시작월~종료월</b>을 지정하면 그 기간에만 항목이 표시됩니다(예: 해지한 적금은 종료월 지정 → 다음 달부터 숨김, 과거 기록은 유지).</div>';
     var body=document.createElement("div"); body.className="ledcat-body";
     function moveCat(item, dir){   // 전체 표시순서에서 한 칸 이동(경계 넘으면 그룹 변경)
       var list=[]; LEDGER_GROUPS.forEach(function(g){ ledCatsOf(g.k).forEach(function(c){ list.push(c); }); });
@@ -4172,13 +4180,15 @@
             fx=document.createElement("input"); fx.type="text"; fx.className="ledcat-tg ledcat-fx"; fx.inputMode="numeric";
             if(c.autopay&&c.autopay.length){ fx.value=fmtWon(cardFixed(c)); fx.readOnly=true; fx.classList.add("ro"); fx.title="자동이체 명세 합계(실적제외 제외) — 명세에서 편집"; }
             else { fx.value=c.fixed?fmtWon(c.fixed):""; fx.placeholder="고정(자동)"; fx.title="매달 자동이체로 실적에 채워지는 고정 합계(명세 없을 때 손입력)"; fx.onchange=function(){ var v=parseWon(fx.value); if(v>0) c.fixed=v; else delete c.fixed; }; } }
+          var st=document.createElement("input"); st.type="month"; st.className="ledcat-mon"; st.value=c.start||""; st.title="시작월(이전 달엔 숨김) · 비우면 처음부터"; st.onchange=function(){ var v=st.value; if(v) c.start=v; else delete c.start; };
+          var en=document.createElement("input"); en.type="month"; en.className="ledcat-mon"; en.value=c.end||""; en.title="종료월(다음 달부터 숨김) · 비우면 계속"; en.onchange=function(){ var v=en.value; c.end=v||""; };
           var mv=document.createElement("span"); mv.className="ledcat-mv";
           var up=document.createElement("button"); up.type="button"; up.className="ledcat-mvb"; up.textContent="▲"; up.title="위로 이동(그룹 넘김 가능)"; up.onclick=function(){ moveCat(c,-1); };
           var dn=document.createElement("button"); dn.type="button"; dn.className="ledcat-mvb"; dn.textContent="▼"; dn.title="아래로 이동(그룹 넘김 가능)"; dn.onclick=function(){ moveCat(c,1); };
           mv.appendChild(up); mv.appendChild(dn);
           var del=document.createElement("button"); del.type="button"; del.className="ledcat-del"; del.textContent="×"; del.title="항목 삭제";
           del.onclick=function(){ askConfirm({ title:"항목 삭제", message:"‘"+(c.name||"")+"’ 항목을 삭제할까요?\n(입력된 금액 데이터는 유지되지만 합계에서 제외됩니다)", okText:"삭제", danger:true, onOk:function(){ state.ledgerCats=state.ledgerCats.filter(function(x){return x!==c;}); render(); } }); };
-          row.appendChild(nm); row.appendChild(day); row.appendChild(memo); if(tg) row.appendChild(tg); if(fx) row.appendChild(fx); row.appendChild(mv); row.appendChild(del); sec.appendChild(row);
+          row.appendChild(nm); row.appendChild(day); row.appendChild(memo); if(tg) row.appendChild(tg); if(fx) row.appendChild(fx); row.appendChild(st); row.appendChild(en); row.appendChild(mv); row.appendChild(del); sec.appendChild(row);
         });
         var add=document.createElement("button"); add.type="button"; add.className="ledcat-add"; add.textContent="+ "+g.n+" 항목 추가";
         add.onclick=function(){ state.ledgerCats.push({id:"lc"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36), group:g.k, name:"새 항목"}); render(); };
