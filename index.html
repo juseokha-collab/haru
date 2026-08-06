@@ -738,6 +738,15 @@
   .led-ap-tog:hover{color:var(--ink-2)}
   .led-ap-tog .led-ap-cap em{font-style:normal; color:var(--ink-2); font-variant-numeric:tabular-nums}
   .led-ap-tog .led-ap-car{font-size:9px}
+  /* 카드 자동이체 구좌 / 잔액 / 카드후 잔액 */
+  .led-bank{flex-basis:100%; display:flex; align-items:center; flex-wrap:wrap; gap:5px; margin-top:3px; font-size:10.5px; color:var(--ink-3)}
+  .led-bank .lb-acct{width:86px; flex:none; font-family:inherit; font-size:10.5px; color:var(--ink-2); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:2px 6px; outline:0}
+  .led-bank .lb-acct:focus{border-color:var(--accent)}
+  .led-bank .lb-lbl{color:var(--ink-3)}
+  .led-bank .lb-bal{width:72px; flex:none; font-family:inherit; font-size:10.5px; text-align:right; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:2px 6px; outline:0; font-variant-numeric:tabular-nums}
+  .led-bank .lb-bal:focus{border-color:var(--accent)}
+  .led-bank .lb-after{margin-left:auto; color:var(--ink-2); font-variant-numeric:tabular-nums}
+  .led-bank .lb-after.neg{color:#e23b3b; font-weight:700}
   .led-ap-list{flex-basis:100%; margin:2px 0 1px; padding:3px 2px 1px; border-top:1px solid var(--border)}
   .led-ap-row{display:grid; grid-template-columns:34px 1fr auto; align-items:baseline; gap:6px; font-size:11px; padding:1.5px 0; color:var(--ink-2)}
   .led-ap-row .lap-d{color:var(--ink-3); font-variant-numeric:tabular-nums}
@@ -3840,6 +3849,8 @@
         c_kb:[{day:1,name:"★구글플레이 클로드",amt:30000},{day:11,name:"SKT 인터넷",amt:11550},{day:17,name:"★넷플릭스",amt:13500,memo:"실적제외"},{day:20,name:"AIA",amt:28620},{day:20,name:"AIA",amt:201600}]
       };
       cats.forEach(function(c){ if(ap[c.id] && (!c.autopay || !c.autopay.length)){ c.autopay=ap[c.id].map(function(a){ return {day:a.day,name:a.name,amt:a.amt,memo:a.memo||""}; }); } });   // 빈 배열(예전에 모달만 열어 []로 저장된 경우)도 시드
+      var bank={ c_shinhan:"신한은행", c_hana:"하나은행", c_hyundai:"K뱅(모임)", c_samsung:"모니모" };   // 카드 자동이체 구좌 시드
+      cats.forEach(function(c){ if(bank[c.id] && c.bank===undefined) c.bank=bank[c.id]; });
     })();
   }
   function fmtWon(n){ n=Math.round(n||0); var s=Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,","); return (n<0?"-":"")+s; }
@@ -3903,6 +3914,17 @@
           tog.innerHTML='<span class="led-ap-cap">자동이체 '+ap.length+'건 <em>· 고정 '+fmtWon(fixed)+'</em></span><span class="led-ap-car">'+(open?"▾":"▸")+'</span>';
           tog.onclick=function(){ ledApOpenAll=!ledApOpenAll; renderAdminLedger(); };
           item.appendChild(tog);
+          // 자동이체 구좌 / 잔액 / 카드(이체)후 잔액 = 잔액 - 카드사용금액
+          var brow=document.createElement("div"); brow.className="led-bank";
+          var acct=document.createElement("input"); acct.type="text"; acct.className="lb-acct"; acct.value=c.bank||""; acct.placeholder="자동이체 구좌"; acct.title="자동이체 구좌";
+          acct.onchange=function(){ var v=acct.value.trim(); if(v)c.bank=v; else delete c.bank; save(); };
+          var bl=document.createElement("span"); bl.className="lb-lbl"; bl.textContent="잔액";
+          var bal=document.createElement("input"); bal.type="text"; bal.className="lb-bal"; bal.inputMode="numeric"; bal.value=c.balance?fmtWon(c.balance):""; bal.placeholder="0"; bal.title="구좌 잔액";
+          bal.onchange=function(){ var v=parseWon(bal.value); if(v)c.balance=v; else delete c.balance; save(); renderAdminLedger(); };
+          var after=(c.balance||0)-(v0||0);
+          var aft=document.createElement("span"); aft.className="lb-after"+(after<0?" neg":""); aft.title="카드 이체 후 잔액 = 구좌 잔액 − 카드 사용금액"; aft.innerHTML='카드후 '+wonH(after);
+          brow.appendChild(acct); brow.appendChild(bl); brow.appendChild(bal); brow.appendChild(aft);
+          item.appendChild(brow);
           if(open){
             var list=document.createElement("div"); list.className="led-ap-list";
             ap.slice().sort(function(a,b){ return (a.day||99)-(b.day||99); }).forEach(function(a){
