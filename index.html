@@ -3861,6 +3861,10 @@
       cats.forEach(function(c){ if(bank[c.id] && c.bank===undefined) c.bank=bank[c.id]; });
       cats.forEach(function(c){ if((c.id==="c_hyundai"||c.id==="c_kb") && c.memo==="K뱅크") delete c.memo; });   // 현대·KB 카드명 옆 'K뱅크' 태그 제거(구좌는 아래 줄에 표기)
     })();
+    // 구형 카테고리 c.bill(청구금액) → 당월 bills로 이전(청구금액을 월별로 저장)
+    (function(){ var cym=todayStr().slice(0,7);
+      (state.ledgerCats||[]).forEach(function(c){ if(c.group==="card" && c.bill!=null){ var m=state.ledger[cym]=state.ledger[cym]||{cells:{},notes:{}}; m.bills=m.bills||{}; if(!(c.id in m.bills)) m.bills[c.id]=c.bill; delete c.bill; } });
+    })();
   }
   function fmtWon(n){ n=Math.round(n||0); var s=Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,","); return (n<0?"-":"")+s; }
   function wonH(n){ n=Math.round(n||0); var s=fmtWon(n); return n<0?'<span class="won-neg">'+s+'</span>':s; }
@@ -3873,18 +3877,19 @@
     cards.forEach(function(c){ var bk=c.bank.trim(); (groups[bk]=groups[bk]||[]).push(c); });
     Object.keys(groups).forEach(function(bk){
       var list=groups[bk].slice().sort(function(a,b){ return (a.day||99)-(b.day||99); }), running=0;
-      list.forEach(function(c,i){ var bill=(c.bill||0), start=(i===0)?(c.balance||0):running, after=start-bill; info[c.id]={ primary:(i===0), start:start, after:after }; running=after; });
+      list.forEach(function(c,i){ var bill=ledCardBill(ym,c.id), start=(i===0)?(c.balance||0):running, after=start-bill; info[c.id]={ primary:(i===0), start:start, after:after }; running=after; });
     });
     return info;
   }
   function ledCell(ym,id){ var m=state.ledger[ym]; return (m&&m.cells&&m.cells[id])||0; }
+  function ledCardBill(ym,id){ var m=state.ledger[ym]; if(m&&m.bills&&(id in m.bills)) return m.bills[id]||0; return ledCell(ym,id); }   // 카드 청구금액(월별). 미입력 월은 실적금액(cell)으로 대체 → 7월까지 실적=청구 자동
   function ledNotes(ym){ var m=state.ledger[ym]; if(!m) return {}; if(!m.notes){ m.notes = m.note? {income:m.note}:{}; } return m.notes; }   // 대분류별 비고(구형 단일 note는 수입으로 이전)
   var LEDGER_NOTE_DEFAULTS={ regular:{1:"자차연납/면허세(지방세)",2:"면세사업장신고(~2/10)",3:"자동차보험(3/4)",5:"종득세 양세무",6:"종합소득세 납부",7:"주민/재산",8:"해마루 수수료",11:"종합소득세"} };
   function ledNoteEff(ym, gk){ var v=ledNotes(ym)[gk]; if(v) return v; var d=LEDGER_NOTE_DEFAULTS[gk]; return (d && d[+ym.slice(5)])||""; }   // 저장값 없으면 월별 기본(정기지출 세금 등)
   function ledCatAvg(id){ var sum=0,n=0; Object.keys(state.ledger||{}).forEach(function(ym){ var v=(state.ledger[ym].cells||{})[id]; if(v>0){ sum+=v; n++; } }); return n? sum/n : 0; }
   function ledMonthTotals(ym){
     var t={income:0,card:0,regular:0,invest:0,cash:0};
-    (state.ledgerCats||[]).forEach(function(c){ if(t[c.group]!=null) t[c.group]+=ledCell(ym,c.id); });
+    (state.ledgerCats||[]).forEach(function(c){ if(t[c.group]!=null) t[c.group]+=(c.group==="card"?ledCardBill(ym,c.id):ledCell(ym,c.id)); });   // 카드는 청구금액 기준(미입력 월=실적금액)
     t.expense=t.card+t.regular+t.cash; t.net=t.income-t.expense-t.invest;   // 투자=지출성(양수 지출/음수 수입)
     return t;
   }
@@ -3904,7 +3909,7 @@
     el.appendChild(sum);
     LEDGER_GROUPS.forEach(function(g){
       var cats=ledCatsOf(g.k); if(!cats.length) return;
-      var gt=0; cats.forEach(function(c){ gt+=ledCell(ym,c.id); });
+      var gt=0; cats.forEach(function(c){ gt+=(g.k==="card"?ledCardBill(ym,c.id):ledCell(ym,c.id)); });   // 카드지출 합계=청구금액 합계
       var sec=document.createElement("div"); sec.className="led-grp";
       var gh=document.createElement("div"); gh.className="led-grp-h"; gh.innerHTML='<span>'+esc(g.n)+'</span><b>'+wonH(gt)+'</b>'; sec.appendChild(gh);
       var grid=document.createElement("div"); grid.className="led-grid";
@@ -3936,13 +3941,14 @@
           // 청구금액(카드사 실제 이체 금액, 실적금액과 다를 수 있음)
           var crow=document.createElement("div"); crow.className="led-bill";
           var cl=document.createElement("span"); cl.className="lb-lbl"; cl.textContent="청구금액";
-          var bill=document.createElement("input"); bill.type="text"; bill.className="lb-bill"; bill.inputMode="text"; bill.value=(c.bill!=null&&c.bill!=="")?fmtWon(c.bill):""; bill.placeholder="0"; bill.title="카드 청구(이체) 금액"; if((c.bill||0)<0) bill.classList.add("neg");
+          var billEff=ledCardBill(ym,c.id);
+          var bill=document.createElement("input"); bill.type="text"; bill.className="lb-bill"; bill.inputMode="text"; bill.value=billEff?fmtWon(billEff):""; bill.placeholder="0"; bill.title="카드 청구(이체) 금액 · 미입력 시 실적금액과 동일"; if(billEff<0) bill.classList.add("neg");
           bill.oninput=function(){ bill.classList.toggle("neg", parseWon(bill.value)<0); };
-          bill.onchange=function(){ var s=bill.value.trim(); if(s===""){ delete c.bill; } else { c.bill=parseWon(bill.value); } save(); renderAdminLedger(); };
+          bill.onchange=function(){ var s=bill.value.trim(); var m=state.ledger[ym]=state.ledger[ym]||{cells:{},notes:{}}; m.bills=m.bills||{}; if(s===""){ delete m.bills[c.id]; } else { m.bills[c.id]=parseWon(bill.value); } save(); renderAdminLedger(); };
           crow.appendChild(cl); crow.appendChild(bill); item.appendChild(crow);
           // 자동이체 구좌 / 잔액 / 이체후 잔액 = 은행잔액 − 청구금액 (같은 구좌면 앞 카드에서 이어받음)
           var brow=document.createElement("div"); brow.className="led-bank";
-          var bi=bankChain[c.id], isPrimary=!bi||bi.primary, startBal=bi?bi.start:(c.balance||0), after=bi?bi.after:((c.balance||0)-(c.bill||0));
+          var bi=bankChain[c.id], isPrimary=!bi||bi.primary, startBal=bi?bi.start:(c.balance||0), after=bi?bi.after:((c.balance||0)-ledCardBill(ym,c.id));
           var acct=document.createElement("input"); acct.type="text"; acct.className="lb-acct"; acct.value=c.bank||""; acct.placeholder="구좌"; acct.title="자동이체 구좌";
           acct.onchange=function(){ var v=acct.value.trim(); if(v)c.bank=v; else delete c.bank; save(); renderAdminLedger(); };
           var bal=document.createElement("input"); bal.type="text"; bal.className="lb-bal"; bal.inputMode="text"; bal.placeholder="잔액"; bal.title=isPrimary?"구좌 잔액(마이너스 입력 가능)":"앞 카드 이체후 잔액에서 이어받음(자동)";
