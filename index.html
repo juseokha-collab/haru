@@ -3948,14 +3948,17 @@
           crow.appendChild(cl); crow.appendChild(bill); item.appendChild(crow);
           // 자동이체 구좌 / 잔액 / 이체후 잔액 = 은행잔액 − 청구금액 (같은 구좌면 앞 카드에서 이어받음)
           var brow=document.createElement("div"); brow.className="led-bank";
-          var bi=bankChain[c.id], isPrimary=!bi||bi.primary, startBal=bi?bi.start:(c.balance||0), after=bi?bi.after:((c.balance||0)-ledCardBill(ym,c.id));
+          var settled = ym < "2026-08";   // 7월까지: 잔액=청구금액 → 이체후 0(정산완료로 간주)
+          var bi=bankChain[c.id], isPrimary, startBal, after;
+          if(settled){ isPrimary=false; startBal=ledCardBill(ym,c.id); after=0; }
+          else { isPrimary=!bi||bi.primary; startBal=bi?bi.start:(c.balance||0); after=bi?bi.after:((c.balance||0)-ledCardBill(ym,c.id)); }
           var acct=document.createElement("input"); acct.type="text"; acct.className="lb-acct"; acct.value=c.bank||""; acct.placeholder="구좌"; acct.title="자동이체 구좌";
           acct.onchange=function(){ var v=acct.value.trim(); if(v)c.bank=v; else delete c.bank; save(); renderAdminLedger(); };
-          var bal=document.createElement("input"); bal.type="text"; bal.className="lb-bal"; bal.inputMode="text"; bal.placeholder="잔액"; bal.title=isPrimary?"구좌 잔액(마이너스 입력 가능)":"앞 카드 이체후 잔액에서 이어받음(자동)";
+          var bal=document.createElement("input"); bal.type="text"; bal.className="lb-bal"; bal.inputMode="text"; bal.placeholder="잔액"; bal.title=settled?"7월까지는 청구금액과 동일(이체후 0)":(isPrimary?"구좌 잔액(마이너스 입력 가능)":"앞 카드 이체후 잔액에서 이어받음(자동)");
           if(isPrimary){ bal.value=(c.balance!=null&&c.balance!=="")?fmtWon(c.balance):""; if((c.balance||0)<0) bal.classList.add("neg");
             bal.oninput=function(){ bal.classList.toggle("neg", parseWon(bal.value)<0); };
             bal.onchange=function(){ var s=bal.value.trim(); if(s===""){ delete c.balance; } else { c.balance=parseWon(bal.value); } save(); renderAdminLedger(); }; }
-          else { bal.value=fmtWon(startBal); bal.readOnly=true; bal.classList.add("ro"); if(startBal<0) bal.classList.add("neg"); }   // 같은 구좌 뒤 카드: 앞 카드 이체후 잔액 상속(수정불가)
+          else { bal.value=fmtWon(startBal); bal.readOnly=true; bal.classList.add("ro"); if(startBal<0) bal.classList.add("neg"); }   // settled=청구금액 상속 / 같은 구좌 뒤 카드=앞 카드 이체후 잔액 상속(수정불가)
           var aft=document.createElement("span"); aft.className="lb-after"+(after<0?" neg":""); aft.title="이체 후 잔액 = 구좌 잔액 − 청구금액"; aft.innerHTML=wonH(after);
           brow.appendChild(acct); brow.appendChild(bal); brow.appendChild(aft);
           item.appendChild(brow);
