@@ -393,7 +393,9 @@
   .recap-sec{margin:16px 0 6px; font-size:12px; font-weight:700; letter-spacing:.02em; color:var(--sky-ink-2); text-transform:uppercase}
   .learn-item{font-size:12.5px; color:var(--sky-ink); padding:6px 0; border-bottom:1px solid rgba(150,166,210,.1); line-height:1.5}
   .learn-item.rec-refl{cursor:pointer} .learn-item.rec-refl:hover{background:rgba(255,255,255,.05)}
-  .learn-item .dt{color:var(--sky-ink-2); font-variant-numeric:tabular-nums; margin-right:7px; font-size:11.5px}
+  .learn-item{display:flex; align-items:flex-start; gap:8px}   /* 내용이 길어도 일자 영역 침범 없이 세로 정렬 */
+  .learn-item .dt{flex:none; width:40px; color:var(--sky-ink-2); font-variant-numeric:tabular-nums; font-size:11.5px; padding-top:1px}
+  .learn-item .li-t{flex:1; min-width:0; font-weight:400}
   .ch-right{display:flex; align-items:center; gap:9px}
   .card-h .rec-find{position:relative; margin-left:auto; flex:0 1 240px; min-width:120px}
   .card-h .rec-find>input{width:100%; font-family:inherit; font-size:12.5px; padding:6px 11px; border:1px solid var(--border); border-radius:8px; background:var(--surface-2); color:var(--ink); outline:0; box-sizing:border-box}
@@ -3515,14 +3517,14 @@
     if(!ent.length){ html+='<div class="pv-empty" style="height:auto;padding:26px 0">'+(yearMode?"이 해엔":"이 달엔")+' 기록이 없어요.</div>'; el.innerHTML=html; wireRecapNav(); return; }
     // 1) Reflection (요약 바로 다음)
     html+='<div class="recap-sec">Reflection</div>';
-    if(refs.length){ refs.sort(function(a,b){return a[0]<b[0]?1:-1;}).forEach(function(l){ html+='<div class="learn-item rec-refl" data-date="'+l[0]+'"><span class="dt">'+l[0].slice(5).replace("-",".")+'</span>'+esc(l[1])+'</div>'; }); }
+    if(refs.length){ refs.sort(function(a,b){return a[0]<b[0]?1:-1;}).forEach(function(l){ html+='<div class="learn-item rec-refl" data-date="'+l[0]+'"><span class="dt">'+l[0].slice(5).replace("-",".")+'</span><span class="li-t">'+esc(l[1])+'</span></div>'; }); }
     else html+='<div class="learn-item">회고 기록이 없어요.</div>';
     // 영화 · 음악 · 책
     MEDIA.forEach(function(mm){
       var items=[]; ent.forEach(function(e){ var md=e.media&&e.media[mm.k]; if(md&&(md.title||md.note)) items.push([e.date, md]); });
       if(!items.length) return;
       html+='<div class="recap-sec">'+mm.emoji+' '+mm.label+'</div>';
-      items.sort(function(a,b){return a[0]<b[0]?1:-1;}).forEach(function(it){ var md=it[1]; html+='<div class="learn-item rec-refl" data-date="'+it[0]+'"><span class="dt">'+it[0].slice(5).replace("-",".")+'</span><b>'+esc(md.title||"")+'</b>'+(md.note?' · '+esc(md.note):'')+'</div>'; });
+      items.sort(function(a,b){return a[0]<b[0]?1:-1;}).forEach(function(it){ var md=it[1]; html+='<div class="learn-item rec-refl" data-date="'+it[0]+'"><span class="dt">'+it[0].slice(5).replace("-",".")+'</span><span class="li-t">'+esc(md.title||"")+(md.note?' · '+esc(md.note):'')+'</span></div>'; });
     });
     // 2) 함께 먹은 사람
     var tc=topN(comp,5);
