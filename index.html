@@ -2371,8 +2371,8 @@
     draft.thoughts=$("#thoughts").value.trim();
     draft.learning=$("#learning").value.trim();
     if(!draft.people.length && !draft.schedule && !mealHasContent(draft.meals) && !draft.bizmeets.length && drinkTotal(draft.drinks)===0 && !(draft.exercise.activity||draft.exercise.minutes) && !draft.thoughts && !draft.learning){ flash("기록할 내용을 입력해 주세요.(몸무게만으론 저장되지 않아요)"); return; }
-    // upsert people global rel (직접 추가한 사람 + 식사/업무미팅 동행)
-    draft.people.forEach(function(p){ state.people[p.name]={rel:p.rel}; });
+    // upsert people global rel (직접 추가한 사람 + 식사/업무미팅 동행) — 기존 서브그룹(sub) 등은 보존
+    draft.people.forEach(function(p){ var ex=state.people[p.name]||{}; ex.rel=p.rel; state.people[p.name]=ex; });
     var withAll=mealPeople(draft.meals); draft.bizmeets.forEach(function(b){ (b.people||[]).forEach(function(n){ if(withAll.indexOf(n)<0) withAll.push(n); }); });
     withAll.forEach(function(n){ if(!state.people[n]) state.people[n]={rel:"etc"}; });
     // 골프 스코어: 골프 체크된 각 라운드(슬롯)별로 나+동반자 것만 남김
