@@ -444,6 +444,17 @@
   .bill-seg .bill-b{font-family:inherit; font-size:11.5px; font-weight:700; color:var(--ink-2); background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:3px 14px; cursor:pointer}
   .bill-seg .bill-b.win.on{background:#3FA35A; border-color:#3FA35A; color:#fff}
   .bill-seg .bill-b.lose.on{background:#D06666; border-color:#D06666; color:#fff}
+  .refl-h{display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap}
+  .refl-h .media-chks{display:inline-flex; gap:10px; font-size:12px; color:var(--ink-2)}
+  .refl-h .media-chks label{display:inline-flex; align-items:center; gap:3px; cursor:pointer}
+  .refl-h .media-chks input{margin:0; accent-color:var(--accent); cursor:pointer}
+  #mediaBoxes{display:flex; flex-direction:column; gap:8px; margin-top:8px}
+  .media-box{border:1px solid var(--border); border-radius:9px; padding:8px 9px; background:var(--surface-2)}
+  .media-box .mb-h{font-size:11.5px; font-weight:700; color:var(--ink-2); margin-bottom:5px}
+  .media-box .mb-title, .media-box .mb-note{width:100%; box-sizing:border-box; font-family:inherit; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:5px 8px; outline:0}
+  .media-box .mb-title{font-size:13px; margin-bottom:5px}
+  .media-box .mb-note{font-size:12.5px; min-height:44px; resize:vertical}
+  .media-box .mb-title:focus, .media-box .mb-note:focus{border-color:var(--accent)}
   .place-wrap{position:relative; display:block}
   .place-wrap input[type=text]{padding-right:26px}
   .golf-chk{position:absolute; right:7px; top:50%; transform:translateY(-50%); margin:0; width:14px; height:14px; cursor:pointer; accent-color:#3FA35A}
@@ -1276,8 +1287,9 @@
           <label class="wt-wrap" title="허리둘레">📏<input type="number" min="0" step="0.1" inputmode="decimal" id="ex-waist" placeholder="cm"></label>
         </div>
         </div>
-        <label for="thoughts">Reflection</label>
+        <div class="refl-h"><label for="thoughts">Reflection</label><span class="media-chks"><label><input type="checkbox" class="media-chk" data-m="movie"> 🎬영화</label><label><input type="checkbox" class="media-chk" data-m="music"> 🎵음악</label><label><input type="checkbox" class="media-chk" data-m="book"> 📖책</label></span></div>
         <textarea id="thoughts" placeholder="오늘의 회고 · 배운 것 · 마음에 남은 생각…"></textarea>
+        <div id="mediaBoxes"></div>
       </div>
     </div>
     <div class="msg" id="msg"></div>
@@ -1396,7 +1408,7 @@
   state.ledgerCats = (state.ledgerCats && state.ledgerCats.length) ? state.ledgerCats : defaultLedgerCats();
   migrateLedgerCats();
   migrateReflections();
-  var draft = { date: todayStr(), people: [], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), drinks:emptyDrinks(), exercise:emptyExercise(), golfScore:{}, thoughts:"", learning:"" };
+  var draft = { date: todayStr(), people: [], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), drinks:emptyDrinks(), exercise:emptyExercise(), golfScore:{}, thoughts:"", learning:"", media:{} };
   function dailyRandomRels(){   // 첫 화면: 가족·식당 제외하고, 날짜 시드로 매일 다른 관계 그룹을 랜덤 표시(하루 안에선 고정)
     var hid={}; REL_ORDER.forEach(function(r){ hid[r]=true; });   // 기본 전부 숨김
     var counts={}; Object.keys(state.people||{}).forEach(function(n){ var r=relOf(n); counts[r]=(counts[r]||0)+1; });
@@ -2219,6 +2231,23 @@
     }
     upBillActive(seg);
   }
+  var MEDIA=[{k:"movie",label:"영화",emoji:"🎬"},{k:"music",label:"음악",emoji:"🎵"},{k:"book",label:"책",emoji:"📖"}];   // Reflection 하위: 영화·음악·책
+  function renderMediaBoxes(){
+    var wrap=$("#mediaBoxes"); if(!wrap) return; wrap.innerHTML="";
+    MEDIA.forEach(function(mm){
+      var chk=document.querySelector('.media-chk[data-m="'+mm.k+'"]'); if(!chk||!chk.checked) return;
+      var v=(draft.media&&draft.media[mm.k])||{};
+      var box=document.createElement("div"); box.className="media-box"; box.setAttribute("data-m",mm.k);
+      var hd=document.createElement("div"); hd.className="mb-h"; hd.textContent=mm.emoji+" "+mm.label; box.appendChild(hd);
+      var ti=document.createElement("input"); ti.type="text"; ti.className="mb-title"; ti.placeholder=mm.label+" 제목"; ti.value=v.title||"";
+      var no=document.createElement("textarea"); no.className="mb-note"; no.placeholder="내용 · 감상"; no.value=v.note||"";
+      ti.oninput=function(){ draft.media=draft.media||{}; (draft.media[mm.k]=draft.media[mm.k]||{}).title=ti.value; };
+      no.oninput=function(){ draft.media=draft.media||{}; (draft.media[mm.k]=draft.media[mm.k]||{}).note=no.value; };
+      box.appendChild(ti); box.appendChild(no); wrap.appendChild(box);
+    });
+  }
+  function readMedia(){ var out={}; MEDIA.forEach(function(mm){ var chk=document.querySelector('.media-chk[data-m="'+mm.k+'"]'); if(chk&&chk.checked){ var v=(draft.media||{})[mm.k]||{}; var t=(v.title||"").trim(), n=(v.note||"").trim(); if(t||n) out[mm.k]={title:t,note:n}; } }); return out; }
+  function loadMediaUI(){ MEDIA.forEach(function(mm){ var chk=document.querySelector('.media-chk[data-m="'+mm.k+'"]'); if(chk) chk.checked=!!(draft.media && draft.media[mm.k]); }); renderMediaBoxes(); }
   function loadMeals(meals){ MEALS.forEach(function(x){ var v=(meals&&meals[x.key])||{}; var p=document.getElementById("m-"+x.key+"-place"), f=document.getElementById("m-"+x.key+"-food"), w=document.getElementById("m-"+x.key+"-people"); if(p)p.value=v.place||""; if(f)f.value=v.food||""; if(w)w.value=(v.people||[]).join(", "); var chk=document.querySelector('.golf-chk[data-meal="'+x.key+'"]'); if(chk) chk.checked=!!(state.golf && v.place && state.golf[v.place]); setGolfFoodPh(x.key, !!(chk&&chk.checked)); updateBillUI(x.key); var _sg=document.querySelector('.bill-seg[data-meal="'+x.key+'"]'); if(_sg){ _sg.dataset.val=v.bill||""; upBillActive(_sg); } }); renderSpecialExtras(); }
   // 30분 단위 시간 드롭다운(오전/오후 라벨)
   function roundTime30(v){ if(!/^\d{1,2}:\d{2}$/.test(v||"")) return v||""; var p=v.split(":"), h=+p[0], m=+p[1]; m=Math.round(m/30)*30; if(m===60){m=0; h=(h+1)%24;} return ("0"+h).slice(-2)+":"+("0"+m).slice(-2); }
@@ -2346,6 +2375,7 @@
   }
   $("#addP").onclick=addPerson;
   $("#pname").addEventListener("keydown",function(e){ if(e.key==="Enter"){e.preventDefault(); addPerson();} });
+  Array.prototype.forEach.call(document.querySelectorAll(".media-chk"), function(chk){ chk.onchange=function(){ var k=chk.getAttribute("data-m"); draft.media=draft.media||{}; if(chk.checked){ draft.media[k]=draft.media[k]||{title:"",note:""}; } else { delete draft.media[k]; } renderMediaBoxes(); }; });
   document.querySelector(".meals").addEventListener("input",function(e){   // 장소 입력 중 허슬러/당구 → 승/패 선택 표시
     var mm=(e.target.id||"").match(/^m-(.+)-place$/); if(mm) updateBillUI(mm[1]);
   });
@@ -2362,7 +2392,7 @@
     renderGolfScore();
   });
 
-  function loadDraft(){ var scs=document.querySelectorAll(".meal-same"); for(var si=0;si<scs.length;si++) scs[si].checked=false; loadPhotoForDate(draft.date); $("#date").value=draft.date; $("#schedule").value=draft.schedule||""; $("#schedMark").checked=!!draft.mark; loadMeals(draft.meals); draft.bizmeets=(draft.bizmeets&&draft.bizmeets.length)?draft.bizmeets:[draft.bizmeet||emptyBiz()]; loadBiz(draft.bizmeets[0]); renderBizExtras(); loadDrinks(draft.drinks); loadExercise(draft.exercise); $("#thoughts").value=draft.thoughts; var _le2=$("#learning"); if(_le2) _le2.value=draft.learning||""; renderDraftChips(); renderGolfScore(); var _ed=$("#editing"); _ed.textContent = existingFor(draft.date)?"수정중":""; _ed.className="sub"; }
+  function loadDraft(){ var scs=document.querySelectorAll(".meal-same"); for(var si=0;si<scs.length;si++) scs[si].checked=false; loadPhotoForDate(draft.date); $("#date").value=draft.date; $("#schedule").value=draft.schedule||""; $("#schedMark").checked=!!draft.mark; loadMeals(draft.meals); draft.bizmeets=(draft.bizmeets&&draft.bizmeets.length)?draft.bizmeets:[draft.bizmeet||emptyBiz()]; loadBiz(draft.bizmeets[0]); renderBizExtras(); loadDrinks(draft.drinks); loadExercise(draft.exercise); $("#thoughts").value=draft.thoughts; var _le2=$("#learning"); if(_le2) _le2.value=draft.learning||""; loadMediaUI(); renderDraftChips(); renderGolfScore(); var _ed=$("#editing"); _ed.textContent = existingFor(draft.date)?"수정중":""; _ed.className="sub"; }
   function existingFor(date){ return state.entries.filter(function(e){return e.date===date;})[0]; }
   function dueTodoText(date){   // 해당 날짜가 기한인 미완료 Things to do → "⏰ 내용" 목록(주요일정 기본값용)
     var arr=(state.todos||[]).filter(function(x){ return x.task && x.task.trim() && x.due===date && !x.done; }).map(function(x){ return "⏰ "+x.task.trim(); });
@@ -2381,6 +2411,7 @@
     draft.exercise=readExercise();
     draft.thoughts=$("#thoughts").value.trim();
     var _le=$("#learning"); draft.learning = _le? _le.value.trim() : (draft.learning||"");   // Learning 입력은 통합·제거 → 기존 값 보존
+    draft.media=readMedia();
     if(!draft.people.length && !draft.schedule && !mealHasContent(draft.meals) && !draft.bizmeets.length && drinkTotal(draft.drinks)===0 && !(draft.exercise.activity||draft.exercise.minutes) && !draft.thoughts && !draft.learning){ flash("기록할 내용을 입력해 주세요.(몸무게만으론 저장되지 않아요)"); return; }
     // upsert people global rel (직접 추가한 사람 + 식사/업무미팅 동행) — 기존 서브그룹(sub) 등은 보존
     draft.people.forEach(function(p){ var ex=state.people[p.name]||{}; ex.rel=p.rel; state.people[p.name]=ex; });
@@ -2393,8 +2424,8 @@
     var ex=existingFor(draft.date);
     var names=draft.people.map(function(p){return p.name;});
     withAll.forEach(function(n){ if(names.indexOf(n)<0) names.push(n); }); // 식사·업무미팅 동행도 만난 사람에 포함
-    if(ex){ ex.people=names; ex.schedule=draft.schedule; ex.mark=draft.mark; ex.meals=draft.meals; ex.bizmeet=draft.bizmeet; ex.bizmeets=draft.bizmeets; ex.drinks=draft.drinks; ex.exercise=draft.exercise; ex.golfScore={}; ex.golfScores=gScores; ex.thoughts=draft.thoughts; ex.learning=draft.learning; ex.ts=Date.now(); }
-    else state.entries.push({id:id(), date:draft.date, people:names, schedule:draft.schedule, mark:draft.mark, meals:draft.meals, bizmeet:draft.bizmeet, bizmeets:draft.bizmeets, drinks:draft.drinks, exercise:draft.exercise, golfScore:{}, golfScores:gScores, thoughts:draft.thoughts, learning:draft.learning, ts:Date.now()});
+    if(ex){ ex.people=names; ex.schedule=draft.schedule; ex.mark=draft.mark; ex.meals=draft.meals; ex.bizmeet=draft.bizmeet; ex.bizmeets=draft.bizmeets; ex.drinks=draft.drinks; ex.exercise=draft.exercise; ex.golfScore={}; ex.golfScores=gScores; ex.thoughts=draft.thoughts; ex.learning=draft.learning; ex.media=draft.media; ex.ts=Date.now(); }
+    else state.entries.push({id:id(), date:draft.date, people:names, schedule:draft.schedule, mark:draft.mark, meals:draft.meals, bizmeet:draft.bizmeet, bizmeets:draft.bizmeets, drinks:draft.drinks, exercise:draft.exercise, golfScore:{}, golfScores:gScores, thoughts:draft.thoughts, learning:draft.learning, media:draft.media, ts:Date.now()});
     save();
     flash("저장했어요 ✦");
     loadDraft();   // 저장 후에도 입력 내용을 비우지 않고 그대로 남김
@@ -2403,7 +2434,7 @@
   }
   // 직전 기록의 몸무게·허리둘레(새 기록 작성 시 미리 채워 수정)
   function lastBody(){ var w="", ws="", arr=state.entries.slice().sort(byDateDesc); for(var i=0;i<arr.length;i++){ var x=arr[i].exercise||{}; if(w===""&&(x.weight===0||x.weight)) w=x.weight; if(ws===""&&(x.waist===0||x.waist)) ws=x.waist; if(w!==""&&ws!=="") break; } return {weight:w, waist:ws}; }
-  function resetDraft(){ var lb=lastBody(); draft={date:todayStr(), people:[], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), bizmeets:[emptyBiz()], drinks:emptyDrinks(), exercise:{activity:"", minutes:0, weight:lb.weight, waist:lb.waist}, golfScore:{}, golfScores:{}, thoughts:"", learning:""}; loadDraft(); }
+  function resetDraft(){ var lb=lastBody(); draft={date:todayStr(), people:[], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), bizmeets:[emptyBiz()], drinks:emptyDrinks(), exercise:{activity:"", minutes:0, weight:lb.weight, waist:lb.waist}, golfScore:{}, golfScores:{}, thoughts:"", learning:"", media:{}}; loadDraft(); }
   $("#saveBtn").onclick=saveEntry;
   $("#saveBtn2").onclick=saveEntry;
   // 저장 후 다시 편집하면 '수정완료' → '수정중'으로 되돌림
@@ -2418,7 +2449,7 @@
 
   function scrollToComposer(){ var c=document.querySelector(".composer-wide"); if(c){ c.scrollIntoView({behavior:reduce?"auto":"smooth", block:"start"}); var f=document.getElementById("schedule"); } }
   function editEntry(e, noScroll){
-    draft={ date:e.date, people:e.people.map(function(n){return {name:n, rel:relOf(n)};}), schedule:e.schedule||"", mark:!!e.mark, meals:e.meals?JSON.parse(JSON.stringify(e.meals)):emptyMeals(), bizmeet:e.bizmeet?JSON.parse(JSON.stringify(e.bizmeet)):emptyBiz(), bizmeets:(e.bizmeets&&e.bizmeets.length)?JSON.parse(JSON.stringify(e.bizmeets)):(e.bizmeet?[JSON.parse(JSON.stringify(e.bizmeet))]:[emptyBiz()]), drinks:e.drinks?JSON.parse(JSON.stringify(e.drinks)):emptyDrinks(), exercise:e.exercise?JSON.parse(JSON.stringify(e.exercise)):emptyExercise(), golfScore:e.golfScore?JSON.parse(JSON.stringify(e.golfScore)):{}, golfScores:e.golfScores?JSON.parse(JSON.stringify(e.golfScores)):{}, thoughts:e.thoughts, learning:e.learning };
+    draft={ date:e.date, people:e.people.map(function(n){return {name:n, rel:relOf(n)};}), schedule:e.schedule||"", mark:!!e.mark, meals:e.meals?JSON.parse(JSON.stringify(e.meals)):emptyMeals(), bizmeet:e.bizmeet?JSON.parse(JSON.stringify(e.bizmeet)):emptyBiz(), bizmeets:(e.bizmeets&&e.bizmeets.length)?JSON.parse(JSON.stringify(e.bizmeets)):(e.bizmeet?[JSON.parse(JSON.stringify(e.bizmeet))]:[emptyBiz()]), drinks:e.drinks?JSON.parse(JSON.stringify(e.drinks)):emptyDrinks(), exercise:e.exercise?JSON.parse(JSON.stringify(e.exercise)):emptyExercise(), golfScore:e.golfScore?JSON.parse(JSON.stringify(e.golfScore)):{}, golfScores:e.golfScores?JSON.parse(JSON.stringify(e.golfScores)):{}, thoughts:e.thoughts, learning:e.learning, media:e.media?JSON.parse(JSON.stringify(e.media)):{} };
     loadDraft(); if(!noScroll) scrollToComposer();
   }
   function delEntry(e){
@@ -3486,6 +3517,13 @@
     html+='<div class="recap-sec">Reflection</div>';
     if(refs.length){ refs.sort(function(a,b){return a[0]<b[0]?1:-1;}).forEach(function(l){ html+='<div class="learn-item rec-refl" data-date="'+l[0]+'"><span class="dt">'+l[0].slice(5).replace("-",".")+'</span>'+esc(l[1])+'</div>'; }); }
     else html+='<div class="learn-item">회고 기록이 없어요.</div>';
+    // 영화 · 음악 · 책
+    MEDIA.forEach(function(mm){
+      var items=[]; ent.forEach(function(e){ var md=e.media&&e.media[mm.k]; if(md&&(md.title||md.note)) items.push([e.date, md]); });
+      if(!items.length) return;
+      html+='<div class="recap-sec">'+mm.emoji+' '+mm.label+'</div>';
+      items.sort(function(a,b){return a[0]<b[0]?1:-1;}).forEach(function(it){ var md=it[1]; html+='<div class="learn-item rec-refl" data-date="'+it[0]+'"><span class="dt">'+it[0].slice(5).replace("-",".")+'</span><b>'+esc(md.title||"")+'</b>'+(md.note?' · '+esc(md.note):'')+'</div>'; });
+    });
     // 2) 함께 먹은 사람
     var tc=topN(comp,5);
     html+='<div class="recap-sec">가장 자주</div>';
