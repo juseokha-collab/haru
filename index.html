@@ -4242,6 +4242,19 @@
         add.onclick=function(){ state.ledgerCats.push({id:"lc"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36), group:g.k, name:"새 항목", start:todayStr().slice(0,7)}); render(); };   // 새 항목은 추가한 달부터 표시(이전 달엔 숨김)
         sec.appendChild(add); body.appendChild(sec);
       });
+      // 보유 계좌 (이름 추가/삭제 — 잔액은 가계부 카드지출 옆 박스에서 입력)
+      var asec=document.createElement("div"); asec.className="ledcat-grp";
+      var agh=document.createElement("div"); agh.className="ledcat-grp-h"; agh.textContent="보유 계좌"; asec.appendChild(agh);
+      (state.ledgerAccounts||[]).forEach(function(a){
+        var row=document.createElement("div"); row.className="ledcat-row";
+        var nm=document.createElement("input"); nm.type="text"; nm.className="ledcat-nm"; nm.value=a.name||""; nm.placeholder="계좌명"; nm.onchange=function(){ a.name=nm.value.trim()||a.name; };
+        var del=document.createElement("button"); del.type="button"; del.className="ledcat-del"; del.textContent="×"; del.title="계좌 삭제";
+        del.onclick=function(){ askConfirm({ title:"계좌 삭제", message:"‘"+(a.name||"")+"’ 계좌를 삭제할까요?\n(입력한 잔액도 함께 사라집니다)", okText:"삭제", danger:true, onOk:function(){ state.ledgerAccounts=state.ledgerAccounts.filter(function(x){return x!==a;}); render(); } }); };
+        row.appendChild(nm); row.appendChild(del); asec.appendChild(row);
+      });
+      var aadd=document.createElement("button"); aadd.type="button"; aadd.className="ledcat-add"; aadd.textContent="+ 보유 계좌 추가";
+      aadd.onclick=function(){ state.ledgerAccounts=state.ledgerAccounts||[]; state.ledgerAccounts.push({id:"a"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36), name:"새 계좌"}); render(); };
+      asec.appendChild(aadd); body.appendChild(asec);
     }
     render();
     var acts=document.createElement("div"); acts.className="modal-actions";
