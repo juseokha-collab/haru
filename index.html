@@ -1967,11 +1967,11 @@
     return "rgba("+r+","+g+","+b+","+a+")";
   }
   function mixHex(a,b,t){ var pa=parseInt(a.slice(1),16), pb=parseInt(b.slice(1),16); var r=Math.round(((pa>>16)&255)+((( pb>>16)&255)-((pa>>16)&255))*t), g=Math.round(((pa>>8)&255)+(((pb>>8)&255)-((pa>>8)&255))*t), bl=Math.round((pa&255)+((pb&255)-(pa&255))*t); return "#"+((1<<24)+(r<<16)+(g<<8)+bl).toString(16).slice(1); }
-  function subShade(hex, sub){   // 서브그룹별로 상위 관계색을 유지하며 밝기만 살짝 변주(어두운 쪽/밝은 쪽 소폭)
+  function subShade(hex, sub){   // 서브그룹별로 상위 관계색을 유지하며 '밝은 쪽으로'만 변주(구분감 넓게)
     if(!sub || (hex||"")[0]!=="#") return hex;
     var h=2166136261; for(var i=0;i<sub.length;i++){ h^=sub.charCodeAt(i); h=Math.imul(h,16777619); }
-    var t=(((h>>>0)%7)-3)/3*0.22;   // -0.22..+0.22
-    return mixHex(hex, t>=0?"#FFFFFF":"#0A0D16", Math.abs(t));
+    var t=0.10 + (((h>>>0)%9)/8)*0.55;   // 0.10~0.65 밝기 혼합(흰색 방향)
+    return mixHex(hex, "#FFFFFF", t);
   }
   function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
 
@@ -2671,7 +2671,7 @@
       if(state.relNames[r]){ var rst=document.createElement("button"); rst.type="button"; rst.className="amc-btn"; rst.textContent="↺"; rst.title="기본 이름으로"; rst.onclick=function(){ delete state.relNames[r]; save(); renderAdminPeople(); renderLegend(); rebuild(); }; h.appendChild(rst); }
       var cntB=document.createElement("b"); cntB.textContent=full.length; h.appendChild(cntB);
       scList.forEach(function(sc){
-        var chip=document.createElement("span"); chip.className="adm-subchip"+(adminSubFilter[sc]?" on":""); chip.style.setProperty("--chipc", REL[r].color);   // 인맥그룹 색상(파스텔)로 배경
+        var chip=document.createElement("span"); chip.className="adm-subchip"+(adminSubFilter[sc]?" on":""); chip.style.setProperty("--chipc", subShade(REL[r].color, sc));   // 상위 관계색 + 서브그룹별 밝기 변주(성좌와 동일)
         var cb=document.createElement("input"); cb.type="checkbox"; cb.className="adm-subchk"; cb.checked=!!adminSubFilter[sc]; cb.title="이 서브그룹만 보기";
         cb.onchange=function(){ if(cb.checked) adminSubFilter[sc]=true; else delete adminSubFilter[sc]; renderAdminPeople(); };
         var nmspan=document.createElement("span"); nmspan.className="amc-nm"; nmspan.innerHTML=esc(sc)+' <i>'+scMap[sc]+'</i>';
@@ -2714,7 +2714,7 @@
       list.forEach(function(n){
         var s=(state.people[n]||{}).sub||"";
         if(s!==curSub){ curSub=s;
-          var box=document.createElement("div"); box.className="pp-sbox"; box.style.setProperty("--chipc", REL[r].color);
+          var box=document.createElement("div"); box.className="pp-sbox"; box.style.setProperty("--chipc", subShade(REL[r].color, s));
           plist=document.createElement("div"); plist.className="adm-plist"; box.appendChild(plist); sec.appendChild(box);
         }
         plist.appendChild(mkRow(n));
