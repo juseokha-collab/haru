@@ -2087,6 +2087,7 @@
       } else {
         if(comp.length) extra=' <span class="rc-with">('+esc(comp.join(", "))+')</span>';
       }
+      if(!isPlace && placeEmoji(label)) return;   // 사람 상세: 당구(허슬러)는 승패로 따로 보여주므로 만난장소 목록에서 제외
       var dLabel = isGolfPlace ? (e.date.slice(2).replace(/-/g,".")+(golfMyScore!=null?' ('+golfMyScore+')':'')) : e.date.slice(2).replace(/-/g,".");
       if(isGolfPlace) rdCls+=" rd-y";
       rows.push({date:e.date, html:'<button class="rec" data-id="'+e.id+'"><span class="'+rdCls+'">'+dLabel+'</span><span class="rt">'+esc(label)+extra+'</span></button>'});
