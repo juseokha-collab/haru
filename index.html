@@ -134,7 +134,9 @@
   .cv-wd.sun{color:#D98A8A}
   .cv-wd.sat{color:#8AA6D9}
   .cv-cell{position:relative; min-height:76px; border:1px solid transparent; background:var(--surface-2); border-radius:10px; display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:1px; cursor:pointer; font-family:inherit; padding:5px 7px 4px; transition:.12s; overflow:hidden; text-align:left}
-  .cv-ball8{position:absolute; right:4px; bottom:4px; width:14px; height:14px; border-radius:50%; background:#D64545; color:#fff; font-size:9px; font-weight:800; display:flex; align-items:center; justify-content:center; line-height:1; box-shadow:0 1px 2px rgba(0,0,0,.3), inset 0 1px 1px rgba(255,255,255,.35)}
+  .cv-ball8{position:absolute; right:4px; bottom:4px; width:14px; height:14px; border-radius:50%; background:#8A8F98; color:#fff; font-size:9px; font-weight:800; display:flex; align-items:center; justify-content:center; line-height:1; box-shadow:0 1px 2px rgba(0,0,0,.3), inset 0 1px 1px rgba(255,255,255,.35)}
+  .cv-ball8.win{background:#D64545}   /* 승 많은 날 = 빨간 공 */
+  .cv-ball8.lose{background:#1B1B1F}  /* 패 많은 날 = 검정 공 */
   .cv-cell.blank{background:transparent; cursor:default; pointer-events:none}
   .cv-cell.has{background:var(--accent-soft)}
   .cv-cell.mark{background:color-mix(in srgb, #6F7BE0 20%, transparent); border-color:color-mix(in srgb, #6F7BE0 42%, transparent)}
@@ -3539,18 +3541,18 @@
         var more=e.people.length>2 ? " +"+(e.people.length-2) : "";
         ppl='<div class="cv-ppl">'+names+more+'</div>';
       }
-      var place='', pico2='', gseen=false, bseen=false;
+      var place='', pico2='', gseen=false, bseen=false, bWin=0, bLose=0;
       if(e && e.meals){ var pls=[], eve=[], hasSp=false; mealKeys(e).forEach(function(_k){ var m=e.meals[_k]; if(!m||!m.place) return;
           if(_k==="dinner" || _k.indexOf("special")===0){ eve.push(m.place); if(_k.indexOf("special")===0) hasSp=true; }   // 저녁=1차, Special=2·3차…
           else if(pls.indexOf(m.place)<0){ pls.push(m.place); }
           if(state.golf&&state.golf[m.place]&&!gseen){ pico2+='<span class="cv-pico">⛳</span>'; gseen=true; }
-          if(placeEmoji(m.place)) bseen=true;   // 당구장 → 우측하단 빨간 8볼
+          if(placeEmoji(m.place)){ bseen=true; if(m.bill==="win") bWin++; else if(m.bill==="lose") bLose++; }   // 당구장 → 우측하단 8볼(승많=빨강/패많=검정)
         });
         if(eve.length){ if(hasSp && eve.length>1){ pls.push(eve[0]+" · "+eve.length+"차"); } else { eve.forEach(function(p){ if(pls.indexOf(p)<0) pls.push(p); }); } }
         if(pls.length) place='<div class="cv-place">🍴 '+esc(pls.join(" · "))+'</div>'; }
       var title=e?' title="'+ds.slice(5).replace("-",".")+' · '+esc(calSummary(e))+'"':'';
       var cam=photoDates[ds]?'<span class="cv-cam">📷</span>':'';
-      var billHtml = bseen? '<span class="cv-ball8" title="당구장">8</span>' : '';
+      var billHtml = bseen? '<span class="cv-ball8 '+(bWin>bLose?"win":bLose>bWin?"lose":"")+'" title="당구장'+(bWin||bLose?" · "+bWin+"승 "+bLose+"패":"")+'">8</span>' : '';
       html+='<button class="'+cls+'" data-date="'+ds+'"'+title+'><div class="cv-top"><span class="cv-d">'+d+'</span>'+dot+pico2+cam+'</div>'+holLbl+sched+ppl+place+billHtml+'</button>';
     }
     grid.innerHTML=html;
