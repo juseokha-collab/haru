@@ -3456,6 +3456,8 @@
       '<div class="barwrap"><i style="width:'+w+'%"></i></div></div>'+
       '<div class="cnt">'+cnt+'<small>'+unit+'</small></div></div>';
   }
+  var RECAP_PLACE_EXCLUDE=["콜","제물포","강화","을3"];   // 즐겨 간 곳에서 제외(허슬러=당구는 placeEmoji로 별도 제외)
+  function recapPlaceExcluded(pl){ if(placeEmoji(pl)) return true; return RECAP_PLACE_EXCLUDE.some(function(t){ return pl===t || pl.indexOf(t)===0; }); }
   function renderRecapView(){
     if(!recapMonth) recapMonth=monthStr(new Date());
     var el=$("#recapView"), yearMode=(recapMode==="year"), yr=recapMonth.slice(0,4), ym=recapMonth.split("-");
@@ -3485,11 +3487,12 @@
     else html+='<div class="learn-item">회고 기록이 없어요.</div>';
     // 2) 함께 먹은 사람
     var tc=topN(comp,5);
-    html+='<div class="recap-sec">가장 자주 함께 먹은 사람</div>';
+    html+='<div class="recap-sec">가장 자주</div>';
     if(tc.length){ var mc=tc[0][1]; tc.forEach(function(x,i){ html+=rankRow(i+1, dotFor(x[0]), esc(x[0]), REL[relOf(x[0])].name, x[1], "번", Math.round(x[1]/mc*100), false); }); }
     else html+='<div class="learn-item">함께 먹은 기록이 없어요.</div>';
     // 3) 즐겨 간 곳
-    var tp=topN(places,5);
+    var _plF={}; Object.keys(places).forEach(function(pl){ if(!recapPlaceExcluded(pl)) _plF[pl]=places[pl]; });   // 허슬러(당구)·집/사무실 등 제외
+    var tp=topN(_plF,5);
     html+='<div class="recap-sec">즐겨 간 곳</div>';
     if(tp.length){ var mp=tp[0][1]; tp.forEach(function(x,i){ html+=rankRow(i+1, "🍴", esc(x[0]), "", x[1], "회", Math.round(x[1]/mp*100), true); }); }
     else html+='<div class="learn-item">장소 기록이 없어요.</div>';
