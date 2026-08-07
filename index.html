@@ -1740,9 +1740,9 @@
       if(hasScore){ mine=+mine; th=+th; hasScore=!(isNaN(mine)||isNaN(th)); }
       var y=(e.date||"").slice(0,4);
       if(hasScore){ sc++; myTot+=mine; thTot+=th; var res=mine<th?"w":(mine>th?"l":"d"); if(res==="w")w++; else if(res==="l")l++; else d++; (byYear[y]=byYear[y]||{w:0,l:0,d:0,x:0})[res]++; return; }
-      // 스코어 없는 라운딩: 같은 골프장에 함께 간 기록만(승패 X = 기록없음)
+      // 스코어 없는 라운딩: '그 골프 슬롯의 동반자'만 (다른 끼니 동석자는 제외)
       var mp=(r.slot!=null && e.meals && e.meals[r.slot] && e.meals[r.slot].people) || [];
-      if(mp.indexOf(name)>=0 || (e.people||[]).indexOf(name)>=0){ x++; (byYear[y]=byYear[y]||{w:0,l:0,d:0,x:0}).x++; noScore.push({date:e.date||"", place:r.place||"(장소)"}); }
+      if(mp.indexOf(name)>=0){ x++; (byYear[y]=byYear[y]||{w:0,l:0,d:0,x:0}).x++; noScore.push({date:e.date||"", place:r.place||"(장소)"}); }
     }); });
     var total=sc+x;
     if(!total){ el.hidden=true; el.innerHTML=""; return; }
