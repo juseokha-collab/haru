@@ -429,6 +429,11 @@
   .meal-h.row>span{flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .same-chk.sm{font-size:11px; font-weight:500}
   .meal-grid{display:grid; grid-template-columns:1fr 1fr; gap:6px; margin:6px 0}
+  .bill-seg{grid-column:1 / -1; display:flex; align-items:center; gap:6px; margin-top:1px}
+  .bill-seg .bill-lbl{font-size:11px; color:var(--ink-3)}
+  .bill-seg .bill-b{font-family:inherit; font-size:11.5px; font-weight:700; color:var(--ink-2); background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:3px 14px; cursor:pointer}
+  .bill-seg .bill-b.win.on{background:#3FA35A; border-color:#3FA35A; color:#fff}
+  .bill-seg .bill-b.lose.on{background:#D06666; border-color:#D06666; color:#fff}
   .place-wrap{position:relative; display:block}
   .place-wrap input[type=text]{padding-right:26px}
   .golf-chk{position:absolute; right:7px; top:50%; transform:translateY(-50%); margin:0; width:14px; height:14px; cursor:pointer; accent-color:#3FA35A}
@@ -1395,7 +1400,8 @@
     picked.forEach(function(r){ hid[r]=false; });
     return hid;
   }
-  var hiddenRels = dailyRandomRels(), hideRest=true, hideGolf=true, drinkPeriod="week", weightPeriod="month", view="graph", recapMonth="", minMeet=2, minMeetIdx=1, meetExact=false, calMonth="", searchQ="", graphYear=String(new Date().getFullYear());
+  var hiddenRels = dailyRandomRels(), hideRest=true, hideGolf=true, hideBilliard=true, drinkPeriod="week", weightPeriod="month", view="graph", recapMonth="", minMeet=2, minMeetIdx=1, meetExact=false, calMonth="", searchQ="", graphYear=String(new Date().getFullYear());
+  function isBilliardPl(pl){ return !(state.golf && state.golf[pl]) && !!placeEmoji(pl); }   // 당구장(허슬러 등) = 골프 아니고 당구 이모지 매칭
 
   function load(){
     try{ var s=JSON.parse(localStorage.getItem(KEY)); if(s&&s.entries) return s; }catch(e){}
@@ -1599,10 +1605,10 @@
       else if(searchAnchors.length>=2){ var _an=searchAnchors.length; searchAnchors.forEach(function(nm,i){ anchorTargets[nm]={fx:(_an===2? (i===0?0.30:0.70) : (0.28+0.44*i/(_an-1))), fy:0.5}; }); }
     } else {
       // 장소 유형(골프/식당) 표시 중이면, 그 유형을 나와 '함께 간' 사람만 사람 노드로 (식사만/미팅만 한 사람 제외)
-      var golfOn=!hideGolf, restOn=!hideRest, placeFilterActive=(golfOn||restOn), allowPeople=null;
+      var golfOn=!hideGolf, billiOn=!hideBilliard, restOn=!hideRest, placeFilterActive=(golfOn||billiOn||restOn), allowPeople=null;
       if(placeFilterActive){
         allowPeople={};
-        Object.keys(g.pplace||{}).forEach(function(k){ var ab=k.split(g.S1), pl=ab[0], pn=ab[1]; var isG=!!(state.golf&&state.golf[pl]); if((isG&&golfOn)||(!isG&&restOn)) allowPeople[pn]=1; });
+        Object.keys(g.pplace||{}).forEach(function(k){ var ab=k.split(g.S1), pl=ab[0], pn=ab[1]; var isG=!!(state.golf&&state.golf[pl]), isB=!isG&&!!placeEmoji(pl); if((isG&&golfOn)||(isB&&billiOn)||(!isG&&!isB&&restOn)) allowPeople[pn]=1; });
       }
       names=allNames.filter(function(n){ return (meetExact ? g.meetings[n]===minMeet : g.meetings[n]>=minMeet) && (!allowPeople || allowPeople[n]); });
       if(capOn && names.length>NODE_CAP){ names.sort(function(a,b){ return g.meetings[b]-g.meetings[a]; }); names=names.slice(0,NODE_CAP); }
@@ -1659,6 +1665,7 @@
       var node = p || { name:pl, x:W/2+Math.cos(ang)*205+(Math.random()*40-20), y:H/2+Math.sin(ang)*185+(Math.random()*40-20), vx:0, vy:0 };
       node.type="place";
       node.golf=!!(state.golf && state.golf[pl]);
+      node.billiard=!node.golf && !!placeEmoji(pl);
       node.visits=g.places[pl].visits;
       node.last=g.places[pl].last;
       var _vis=_visOf(pl);
@@ -1696,7 +1703,7 @@
 
     alpha=1;
     var emp=$("#emptySky");
-    var visPlaces = (searchQ || !hideRest || !hideGolf)? pnames.length : 0;
+    var visPlaces = (searchQ || !hideRest || !hideGolf || !hideBilliard)? pnames.length : 0;
     if(names.length||visPlaces){ emp.style.display="none"; }
     else { emp.style.display="flex";
       emp.firstElementChild.innerHTML = searchQ
@@ -1772,7 +1779,7 @@
   }
 
   function visible(node){
-    if(node.type==="place"){ return node.golf? !hideGolf : !hideRest; }   // 장소는 검색이든 아니든 식당/골프 칩 적용
+    if(node.type==="place"){ return node.golf? !hideGolf : node.billiard? !hideBilliard : !hideRest; }   // 장소: 골프/당구/식당 칩 적용
     if(node.me) return true;
     if(searchQ) return (searchAnchors.indexOf(node.name)>=0) || (searchSubs.length && searchSubs.indexOf((state.people[node.name]||{}).sub)>=0) || !hiddenRels[node.rel];   // 검색 인물·서브그룹 멤버는 항상, 나머지는 관계칩
     return !hiddenRels[node.rel];
@@ -2139,13 +2146,25 @@
   function mval(id){ var el=document.getElementById(id); return el?(el.value||"").trim():""; }
   function parseNames(s){ return s? s.split(/[,，]/).map(function(x){return x.trim();}).filter(Boolean):[]; }
   function readMeals(){
-    var m={}; MEALS.forEach(function(x){ m[x.key]={place:mval("m-"+x.key+"-place"), food:mval("m-"+x.key+"-food"), people:parseNames(mval("m-"+x.key+"-people"))}; });
+    var m={}; MEALS.forEach(function(x){ m[x.key]={place:mval("m-"+x.key+"-place"), food:mval("m-"+x.key+"-food"), people:parseNames(mval("m-"+x.key+"-people"))}; var _seg=document.querySelector('.bill-seg[data-meal="'+x.key+'"]'); if(_seg && _seg.dataset.val && placeEmoji(m[x.key].place)) m[x.key].bill=_seg.dataset.val; });   // 당구(허슬러) 승/패
     var ex=document.querySelectorAll("#specialExtra .sp-row");   // 추가 Special
     Array.prototype.forEach.call(ex,function(row,i){ m["special"+(i+2)]={place:(row.querySelector(".sp-place").value||"").trim(), food:(row.querySelector(".sp-food").value||"").trim(), people:parseNames(row.querySelector(".sp-people").value)}; });
     return m;
   }
   function setGolfFoodPh(mk, isGolf){ var f=document.getElementById("m-"+mk+"-food"); if(f) f.placeholder = isGolf? "🏆 이글·홀인원 등 특이사항" : "무엇을"; }
-  function loadMeals(meals){ MEALS.forEach(function(x){ var v=(meals&&meals[x.key])||{}; var p=document.getElementById("m-"+x.key+"-place"), f=document.getElementById("m-"+x.key+"-food"), w=document.getElementById("m-"+x.key+"-people"); if(p)p.value=v.place||""; if(f)f.value=v.food||""; if(w)w.value=(v.people||[]).join(", "); var chk=document.querySelector('.golf-chk[data-meal="'+x.key+'"]'); if(chk) chk.checked=!!(state.golf && v.place && state.golf[v.place]); setGolfFoodPh(x.key, !!(chk&&chk.checked)); }); renderSpecialExtras(); }
+  function upBillActive(seg){ Array.prototype.forEach.call(seg.querySelectorAll(".bill-b"), function(b){ b.classList.toggle("on", !!seg.dataset.val && b.classList.contains(seg.dataset.val)); }); }
+  function updateBillUI(mk){   // 장소에 허슬러/당구 → '무엇을' 옆에 승/패 선택 동적 표시
+    var pv=document.getElementById("m-"+mk+"-place"); if(!pv) return; var grid=pv.closest(".meal-grid"); if(!grid) return;
+    var on=!!placeEmoji(pv.value), seg=grid.querySelector(".bill-seg");
+    if(!on){ if(seg) seg.remove(); return; }
+    if(!seg){ seg=document.createElement("div"); seg.className="bill-seg"; seg.setAttribute("data-meal",mk);
+      seg.innerHTML='<span class="bill-lbl">🎱 당구</span>';
+      ["win","lose"].forEach(function(v){ var b=document.createElement("button"); b.type="button"; b.className="bill-b "+v; b.textContent=(v==="win"?"승":"패"); b.onclick=function(){ seg.dataset.val=(seg.dataset.val===v?"":v); upBillActive(seg); draft.meals=readMeals(); }; seg.appendChild(b); });
+      grid.appendChild(seg);
+    }
+    upBillActive(seg);
+  }
+  function loadMeals(meals){ MEALS.forEach(function(x){ var v=(meals&&meals[x.key])||{}; var p=document.getElementById("m-"+x.key+"-place"), f=document.getElementById("m-"+x.key+"-food"), w=document.getElementById("m-"+x.key+"-people"); if(p)p.value=v.place||""; if(f)f.value=v.food||""; if(w)w.value=(v.people||[]).join(", "); var chk=document.querySelector('.golf-chk[data-meal="'+x.key+'"]'); if(chk) chk.checked=!!(state.golf && v.place && state.golf[v.place]); setGolfFoodPh(x.key, !!(chk&&chk.checked)); updateBillUI(x.key); var _sg=document.querySelector('.bill-seg[data-meal="'+x.key+'"]'); if(_sg){ _sg.dataset.val=v.bill||""; upBillActive(_sg); } }); renderSpecialExtras(); }
   // 30분 단위 시간 드롭다운(오전/오후 라벨)
   function roundTime30(v){ if(!/^\d{1,2}:\d{2}$/.test(v||"")) return v||""; var p=v.split(":"), h=+p[0], m=+p[1]; m=Math.round(m/30)*30; if(m===60){m=0; h=(h+1)%24;} return ("0"+h).slice(-2)+":"+("0"+m).slice(-2); }
   function timeOptsHtml(sel){ sel=roundTime30(sel); var o='<option value="">시간</option>'; for(var t=8*60; t<=17*60+30; t+=30){ var h=Math.floor(t/60), m=t%60, v=("0"+h).slice(-2)+":"+("0"+m).slice(-2), ap=h<12?"오전":"오후", h12=h%12||12; o+='<option value="'+v+'"'+(v===sel?" selected":"")+'>'+ap+" "+h12+":"+("0"+m).slice(-2)+'</option>'; } return o; }
@@ -2266,6 +2285,9 @@
   }
   $("#addP").onclick=addPerson;
   $("#pname").addEventListener("keydown",function(e){ if(e.key==="Enter"){e.preventDefault(); addPerson();} });
+  document.querySelector(".meals").addEventListener("input",function(e){   // 장소 입력 중 허슬러/당구 → 승/패 선택 표시
+    var mm=(e.target.id||"").match(/^m-(.+)-place$/); if(mm) updateBillUI(mm[1]);
+  });
   document.querySelector(".meals").addEventListener("change",function(e){
     if(e.target.classList.contains("meal-same") && e.target.checked){ applyMealSame(); }
     else if(e.target.classList.contains("golf-chk")){
@@ -2488,6 +2510,11 @@
     gc.onclick=function(){ hideGolf=!hideGolf; if(!hideGolf){ REL_ORDER.forEach(function(r){ hiddenRels[r]=true; }); }   /* 골프 켜면 인맥 모두 비활성화 */
       renderLegend(); renderStats(); rebuild(); alpha=Math.max(alpha,0.4); wake(); };
     l.appendChild(gc);
+    var bc=document.createElement("span"); bc.className="chip place-chip"; bc.setAttribute("aria-pressed", hideBilliard?"false":"true");
+    bc.innerHTML='<span class="golf-ico">🎱</span>당구';
+    bc.onclick=function(){ hideBilliard=!hideBilliard; if(!hideBilliard){ REL_ORDER.forEach(function(r){ hiddenRels[r]=true; }); }   /* 당구 켜면 인맥 모두 비활성화 → 당구장 중심으로 동반자 표시 */
+      renderLegend(); renderStats(); rebuild(); alpha=Math.max(alpha,0.4); wake(); };
+    l.appendChild(bc);
   }
 
   // ---------- 인맥 관계 편집 (관계칩 더블클릭) ----------
