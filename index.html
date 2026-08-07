@@ -1395,6 +1395,7 @@
   state.ledger = state.ledger || {};        // 가계부: {"YYYY-MM":{cells:{catId:금액}, note}}
   state.ledgerCats = (state.ledgerCats && state.ledgerCats.length) ? state.ledgerCats : defaultLedgerCats();
   migrateLedgerCats();
+  migrateReflections();
   var draft = { date: todayStr(), people: [], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), drinks:emptyDrinks(), exercise:emptyExercise(), golfScore:{}, thoughts:"", learning:"" };
   function dailyRandomRels(){   // 첫 화면: 가족·식당 제외하고, 날짜 시드로 매일 다른 관계 그룹을 랜덤 표시(하루 안에선 고정)
     var hid={}; REL_ORDER.forEach(function(r){ hid[r]=true; });   // 기본 전부 숨김
@@ -3969,6 +3970,13 @@
     {id:"i_stock",group:"invest",name:"주식/IRP"},{id:"i_coin",group:"invest",name:"코인"},
     {id:"h_tax",group:"cash",name:"세금"},{id:"h_holiday",group:"cash",name:"명절"},{id:"h_personal",group:"cash",name:"개인"},{id:"h_event",group:"cash",name:"축/조의"},{id:"h_eeum",group:"cash",name:"e음"},{id:"h_etc",group:"cash",name:"기타"}
   ]; }
+  function migrateReflections(){   // Reflection+Learning 통합: 기존 learning을 thoughts로 합치고 learning 제거(멱등)
+    (state.entries||[]).forEach(function(e){
+      var lg=(e.learning||"").trim();
+      if(lg){ var th=(e.thoughts||"").replace(/\s+$/,""); e.thoughts = th? (th+"\n"+lg) : lg; }
+      if("learning" in e) delete e.learning;
+    });
+  }
   function migrateLedgerCats(){   // 가계부 항목 마이그레이션(로컬/클라우드 로드 모두에서 실행, 멱등)
     if(!state.ledgerCats||!state.ledgerCats.length) state.ledgerCats=defaultLedgerCats();
     if(!state.ledgerAccounts||!state.ledgerAccounts.length) state.ledgerAccounts=[{id:"a_kakaobank",name:"카카오뱅크"},{id:"a_kakaopay",name:"카카오페이"},{id:"a_samsungcma",name:"삼성CMA"}];   // 보유 계좌
@@ -4493,6 +4501,7 @@
       if(!s || !Array.isArray(s.entries)) return;
       state={ people:s.people||{}, entries:s.entries||[], events:s.events||[], golf:s.golf||{}, todos:s.todos||[], plans:s.plans||[], subcats:s.subcats||[], relNames:s.relNames||{}, ledger:s.ledger||{}, ledgerCats:(s.ledgerCats&&s.ledgerCats.length)?s.ledgerCats:defaultLedgerCats(), ledgerAccounts:s.ledgerAccounts||[] };
       migrateLedgerCats();
+      migrateReflections();
       mergeDuplicateDates();
       save();
       if(!keepDraft) resetDraft();
