@@ -276,6 +276,11 @@
   .detail .golf-rec b{color:#5BAE6E; font-weight:700}
   .detail .gv-toggle{margin-left:auto; display:inline-flex; align-items:center; gap:4px; font-size:11px; color:var(--sky-ink-2); cursor:pointer; user-select:none}
   .detail .gv-toggle input{accent-color:#5BAE6E; cursor:pointer; margin:0}
+  .detail .bill-rec b{color:#B58AE0; font-weight:700}
+  .detail .bill-vs{margin-top:8px; max-height:170px; overflow-y:auto; display:flex; flex-direction:column; gap:1px; padding-right:8px}
+  .detail .bill-vs .bill-r{flex:none; width:28px; text-align:right; font-weight:800}
+  .detail .bill-vs .bill-r.win{color:#6FD69A} .detail .bill-vs .bill-r.lose{color:#E58A8A}
+  #skyTip .bt-w{color:#6FD69A} #skyTip .bt-l{color:#E58A8A}
   .detail .golf-vs{display:none; margin-top:10px}
   .detail.golf-mode .with, .detail.golf-mode .rel-recs, .detail.golf-mode .rel-h{display:none}
   .detail.golf-mode .golf-vs{display:block}
@@ -1547,6 +1552,7 @@
   }
 
   var placeIndex={}, searchAnchors=[], anchorTargets={}, searchMeTarget=null, searchFocus=[], searchSubs=[];   // 인물 검색 시 앵커 배치 · 서브그룹(복수) 검색
+  var billiardFocus=false, centerPlaceName=null;   // 당구 뷰: 당구장을 중앙에 두고 '나' 숨김
   function rebuild(){
     var g=buildGraph();
     var allNames=Object.keys(g.meetings);
@@ -1683,13 +1689,16 @@
       nodes.push(node); placeIndex[pl]=node;
     });
 
+    billiardFocus = (!hideBilliard && hideGolf && hideRest && !searchQ); centerPlaceName=null;   // 당구 단독 뷰
+    if(billiardFocus){ var _bv=-1; Object.keys(placeIndex).forEach(function(pl){ if(placeEmoji(pl) && !(state.golf&&state.golf[pl])){ var v=g.places[pl]?g.places[pl].visits:0; if(v>_bv){ _bv=v; centerPlaceName=pl; } } }); }
+
     links=[];
     var _hubMode = searchQ && searchAnchors.length;
     var _aset={}; if(_hubMode) searchAnchors.forEach(function(a){ _aset[a]=1; });
     if(_hubMode){
       names.forEach(function(n){ if(_aset[n]) return; searchAnchors.forEach(function(a){ if(a===n) return; var w=g.pairs[[a,n].sort().join(g.S1)]; if(w && nodeIndex[a] && nodeIndex[n]) links.push({a:nodeIndex[a], b:nodeIndex[n], w:w, me:true}); }); });
       if(searchAnchors.length===2 && nodeIndex[searchAnchors[0]] && nodeIndex[searchAnchors[1]]){ var _w2=g.pairs[searchAnchors.slice().sort().join(g.S1)]||1; links.push({a:nodeIndex[searchAnchors[0]], b:nodeIndex[searchAnchors[1]], w:_w2, me:true}); }
-    } else if(!searchAnchors.length)
+    } else if(!searchAnchors.length && !billiardFocus)
     names.forEach(function(n){ links.push({a:me, b:nodeIndex[n], w:g.meetings[n], me:true}); });
     Object.keys(g.pairs).forEach(function(k){
       var ab=k.split("");
@@ -1824,6 +1833,7 @@
       var Rvis=Math.min(W,H)*0.5, minPeopleR=Rvis*0.2, placeInner=Rvis*0.5;
       nodes.forEach(function(n){
         if(n===dragging || !visible(n)) return;
+        if(billiardFocus && n.name===centerPlaceName) return;   // 중앙 고정 당구장은 바깥 밀기 제외
         var dx=n.x-me.x, dy=n.y-me.y, d=Math.sqrt(dx*dx+dy*dy)||0.01, target, str;
         if(n.type==="place"){ target = d<placeInner? placeInner : d; str=0.05; }   // 장소: 너무 안쪽이면 바깥으로
         else { if(d>=minPeopleR) return; target=minPeopleR; str=0.06; }             // 사람: 나와 겹치지 않게 최소거리만
@@ -1846,6 +1856,11 @@
     else { me.vx+=(W/2-me.x)*0.012*k; me.vy+=(H/2-me.y)*0.012*k; }
     me.vx*=damping; me.vy*=damping; me.x+=me.vx; me.y+=me.vy;
 
+    // 당구 뷰: 당구장을 화면 중앙으로 강하게 끌고, 정확히 중앙에 고정
+    if(billiardFocus && centerPlaceName && placeIndex[centerPlaceName]){
+      var cn=placeIndex[centerPlaceName]; cn.vx+=(W/2-cn.x)*0.08*k; cn.vy+=(H/2-cn.y)*0.08*k;
+      if(!dragging){ var ddx0=W/2-cn.x, ddy0=H/2-cn.y; nodes.forEach(function(n){ n.x+=ddx0; n.y+=ddy0; }); }
+    }
     // 검색 인물(들)을 화면 중앙에 고정: 그 평균 위치가 (W/2,H/2)가 되도록 전체 평행이동
     if(!dragging && searchFocus && searchFocus.length){
       var fcx=0, fcy=0, fcn=0;
@@ -1913,7 +1928,7 @@
     });
 
     // me (특정 인물 검색 중에는 '나' 제외 — 검색 인물이 중심 허브. 서브그룹/장소 검색은 '나' 유지)
-    if(!searchFocus.length){
+    if(!searchFocus.length && !billiardFocus){
       var mg=ctx.createRadialGradient(me.x,me.y,0,me.x,me.y,34);
       mg.addColorStop(0,"rgba(251,239,201,.55)"); mg.addColorStop(1,"rgba(251,239,201,0)");
       ctx.fillStyle=mg; ctx.beginPath(); ctx.arc(me.x,me.y,34,0,6.29); ctx.fill();
@@ -1951,7 +1966,7 @@
     var pk=pick(p), prev=hover;
     hover=pk;
     canvas.style.cursor=pk?"pointer":"default";
-    if(pk && pk.type==="place" && pk.golf) showSkyTip(pk, ev); else if(pk) hideSkyTip();   // 빈 곳으로 이동해도 유지(닫기 × 로 삭제) · 다른 노드 위에선 숨김
+    if(pk && pk.type==="place" && pk.golf) showSkyTip(pk, ev); else if(pk && billiardFocus && pk.type==="person") showBilliardTip(pk, ev); else if(pk) hideSkyTip();   // 골프장/당구 동반자 호버 → 플로팅, 그 외 숨김
     if(hover!==prev) wake();
   });
   canvas.addEventListener("mouseleave",function(ev){ var rt=ev&&ev.relatedTarget; if(!(rt&&rt.closest&&rt.closest("#skyTip"))) hideSkyTip(); if(hover){ hover=null; wake(); } });
@@ -1970,6 +1985,16 @@
     var _xb=tip.querySelector(".st-x"); if(_xb) _xb.onclick=function(e){ e.stopPropagation(); hideSkyTip(); };
   }
   function hideSkyTip(){ var tip=$("#skyTip"); if(tip&&!tip.hidden) tip.hidden=true; }
+  // 당구 뷰: 사람 호버 → 나와의 당구 승패·최근 경기 플로팅
+  function showBilliardTip(node, ev){
+    var tip=$("#skyTip"), gv=$("#graphView"); if(!tip||!gv) return;
+    var rec=billiardRoundsVs(node.name); if(!rec.length){ hideSkyTip(); return; }
+    var wl=billiardRecordVs(node.name);
+    var lines=rec.slice(0,6).map(function(r){ return '<div class="st-b">'+r.date.slice(2).replace(/-/g,".")+' <span class="st-nm">'+esc(r.place)+'</span> '+(r.result==="win"?'<b class="bt-w">승</b>':'<b class="bt-l">패</b>')+'</div>'; }).join("");
+    tip.innerHTML='<button class="st-x" aria-label="닫기">&times;</button><div class="st-v">🎱 '+esc(node.name)+' · '+wl.w+'승 '+wl.l+'패</div>'+lines;
+    var r=gv.getBoundingClientRect(); tip.style.left=(ev.clientX-r.left)+"px"; tip.style.top=(ev.clientY-r.top-14)+"px"; tip.hidden=false;
+    var _xb=tip.querySelector(".st-x"); if(_xb) _xb.onclick=function(e){ e.stopPropagation(); hideSkyTip(); };
+  }
   canvas.addEventListener("mousedown",function(ev){ var p=pos(ev); dragging=pick(p); if(dragging&&!dragging.me){ selectNode(dragging); } wake(); });
   window.addEventListener("mouseup",function(){ if(dragging){ dragging=null; wake(); } });
   canvas.addEventListener("click",function(ev){ var p=pos(ev); var n=pick(p); if(n&&!n.me) selectNode(n); else if(!n){ closeDetail(); hideSkyTip(); } wake(); });
@@ -2120,14 +2145,19 @@
           return _sep+'<div class="gv-row gv-click" data-date="'+r.date+'" title="이 날짜 기록 수정"><span class="gv-date">'+r.date.slice(2).replace(/-/g,".")+'</span><span class="gv-place">'+esc(r.place)+'</span><span class="gv-sc'+(mw?" win":"")+'">'+r.mine+'</span><span class="gv-sc'+(tw?" win":"")+'">'+r.th+'</span></div>';
         }).join("")+'</div></div>';
     }
+    var bvr=billiardRecordVs(n.name), billLine="", billHtml="";
+    if(bvr.n){
+      billLine='<div class="golf-rec bill-rec">🎱 <b>'+bvr.w+'승 '+bvr.l+'패</b></div>';
+      billHtml='<div class="bill-vs">'+billiardRoundsVs(n.name).map(function(r){ var wn=(r.result==="win"); return '<div class="gv-row gv-click" data-date="'+r.date+'" title="이 날짜 기록 수정"><span class="gv-date">'+r.date.slice(2).replace(/-/g,".")+'</span><span class="gv-place">'+esc(r.place)+'</span><span class="bill-r '+(wn?"win":"lose")+'">'+(wn?"승":"패")+'</span></div>'; }).join("")+'</div>';
+    }
     var d=$("#detail");
     d.classList.remove("golf-mode");
     d.innerHTML =
       '<div class="dh"><div><div class="nm"><span class="dot" style="background:'+REL[n.rel].color+'"></span>'+esc(n.name)+' <span class="mc">('+n.meet+')</span></div></div><button class="x" aria-label="닫기">&times;</button></div>'+
-      recLine+
+      recLine+billLine+
       '<div class="with"><div class="wn-list">'+withHtml+'</div></div>'+
       renderRelatedRecs(n)+
-      gvHtml;
+      gvHtml+billHtml;
     d.classList.add("show");
     d.querySelector(".x").onclick=closeDetail;
     var chk=d.querySelector(".gv-chk"); if(chk) chk.onchange=function(){ d.classList.toggle("golf-mode", chk.checked); };
@@ -2254,6 +2284,12 @@
     var rounds=[]; state.entries.forEach(function(e){ roundsOf(e).forEach(function(r){ var mine=r.scores["나"], th=r.scores[name]; if(mine==null||mine===""||th==null||th==="") return; mine=+mine; th=+th; if(isNaN(mine)||isNaN(th)) return; rounds.push({date:e.date, place:r.place||"(장소)", mine:mine, th:th}); }); });
     rounds.sort(byDateDesc); return rounds;
   }
+  // 당구(허슬러 등) 특정인과 함께한 경기 목록 + 승패(내 기준)
+  function billiardRoundsVs(name){
+    var out=[]; (state.entries||[]).forEach(function(e){ var mm=e.meals||{}; Object.keys(mm).forEach(function(k){ var m=mm[k]; if(m && m.place && placeEmoji(m.place) && m.bill && (m.people||[]).indexOf(name)>=0) out.push({date:e.date, place:m.place, result:m.bill}); }); });
+    out.sort(byDateDesc); return out;
+  }
+  function billiardRecordVs(name){ var r=billiardRoundsVs(name), w=0,l=0; r.forEach(function(x){ if(x.result==="win")w++; else if(x.result==="lose")l++; }); return {w:w,l:l,n:w+l}; }
   function mealPeople(m){ var out=[]; if(m) Object.keys(m).forEach(function(k){ ((m[k]||{}).people||[]).forEach(function(n){ if(out.indexOf(n)<0)out.push(n); }); }); return out; }
   function readDrinks(){ var d={}; DRINKS.forEach(function(x){ var v=parseFloat(mval("d-"+x.key)); d[x.key]=(isNaN(v)||v<0)?0:v; }); return d; }
   function loadDrinks(dr){ DRINKS.forEach(function(x){ var el=document.getElementById("d-"+x.key); if(el){ var v=(dr&&+dr[x.key])||0; el.value=v?v:""; } }); }
@@ -2512,7 +2548,7 @@
     l.appendChild(gc);
     var bc=document.createElement("span"); bc.className="chip place-chip"; bc.setAttribute("aria-pressed", hideBilliard?"false":"true");
     bc.innerHTML='<span class="golf-ico">🎱</span>당구';
-    bc.onclick=function(){ hideBilliard=!hideBilliard; if(!hideBilliard){ REL_ORDER.forEach(function(r){ hiddenRels[r]=true; }); }   /* 당구 켜면 인맥 모두 비활성화 → 당구장 중심으로 동반자 표시 */
+    bc.onclick=function(){ hideBilliard=!hideBilliard; if(!hideBilliard){ REL_ORDER.forEach(function(r){ hiddenRels[r]=true; }); hiddenRels.work=false; hideGolf=true; hideRest=true; }   /* 당구 켜면 당구장 중심 + 직장 기본 표시 */
       renderLegend(); renderStats(); rebuild(); alpha=Math.max(alpha,0.4); wake(); };
     l.appendChild(bc);
   }
