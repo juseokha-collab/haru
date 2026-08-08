@@ -885,6 +885,8 @@
   .led-chart-legend .lg::before{content:""; width:9px; height:9px; border-radius:2px; display:inline-block}
   .led-chart-legend .lg.inc::before{background:#5FBFA0} .led-chart-legend .lg.exp::before{background:#E58A8A}
   .led-chart-legend .lg em{font-style:normal; font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums}
+  .led-chart-legend .lg-net::before{display:none}
+  .led-chart-legend .lg-net em.pos{color:#2f8f52} .led-chart-legend .lg-net em.neg{color:#e23b3b}
   .led-chart-svgwrap{position:relative}
   .led-chart-svgwrap .led-bar-inc, .led-chart-svgwrap .led-bar-exp{cursor:pointer}
   .led-svg{display:block; width:100%; height:170px}
@@ -1483,7 +1485,7 @@
     }
     ok.onclick=go;
     cancel.onclick=close;
-    back.onclick=function(e){ if(e.target===back) close(); };
+    back.onclick=null;   // 바깥 클릭으로 닫히지 않음(취소/확인·ESC로만)
     if(o.requireText) inp.onkeydown=function(e){ if(e.key==="Enter") go(); };
     document.onkeydown=function(e){ if(e.key==="Escape") close(); };
   }
@@ -1502,7 +1504,7 @@
     function close(){ back.hidden=true; ok.onclick=cancel.onclick=back.onclick=null; }
     ok.onclick=function(){ var r=o.onOk?o.onOk(area.value):true; if(r!==false) close(); };
     cancel.onclick=close;
-    back.onclick=function(e){ if(e.target===back) close(); };
+    back.onclick=null;   // 바깥 클릭으로 닫히지 않음
   }
 
   // ---------- derived graph model ----------
@@ -2665,7 +2667,6 @@
     var back=$("#relModalBack");
     function close(){ back.hidden=true; }
     $("#relModalClose").onclick=close;
-    back.addEventListener("click",function(e){ if(e.target===back) close(); });
   })();
 
   // ---------- 관리자 모드 (PC) ----------
@@ -3042,7 +3043,6 @@
     acts.appendChild(cancelB); acts.appendChild(saveB);
     modal.appendChild(title); modal.appendChild(form); modal.appendChild(acts);
     back.appendChild(modal); document.body.appendChild(back);
-    back.addEventListener("click",function(ev){ if(ev.target===back) close(); });
   }
   // 편집된 라운드 값을 기록에 반영(날짜·골프장·홀수·나·동반자 점수) — 저장/렌더는 호출측에서
   // e가 null이면 새 라운드: 날짜의 기존 기록에 합치거나 새 기록 생성. 반영한 entry를 반환
@@ -3146,7 +3146,6 @@
     var back=$("#adminModal"); if(!back) return;
     function close(){ back.hidden=true; }
     $("#adminClose").onclick=close;
-    back.addEventListener("click",function(e){ if(e.target===back) close(); });
     $("#adminTabs").addEventListener("click",function(e){ var b=e.target.closest("button"); if(!b) return; var at=b.getAttribute("data-at");
       var tabs=this.children; for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle("on", tabs[i]===b);
       adminTab=at; adminFindQ=""; golfSearchQ=""; var _fi=$("#adminFind"); if(_fi) _fi.value=""; setAdminFindPh(); renderAdminYearSel();
@@ -4323,7 +4322,8 @@
       s+='<text x="'+cx.toFixed(1)+'" y="'+(H-5)+'" text-anchor="middle" class="led-axl">'+o.m+'</text>';
     });
     s+='</svg>';
-    var leg='<div class="led-chart-legend"><span class="lg inc">수입 <em>평균 '+fmtWon(incAvg)+'원</em></span><span class="lg exp">지출 <em>평균 '+fmtWon(expAvg)+'원</em></span></div>';
+    var sInc=0,sExp=0; months.forEach(function(o){ sInc+=o.inc; sExp+=o.exp; }); var netY=sInc-sExp;
+    var leg='<div class="led-chart-legend"><span class="lg lg-net">연간 수지 <em class="'+(netY<0?"neg":"pos")+'">'+fmtWon(netY)+'원</em></span><span class="lg inc">수입 <em>평균 '+fmtWon(incAvg)+'원</em></span><span class="lg exp">지출 <em>평균 '+fmtWon(expAvg)+'원</em></span></div>';
     var svgwrap=document.createElement("div"); svgwrap.className="led-chart-svgwrap"; svgwrap.innerHTML=s;
     var tip=document.createElement("div"); tip.className="lb-tip"; svgwrap.appendChild(tip);
     Array.prototype.forEach.call(svgwrap.querySelectorAll("[data-v]"), function(el){
@@ -4415,7 +4415,6 @@
     saveB.onclick=function(){ save(); renderAdminLedger(); updateSkyDate(); close(); };
     acts.appendChild(cancelB); acts.appendChild(saveB);
     modal.appendChild(body); modal.appendChild(acts); back.appendChild(modal); document.body.appendChild(back);
-    back.addEventListener("click",function(e){ if(e.target===back){ save(); renderAdminLedger(); close(); } });
   }
 
   function openCatPeriod(c, onSave){   // 항목 표시 기간(종료월)만 편집 — 시작월은 새 항목 추가 시 자동 지정
@@ -4428,11 +4427,11 @@
     var mon=document.createElement("input"); mon.type="month"; mon.className="ledcat-mon"; mon.style.width="160px"; mon.value=c.end||"";
     lbl.appendChild(mon); body.appendChild(lbl);
     var acts=document.createElement("div"); acts.className="modal-actions";
+    var cancelB=document.createElement("button"); cancelB.type="button"; cancelB.className="btn"; cancelB.textContent="닫기"; cancelB.onclick=function(){ back.remove(); };
     var clr=document.createElement("button"); clr.type="button"; clr.className="btn"; clr.textContent="종료 해제"; clr.onclick=function(){ delete c.end; save(); if(onSave)onSave(); renderAdminLedger(); back.remove(); };
     var ok=document.createElement("button"); ok.type="button"; ok.className="btn primary"; ok.textContent="저장"; ok.onclick=function(){ var v=mon.value; if(v) c.end=v; else delete c.end; save(); if(onSave)onSave(); renderAdminLedger(); back.remove(); };
-    acts.appendChild(clr); acts.appendChild(ok);
+    acts.appendChild(cancelB); acts.appendChild(clr); acts.appendChild(ok);
     modal.appendChild(body); modal.appendChild(acts); back.appendChild(modal); document.body.appendChild(back);
-    back.addEventListener("click",function(e){ if(e.target===back) back.remove(); });
   }
   function openAutopay(c){   // 카드 자동이체 명세 편집(일자/항목/금액/비고)
     c.autopay=c.autopay||[];
@@ -4466,7 +4465,6 @@
     okB.onclick=function(){ save(); renderAdminLedger(); updateSkyDate(); close(); };
     acts.appendChild(sumEl); acts.appendChild(okB);
     modal.appendChild(body); modal.appendChild(acts); back.appendChild(modal); document.body.appendChild(back);
-    back.addEventListener("click",function(e){ if(e.target===back){ save(); renderAdminLedger(); updateSkyDate(); close(); } });
   }
 
   // 같은 날짜에 기록이 둘 이상이면 하나로 병합(끼니는 빈 슬롯으로 이동, 골프 라운드는 슬롯별 스코어로 보존)
