@@ -4125,35 +4125,20 @@
         var item=document.createElement("div"); item.className="led-item"+(hot?" led-hot":"")+(selc?" led-sel":"");
         item.innerHTML='<span class="led-nm">'+esc(c.name)+(c.day?' <i class="led-day">'+c.day+'일</i>':'')+(c.memo?' <i class="led-memo">'+esc(c.memo)+'</i>':'')+'</span>';
         var nmEl=item.querySelector(".led-nm"); if(nmEl){ nmEl.title="이 항목 추이 보기"; nmEl.onclick=function(){ ledChartSel[g.k]=(ledChartSel[g.k]===c.id)?null:c.id; renderAdminLedger(); }; }
-        var inp=document.createElement("input"); inp.type="text"; inp.className="led-in"+(v0<0?" neg":""); inp.inputMode="numeric"; inp.value=v0?fmtWon(v0):""; inp.placeholder="0";
-        inp.oninput=function(){ inp.classList.toggle("neg", parseWon(inp.value)<0); };
-        inp.onchange=function(){ var v=parseWon(inp.value); state.ledger[ym]=state.ledger[ym]||{cells:{},note:""}; state.ledger[ym].cells=state.ledger[ym].cells||{}; if(v) state.ledger[ym].cells[c.id]=v; else delete state.ledger[ym].cells[c.id]; save(); renderAdminLedger(); };
-        item.appendChild(inp);
         var fixed=cardFixed(c);
-        if(g.k==="card" && c.target>0){   // 카드 이번달 실적 진행률 (고정 자동이체 반영)
-          var filled=Math.max(v0||0, fixed);   // 고정합계는 최소 채움으로 보장
-          var pct=Math.round(filled/c.target*100), bw=Math.min(100,Math.max(0,pct));
-          var fxpct=fixed>0?Math.min(100,Math.max(0,Math.round(fixed/c.target*100))):0;   // 고정분 위치(진행바 눈금)
-          var remain=Math.max(0,c.target-filled), done=pct>=100;
-          var prog=document.createElement("div"); prog.className="led-prog";
-          prog.innerHTML='<div class="led-prog-track"><i class="'+(done?"done":"")+'" style="width:'+bw+'%"></i>'+(fxpct>0&&fxpct<100?'<u class="led-prog-fx" style="left:'+fxpct+'%" title="고정 자동이체 '+fmtWon(fixed)+'"></u>':'')+'</div><span class="led-prog-lbl'+(done?" done":"")+'">'+pct+'% <em>/ '+fmtWon(c.target)+'</em>'+(done?' <b class="lp-ok">달성</b>':' <b class="lp-rem">남은 '+fmtWon(remain)+'</b>')+'</span>';
-          item.appendChild(prog);
-        }
-        if(g.k==="card"){   // 자동이체 명세(인라인 확장 · 토글 하나로 전 카드 동시)
-          var ap=c.autopay||[], open=ledApOpenAll;
-          var tog=document.createElement("button"); tog.type="button"; tog.className="led-ap-tog"+(open?" open":"");
-          tog.innerHTML='<span class="led-ap-cap">자동이체 '+ap.length+'건 <em>· 고정 '+fmtWon(fixed)+'</em></span><span class="led-ap-car">'+(open?"▾":"▸")+'</span>';
-          tog.onclick=function(){ ledApOpenAll=!ledApOpenAll; renderAdminLedger(); };
-          item.appendChild(tog);
-          // 청구금액(카드사 실제 이체 금액, 실적금액과 다를 수 있음)
-          var crow=document.createElement("div"); crow.className="led-bill";
-          var cl=document.createElement("span"); cl.className="lb-lbl"; cl.textContent="청구금액";
+        function mkCellInput(cls){ var inp=document.createElement("input"); inp.type="text"; inp.className=cls+(v0<0?" neg":""); inp.inputMode="numeric"; inp.value=v0?fmtWon(v0):""; inp.placeholder=(cls==="led-in"?"0":"0");
+          inp.oninput=function(){ inp.classList.toggle("neg", parseWon(inp.value)<0); };
+          inp.onchange=function(){ var v=parseWon(inp.value); state.ledger[ym]=state.ledger[ym]||{cells:{},note:""}; state.ledger[ym].cells=state.ledger[ym].cells||{}; if(v) state.ledger[ym].cells[c.id]=v; else delete state.ledger[ym].cells[c.id]; save(); renderAdminLedger(); };
+          return inp; }
+        if(g.k!=="card"){ item.appendChild(mkCellInput("led-in")); }
+        if(g.k==="card"){
+          // 1행: 청구금액(상단 큰 입력 — 중요도 높음)
           var billEff=ledCardBill(ym,c.id);
-          var bill=document.createElement("input"); bill.type="text"; bill.className="lb-bill"; bill.inputMode="text"; bill.value=billEff?fmtWon(billEff):""; bill.placeholder="0"; bill.title="카드 청구(이체) 금액 · 미입력 시 실적금액과 동일"; if(billEff<0) bill.classList.add("neg");
+          var bill=document.createElement("input"); bill.type="text"; bill.className="led-in"+(billEff<0?" neg":""); bill.inputMode="numeric"; bill.value=billEff?fmtWon(billEff):""; bill.placeholder="청구금액"; bill.title="카드 청구(이체) 금액 · 미입력 시 실적금액과 동일";
           bill.oninput=function(){ bill.classList.toggle("neg", parseWon(bill.value)<0); };
           bill.onchange=function(){ var s=bill.value.trim(); var m=state.ledger[ym]=state.ledger[ym]||{cells:{},notes:{}}; m.bills=m.bills||{}; if(s===""){ delete m.bills[c.id]; } else { m.bills[c.id]=parseWon(bill.value); } save(); renderAdminLedger(); };
-          crow.appendChild(cl); crow.appendChild(bill); item.appendChild(crow);
-          // 자동이체 구좌 / 잔액 / 이체후 잔액 = 은행잔액 − 청구금액 (같은 구좌면 앞 카드에서 이어받음)
+          item.appendChild(bill);
+          // 2행: 자동이체 구좌 / 잔액 / 이체후 잔액
           var brow=document.createElement("div"); brow.className="led-bank";
           var settled = ym < "2026-08";   // 7월까지: 잔액=청구금액 → 이체후 0(정산완료로 간주)
           var bi=bankChain[c.id], isPrimary, startBal, after;
@@ -4167,8 +4152,25 @@
             bal.onchange=function(){ var s=bal.value.trim(); if(s===""){ delete c.balance; } else { c.balance=parseWon(bal.value); } save(); renderAdminLedger(); }; }
           else { bal.value=fmtWon(startBal); bal.readOnly=true; bal.classList.add("ro"); if(startBal<0) bal.classList.add("neg"); }   // settled=청구금액 상속 / 같은 구좌 뒤 카드=앞 카드 이체후 잔액 상속(수정불가)
           var aft=document.createElement("span"); aft.className="lb-after"+(after<0?" neg":""); aft.title="이체 후 잔액 = 구좌 잔액 − 청구금액"; aft.innerHTML=wonH(after);
-          brow.appendChild(acct); brow.appendChild(bal); brow.appendChild(aft);
-          item.appendChild(brow);
+          brow.appendChild(acct); brow.appendChild(bal); brow.appendChild(aft); item.appendChild(brow);
+          // 3행: 실적금액(작은 입력)
+          var srow=document.createElement("div"); srow.className="led-bill";
+          var sl=document.createElement("span"); sl.className="lb-lbl"; sl.textContent="실적금액";
+          srow.appendChild(sl); srow.appendChild(mkCellInput("lb-bill")); item.appendChild(srow);
+          // 4행: 실적 진행률(고정 자동이체 반영)
+          if(c.target>0){
+            var filled=Math.max(v0||0, fixed), pct=Math.round(filled/c.target*100), bw=Math.min(100,Math.max(0,pct));
+            var fxpct=fixed>0?Math.min(100,Math.max(0,Math.round(fixed/c.target*100))):0, remain=Math.max(0,c.target-filled), done=pct>=100;
+            var prog=document.createElement("div"); prog.className="led-prog";
+            prog.innerHTML='<div class="led-prog-track"><i class="'+(done?"done":"")+'" style="width:'+bw+'%"></i>'+(fxpct>0&&fxpct<100?'<u class="led-prog-fx" style="left:'+fxpct+'%" title="고정 자동이체 '+fmtWon(fixed)+'"></u>':'')+'</div><span class="led-prog-lbl'+(done?" done":"")+'">'+pct+'% <em>/ '+fmtWon(c.target)+'</em>'+(done?' <b class="lp-ok">달성</b>':' <b class="lp-rem">남은 '+fmtWon(remain)+'</b>')+'</span>';
+            item.appendChild(prog);
+          }
+          // 5행: 자동이체 토글 + 명세
+          var ap=c.autopay||[], open=ledApOpenAll;
+          var tog=document.createElement("button"); tog.type="button"; tog.className="led-ap-tog"+(open?" open":"");
+          tog.innerHTML='<span class="led-ap-cap">자동이체 '+ap.length+'건 <em>· 고정 '+fmtWon(fixed)+'</em></span><span class="led-ap-car">'+(open?"▾":"▸")+'</span>';
+          tog.onclick=function(){ ledApOpenAll=!ledApOpenAll; renderAdminLedger(); };
+          item.appendChild(tog);
           if(open){
             var list=document.createElement("div"); list.className="led-ap-list";
             ap.slice().sort(function(a,b){ return (a.day||99)-(b.day||99); }).forEach(function(a){
