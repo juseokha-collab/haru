@@ -4234,8 +4234,15 @@
     // 합계 뷰: 비중 가장 큰 항목 1개를 색 구분해 스택
     var domId=null, domName="";
     if(!selId){ var best=-1; ledCatsOf(gk).forEach(function(c){ var sm=0; months.forEach(function(ym,i){ if(present[i]) sm+=Math.max(0, ledCell(ym,c.id)); }); if(sm>best){ best=sm; domId=c.id; domName=c.name; } }); if(best<=0) domId=null; }
+    function catAvgWin(id){ var s=0,n=0; months.forEach(function(ym,i){ if(present[i]){ s+=ledCell(ym,id); n++; } }); return n? s/n : 0; }   // 표시 구간 평균(합=그룹 평균)
+    var legHtml='';
+    if(domId){
+      var others=ledCatsOf(gk).filter(function(c){ return c.id!==domId; }).map(function(c){ return {n:c.name, a:catAvgWin(c.id)}; }).filter(function(o){ return Math.round(o.a)!==0; }).sort(function(a,b){ return b.a-a.a; });
+      var othersStr=others.map(function(o){ return esc(o.n)+' '+fmtWon(o.a)+'원'; }).join(', ');
+      legHtml=' <span class="lbc-leg"><i class="dot dom"></i>'+esc(domName)+' '+fmtWon(catAvgWin(domId))+'원 <i class="dot rest"></i>그 외('+othersStr+')</span>';
+    }
     var cap=document.createElement("div"); cap.className="led-bar-cap";
-    cap.innerHTML='<b>'+esc(selName)+'</b> 추이 <span class="lbc-range">'+months[0].slice(2).replace("-",".")+"~"+months[12].slice(2).replace("-",".")+'</span>'+(pv.length?' <span class="lbc-avg">평균 '+wonH(avg)+'</span>':'')+(domId?' <span class="lbc-leg"><i class="dot dom"></i>'+esc(domName)+' <i class="dot rest"></i>그 외</span>':'')+(canReset?' <button type="button" class="lbc-reset">합계로</button>':'');
+    cap.innerHTML='<b>'+esc(selName)+'</b> 추이 <span class="lbc-range">'+months[0].slice(2).replace("-",".")+"~"+months[12].slice(2).replace("-",".")+'</span>'+(pv.length?' <span class="lbc-avg">평균 '+wonH(avg)+'</span>':'')+legHtml+(canReset?' <button type="button" class="lbc-reset">합계로</button>':'');
     wrap.appendChild(cap);
     if(canReset){ var rb=cap.querySelector(".lbc-reset"); if(rb) rb.onclick=function(){ ledChartSel[gk]=null; renderAdminLedger(); }; }
     if(!pv.length){ var em=document.createElement("div"); em.className="led-empty"; em.style.padding="8px"; em.textContent="데이터가 쌓이면 추이가 표시돼요"; wrap.appendChild(em); return wrap; }
