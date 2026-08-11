@@ -739,6 +739,7 @@
   .led-navb:hover{border-color:var(--accent); color:var(--accent-ink)}
   .led-mlabel{font-size:13px; font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums; min-width:78px; text-align:center}
   .led-imp{border:1px solid var(--border); background:var(--surface); color:var(--ink-2); font-family:inherit; font-size:11.5px; font-weight:600; padding:5px 10px; border-radius:7px; cursor:pointer; margin-right:6px}
+  .led-imp.led-imp-cfg{font-weight:400}
   .led-imp:hover{border-color:var(--accent); color:var(--accent-ink)}
   .led-sum{display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; position:sticky; top:0; z-index:5; background:var(--surface); padding:6px 0 8px; box-shadow:0 6px 8px -6px rgba(0,0,0,.15)}
   .led-s{flex:1; min-width:80px; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:7px 6px; text-align:center}
@@ -4109,9 +4110,8 @@
     el.innerHTML="";
     // 상단 헤더: 월 선택은 상단 셀렉트(2026.08월)로 통합, 여기엔 PC 편집 버튼만
     var head=document.createElement("div"); head.className="led-head";
-    var cfg=document.createElement("button"); cfg.type="button"; cfg.className="led-imp"; cfg.textContent="⚙ 항목"; cfg.title="항목 추가·이름·결제일 편집"; cfg.onclick=openLedgerCats;
-    var imp=document.createElement("button"); imp.type="button"; imp.className="led-imp"; imp.textContent="엑셀 붙여넣기"; imp.title="엑셀 표를 붙여 한 번에 가져오기"; imp.onclick=function(){ openLedgerImport(yr); };
-    head.appendChild(cfg); head.appendChild(imp); el.appendChild(head);
+    var cfg=document.createElement("button"); cfg.type="button"; cfg.className="led-imp led-imp-cfg"; cfg.textContent="⚙ 항목"; cfg.title="항목 추가·이름·결제일 편집"; cfg.onclick=openLedgerCats;
+    head.appendChild(cfg); el.appendChild(head);
     var t=ledMonthTotals(ym);
     var sum=document.createElement("div"); sum.className="led-sum";
     sum.innerHTML='<div class="led-s"><i>수입</i><b>'+wonH(t.income)+'</b></div><div class="led-s"><i>지출</i><b>'+wonH(t.expense)+'</b></div><div class="led-s"><i>투자</i><b>'+wonH(t.invest)+'</b></div><div class="led-s net"><i>수지</i><b class="'+(t.net<0?"neg":"pos")+'">'+fmtWon(t.net)+'</b></div>';
