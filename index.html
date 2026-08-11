@@ -520,6 +520,7 @@
   .todo-row .td-date{font-family:inherit; font-size:10.5px; color:var(--ink-2); background:var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:3px 4px; cursor:pointer; white-space:nowrap; font-variant-numeric:tabular-nums; width:48px; box-sizing:border-box; text-align:center}
   .todo-row .td-date.empty{color:var(--ink-3)}
   .todo-row .td-date.soon{color:#E06B6B; font-weight:700; border-color:color-mix(in srgb, #E06B6B 55%, transparent); background:color-mix(in srgb, #E06B6B 13%, transparent)}
+  .todo-row .td-date.soon.soon2{background:color-mix(in srgb, #E06B6B 30%, transparent); border-color:color-mix(in srgb, #E06B6B 75%, transparent)}   /* 오늘/내일: 더 진하게 */
   .todo-row .td-date:hover{border-color:var(--accent)}
   .todo-row.done .td-task{text-decoration:line-through; color:var(--ink-3)}
   /* 일정관리 */
@@ -3870,7 +3871,7 @@
       if(it.due){ var dd=Math.round((parseD(it.due)-parseD(todayStr()))/864e5);   // 남은 일수: 0=오늘,1=내일,2~7=D-2~D-7, 그 외=월.일
         dlabel.textContent = dd===0?"오늘" : dd===1?"내일" : (dd>=2&&dd<=7)?("D-"+dd) : it.due.slice(5).replace("-","."); }
       else dlabel.textContent="기한";
-      if(it.due && !it.done && Math.round((parseD(it.due)-parseD(todayStr()))/864e5)<=7) dlabel.classList.add("soon");   // 기한 7일 이내(지난 것 포함) 강조
+      if(it.due && !it.done){ var _dd=Math.round((parseD(it.due)-parseD(todayStr()))/864e5); if(_dd<=7) dlabel.classList.add("soon"); if(_dd<=1) dlabel.classList.add("soon2"); }   // 7일 이내 강조 · 오늘/내일은 더 진하게
       dwrap.appendChild(due); dwrap.appendChild(dlabel);
       var flag=document.createElement("input"); flag.type="checkbox"; flag.className="td-flag"; flag.checked=!!it.flag; flag.title="색상 표시(구분)";   // 행 색상 강조
       flag.onchange=function(r){ return function(){ r.classList.toggle("flagged", r.querySelector(".td-flag").checked); saveTodos(); }; }(row);
@@ -4203,7 +4204,8 @@
     el.appendChild(buildLedgerChart(yr));
   }
   function shiftLedgerMonth(d){ var m=ledgerMonth+d, y=+adminYear; if(m<1){m=12;y--;} else if(m>12){m=1;y++;} ledgerMonth=m; adminYear=String(y); renderAdminYearSel(); renderAdminLedger(); }
-  function ledGroupMonthVal(gk, ym, selId){ if(selId) return ledCell(ym,selId); var s=0; ledCatsOf(gk).forEach(function(c){ s+=ledCell(ym,c.id); }); return s; }
+  function ledSeriesVal(gk, ym, id){ return gk==="card"? ledCardBill(ym,id) : ledCell(ym,id); }   // 카드는 청구금액(월별) 기준 → 그래프도 총액과 일치
+  function ledGroupMonthVal(gk, ym, selId){ if(selId) return ledSeriesVal(gk,ym,selId); var s=0; ledCatsOf(gk).forEach(function(c){ s+=ledSeriesVal(gk,ym,c.id); }); return s; }
   function ledMonthHasData(ym){ var m=state.ledger[ym]; return !!(m && m.cells && Object.keys(m.cells).length); }
   // 대분류(또는 선택 항목) 13개월 추이: 1년전 같은 달~이번달, 기록 있는 달만 평균/막대(없는 달은 공란), 변동폭 확대
   function buildAcctBox(){   // 보유 계좌(카카오뱅크/페이/삼성CMA…) 잔액 입력 + 합계 → 카드후 잔액 합계에 포함
@@ -4231,13 +4233,15 @@
     if(selId){ var c=ledCatsOf(gk).filter(function(x){return x.id===selId;})[0]; if(c){ selName=c.name; canReset=true; } }
     var pv=[]; months.forEach(function(ym,i){ if(present[i]) pv.push(vals[i]); });
     var avg=pv.length? pv.reduce(function(a,b){return a+b;},0)/pv.length : 0;
-    // 합계 뷰: 비중 가장 큰 항목 1개를 색 구분해 스택
+    // 합계 뷰: 비중 가장 큰 항목 1개를 색 구분해 스택 (카드는 신한·현대·삼성·KB 4개로 한정)
+    var mainCard={c_shinhan:1,c_hyundai:1,c_samsung:1,c_kb:1}, isCardG=(gk==="card");
+    var legCand=ledCatsOf(gk).filter(function(c){ return !isCardG || mainCard[c.id]; });   // 캡션 후보 항목
     var domId=null, domName="";
-    if(!selId){ var best=-1; ledCatsOf(gk).forEach(function(c){ var sm=0; months.forEach(function(ym,i){ if(present[i]) sm+=Math.max(0, ledCell(ym,c.id)); }); if(sm>best){ best=sm; domId=c.id; domName=c.name; } }); if(best<=0) domId=null; }
-    function catAvgWin(id){ var s=0,n=0; months.forEach(function(ym,i){ if(present[i]){ s+=ledCell(ym,id); n++; } }); return n? s/n : 0; }   // 표시 구간 평균(합=그룹 평균)
+    if(!selId){ var best=-1; legCand.forEach(function(c){ var sm=0; months.forEach(function(ym,i){ if(present[i]) sm+=Math.max(0, ledSeriesVal(gk,ym,c.id)); }); if(sm>best){ best=sm; domId=c.id; domName=c.name; } }); if(best<=0) domId=null; }
+    function catAvgWin(id){ var s=0,n=0; months.forEach(function(ym,i){ if(present[i]){ s+=ledSeriesVal(gk,ym,id); n++; } }); return n? s/n : 0; }   // 표시 구간 평균
     var legHtml='';
     if(domId){
-      var others=ledCatsOf(gk).filter(function(c){ return c.id!==domId; }).map(function(c){ return {n:c.name, a:catAvgWin(c.id)}; }).filter(function(o){ return Math.round(o.a)!==0; }).sort(function(a,b){ return b.a-a.a; });
+      var others=legCand.filter(function(c){ return c.id!==domId; }).map(function(c){ return {n:c.name, a:catAvgWin(c.id)}; }).filter(function(o){ return Math.round(o.a)!==0; }).sort(function(a,b){ return b.a-a.a; }).slice(0,3);   // 주력 포함 총 4개
       var othersStr=others.map(function(o){ return esc(o.n)+' '+fmtWon(o.a)+'원'; }).join(', ');
       legHtml=' <span class="lbc-leg"><i class="dot dom"></i>'+esc(domName)+' '+fmtWon(catAvgWin(domId))+'원 <i class="dot rest"></i>그 외('+othersStr+')</span>';
     }
@@ -4255,7 +4259,7 @@
     months.forEach(function(ym,i){ var x=pl+i*(bw+gap);
       if(!present[i]) return;   // 값 없는 달은 공란
       var v=vals[i], cur=(i===n-1?" cur":"");
-      var dv= domId? Math.max(0, ledCell(ym,domId)) : 0, rv=v-dv;
+      var dv= domId? Math.max(0, ledSeriesVal(gk,ym,domId)) : 0, rv=v-dv;
       if(domId && v>=0 && dv>=0 && rv>=0){   // 주력(바닥) + 그 외(위) 스택
         var yD=yOf(dv), hD=Math.max(0, zeroY-yD); if(hD>0.4) s+='<rect x="'+x.toFixed(1)+'" y="'+yD.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+hD.toFixed(1)+'" class="lb-dom'+cur+'"></rect>';
         var yR=yOf(v), hR=Math.max(0, yD-yR); if(hR>0.4) s+='<rect x="'+x.toFixed(1)+'" y="'+yR.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+hR.toFixed(1)+'" rx="1" class="lb-bar2'+cur+'"></rect>';
