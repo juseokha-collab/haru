@@ -535,6 +535,8 @@
   .plan-row.flagged{background:color-mix(in srgb,#E6A23C 11%,transparent); border-left:3px solid #E6A23C; padding-left:8px; border-radius:6px}
   .pl-top .pl-flag{-webkit-appearance:none; appearance:none; width:15px; height:15px; flex:none; margin:0 0 0 2px; border:1.5px solid var(--border); border-radius:4px; background:var(--surface); cursor:pointer}
   .pl-top .pl-flag:checked{background:#E6A23C; border-color:#E6A23C}   /* 체크 시 강조색으로 박스 채움 */
+  .pl-top .pl-edit{flex:none; border:1px solid var(--border); background:var(--surface); color:var(--ink-3); font-size:11px; line-height:1; padding:2px 6px; border-radius:6px; cursor:pointer}
+  .pl-top .pl-edit:hover{border-color:var(--accent); color:var(--accent-ink)}
   .pl-save{margin-left:2px; font-family:inherit; font-size:11px; font-weight:700; border:1px solid var(--accent); background:var(--accent); color:#fff; border-radius:7px; padding:3px 11px; cursor:pointer}
   .pl-save.done{background:#3FA35A; border-color:#3FA35A}
   .pl-top{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
@@ -2552,8 +2554,7 @@
   function drinkMonthlyData(period){
     var now=new Date(), months=[];
     if(period==="year"){ for(var k=11;k>=0;k--){ var d=new Date(now.getFullYear(), now.getMonth()-k, 1); months.push(d.getFullYear()+"-"+pad(d.getMonth()+1)); } }
-    else { var earliest=null; state.entries.forEach(function(e){ if(e.drinks && drinkTotal(e.drinks)>0){ var ym=e.date.slice(0,7); if(!earliest||ym<earliest) earliest=ym; } });
-      if(!earliest) earliest=now.getFullYear()+"-"+pad(now.getMonth()+1);
+    else { var earliest="2026-01";   // 전체 = 2026년 1월부터
       var d2=new Date(+earliest.slice(0,4), +earliest.slice(5)-1, 1);
       while(true){ months.push(d2.getFullYear()+"-"+pad(d2.getMonth()+1)); if(d2.getFullYear()===now.getFullYear() && d2.getMonth()===now.getMonth()) break; d2.setMonth(d2.getMonth()+1); if(months.length>240) break; } }
     var data={}, idx={}; DRINKS.forEach(function(x){ data[x.key]=months.map(function(){return 0;}); }); months.forEach(function(m,i){ idx[m]=i; });
@@ -2592,9 +2593,9 @@
   }
   function renderTimeline(){
     var tl=$("#timeline"); tl.innerHTML="";
-    var list=[];
-    state.entries.forEach(function(e){ list.push({kind:"entry", date:e.date, ref:e}); });
-    (state.events||[]).forEach(function(ev){ list.push({kind:"event", date:ev.date, ref:ev}); });
+    var list=[], _tdy=todayStr();
+    state.entries.forEach(function(e){ if(e.date>_tdy) return; list.push({kind:"entry", date:e.date, ref:e}); });   // 미래(앞으로의 일정) 제외 — 오늘~과거만
+    (state.events||[]).forEach(function(ev){ if(ev.date>_tdy) return; list.push({kind:"event", date:ev.date, ref:ev}); });
     list.sort(function(a,b){ if(a.date!==b.date) return a.date<b.date?1:-1; return a.kind==="entry"?-1:1; });
     if(!list.length){ tl.innerHTML='<div class="tl-empty">첫 기록을 남겨보세요.</div>'; return; }
     list.forEach(function(row){
@@ -3992,6 +3993,9 @@
       var task=document.createElement("span"); task.className="pl-task"; task.textContent=p.task||"";
       if(p.ts){ var cd=new Date(p.ts); var cr=document.createElement("span"); cr.className="pl-created"; cr.textContent=String(cd.getFullYear()).slice(2)+"."+pad(cd.getMonth()+1)+"."+pad(cd.getDate())+" 기록"; task.appendChild(document.createTextNode(" ")); task.appendChild(cr); }
       top.appendChild(st); top.appendChild(task);
+      if(p.repeat){ var ped=document.createElement("button"); ped.type="button"; ped.className="pl-edit"; ped.textContent="✏"; ped.title="반복일정 내용 수정";
+        ped.onclick=function(){ askConfirm({ title:"반복일정 수정", message:"반복일정 내용을 입력하세요.", okText:"저장", promptText:true, initial:p.task||"", placeholder:"일정 내용", onOk:function(v){ v=(v||"").trim(); if(!v) return; p.task=v; save(); renderAdminPlan(); updateSkyDate(); } }); };
+        top.appendChild(ped); }
       var flag=document.createElement("input"); flag.type="checkbox"; flag.className="pl-flag"; flag.checked=!!p.flag; flag.title="색상 표시(구분)";   // 납기 앞 체크 → 행 색상
       flag.onchange=function(){ p.flag=flag.checked; row.classList.toggle("flagged", p.flag); save(); };
       top.appendChild(flag);
