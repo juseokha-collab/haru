@@ -586,6 +586,12 @@
   .dk-bar i{display:block; height:100%; border-radius:5px; transition:width .3s}
   .dk-row .val{width:34px; text-align:right; font-size:12px; font-variant-numeric:tabular-nums; color:var(--ink); flex:none}
   .dk-empty{color:var(--ink-3); font-size:12.5px; padding:10px 0}
+  .dk-legend{display:flex; flex-wrap:wrap; gap:4px 12px; font-size:11px; color:var(--ink-2); margin:2px 0 4px}
+  .dk-legend .dk-lg{display:inline-flex; align-items:center; gap:4px; font-variant-numeric:tabular-nums}
+  .dk-legend .dk-lg i{width:9px; height:9px; border-radius:2px; display:inline-block}
+  .dk-svg{display:block; width:100%; height:auto}
+  .dk-svg .dk-axl{stroke:var(--border); stroke-width:1}
+  .dk-svg .dk-axx{fill:var(--ink-3); font-size:8px}
 
   .tl-meals{margin-top:6px; display:flex; flex-direction:column; gap:2px}
   .tl-meal{font-size:12px; color:var(--ink-2); line-height:1.55}
@@ -2534,13 +2540,44 @@
     for(var wi=7; wi>=1; wi--){ var dd=new Date(); dd.setDate(dd.getDate()-wi); var ds=fmt(dd), lv=lvMap[ds]||0;
       strip+='<div class="dw"><span class="dwd'+(dd.getDay()===0?" sun":dd.getDay()===6?" sat":"")+'">'+DOW[dd.getDay()]+'</span><span class="dwdot lv'+lv+'"></span></div>'; }
     var wk=$("#dkWeek"); if(wk) wk.innerHTML=strip;
+    if(drinkPeriod==="year" || drinkPeriod==="all"){ renderDrinkLineChart(el, drinkPeriod); return; }   // 1년·전체 → 월별 선그래프
     var html='';
     if(total===0) html='<div class="dk-empty">이 기간엔 음주 기록이 없어요.</div>';
     else DRINKS.forEach(function(x){
-      var v=totals[x.key], w=Math.round(v/maxv*100);
+      var v=Math.round(totals[x.key]*10)/10, w=Math.round(totals[x.key]/maxv*100);
       html+='<div class="dk-row" title="'+x.ko+'"><span class="nm">'+x.label+'</span><span class="dk-bar"><i style="width:'+w+'%;background:'+x.color+'"></i></span><span class="val">'+v+'</span></div>';
     });
     el.innerHTML=html;
+  }
+  function drinkMonthlyData(period){
+    var now=new Date(), months=[];
+    if(period==="year"){ for(var k=11;k>=0;k--){ var d=new Date(now.getFullYear(), now.getMonth()-k, 1); months.push(d.getFullYear()+"-"+pad(d.getMonth()+1)); } }
+    else { var earliest=null; state.entries.forEach(function(e){ if(e.drinks && drinkTotal(e.drinks)>0){ var ym=e.date.slice(0,7); if(!earliest||ym<earliest) earliest=ym; } });
+      if(!earliest) earliest=now.getFullYear()+"-"+pad(now.getMonth()+1);
+      var d2=new Date(+earliest.slice(0,4), +earliest.slice(5)-1, 1);
+      while(true){ months.push(d2.getFullYear()+"-"+pad(d2.getMonth()+1)); if(d2.getFullYear()===now.getFullYear() && d2.getMonth()===now.getMonth()) break; d2.setMonth(d2.getMonth()+1); if(months.length>240) break; } }
+    var data={}, idx={}; DRINKS.forEach(function(x){ data[x.key]=months.map(function(){return 0;}); }); months.forEach(function(m,i){ idx[m]=i; });
+    state.entries.forEach(function(e){ if(!e.drinks) return; var mi=idx[e.date.slice(0,7)]; if(mi==null) return; DRINKS.forEach(function(x){ data[x.key][mi]+=(+e.drinks[x.key]||0); }); });
+    return {months:months, data:data};
+  }
+  function renderDrinkLineChart(el, period){
+    var md=drinkMonthlyData(period), months=md.months, data=md.data, n=months.length;
+    var maxv=1, any=false; DRINKS.forEach(function(x){ data[x.key].forEach(function(v){ if(v>0)any=true; maxv=Math.max(maxv,v); }); });
+    if(!any){ el.innerHTML='<div class="dk-empty">아직 음주 기록이 없어요.</div>'; return; }
+    var W=320, H=120, pl=6, pr=6, pt=10, pb=16, iw=W-pl-pr, ih=H-pt-pb;
+    var xOf=function(i){ return n<=1? pl+iw/2 : pl+i/(n-1)*iw; }, yOf=function(v){ return pt+ih-(v/maxv)*ih; };
+    var s='<svg viewBox="0 0 '+W+' '+H+'" class="dk-svg">';
+    s+='<line x1="'+pl+'" y1="'+(pt+ih).toFixed(1)+'" x2="'+(W-pr)+'" y2="'+(pt+ih).toFixed(1)+'" class="dk-axl"/>';
+    DRINKS.forEach(function(x){ if(!data[x.key].some(function(v){return v>0;})) return;
+      var pts=data[x.key].map(function(v,i){ return xOf(i).toFixed(1)+","+yOf(v).toFixed(1); });
+      s+='<polyline points="'+pts.join(" ")+'" fill="none" stroke="'+x.color+'" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>';
+      data[x.key].forEach(function(v,i){ if(v>0) s+='<circle cx="'+xOf(i).toFixed(1)+'" cy="'+yOf(v).toFixed(1)+'" r="1.8" fill="'+x.color+'"/>'; });
+    });
+    var mid=Math.floor((n-1)/2);
+    [0, mid, n-1].filter(function(v,i,a){return a.indexOf(v)===i;}).forEach(function(i){ var anch=i===0?'start':(i===n-1?'end':'middle'); s+='<text x="'+xOf(i).toFixed(1)+'" y="'+(H-4)+'" text-anchor="'+anch+'" class="dk-axx">'+months[i].slice(2).replace("-",".")+'</text>'; });
+    s+='</svg>';
+    var leg='<div class="dk-legend">'+DRINKS.map(function(x){ var tot=data[x.key].reduce(function(a,b){return a+b;},0); return '<span class="dk-lg"><i style="background:'+x.color+'"></i>'+x.label+' '+(Math.round(tot*10)/10)+'</span>'; }).join("")+'</div>';
+    el.innerHTML=leg+s;
   }
   function mealsHtml(meals){
     if(!meals) return "";
