@@ -3514,7 +3514,7 @@
       '<div class="rtile"><b>'+Object.keys(days).length+'</b><span>기록한 날</span></div>'+
       '<div class="rtile"><b>'+Object.keys(people).length+'</b><span>함께한 사람</span></div>'+
       '<div class="rtile"><b>'+Object.keys(places).length+'</b><span>다녀온 곳</span></div>'+
-      '<div class="rtile"><b>'+drinkTotal(drinks)+'</b><span>음주(병)</span></div></div>';
+      '<div class="rtile"><b>'+(Math.round(drinkTotal(drinks)*10)/10)+'</b><span>음주(병)</span></div></div>';
     if(!ent.length){ html+='<div class="pv-empty" style="height:auto;padding:26px 0">'+(yearMode?"이 해엔":"이 달엔")+' 기록이 없어요.</div>'; el.innerHTML=html; wireRecapNav(); return; }
     // 1) Reflection (요약 바로 다음)
     html+='<div class="recap-sec">Reflection</div>';
@@ -3556,7 +3556,7 @@
     var bits=[];
     if(e.schedule) bits.push(e.schedule);
     if(e.people && e.people.length) bits.push("만난 사람 "+e.people.length);
-    if(e.drinks && drinkTotal(e.drinks)>0) bits.push("음주 "+drinkTotal(e.drinks));
+    if(e.drinks && drinkTotal(e.drinks)>0) bits.push("음주 "+(Math.round(drinkTotal(e.drinks)*10)/10));
     if(e.learning) bits.push("학습");
     return bits.join(" · ")||"기록";
   }
