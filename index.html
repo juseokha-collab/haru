@@ -139,6 +139,14 @@
   .cv-ball8.lose{background:#1B1B1F}  /* 패 많은 날 = 검정 공 */
   .cv-cell.blank{background:transparent; cursor:default; pointer-events:none}
   .cv-cell.has{background:var(--accent-soft)}
+  .cv-cell.painted .cv-d, .cv-cell.painted .cv-ppl, .cv-cell.painted .cv-place, .cv-cell.painted .cv-sched{color:#2a2f38}   /* 색칠한 날: 글자 어둡게(대비) */
+  /* 달력 날짜 색칠 팔레트 */
+  .cal-palette{display:flex; align-items:center; flex-wrap:wrap; gap:6px; padding:6px 2px 8px}
+  .cal-palette .cp-lbl{font-size:11.5px; color:var(--ink-3); margin-right:2px}
+  .cal-palette .cp-sw{width:20px; height:20px; border:1px solid var(--border); border-radius:6px; cursor:pointer; padding:0; line-height:1}
+  .cal-palette .cp-sw.on{outline:2px solid var(--accent); outline-offset:1px; border-color:transparent}
+  .cal-palette .cp-none{background:var(--surface); color:var(--ink-3); font-size:12px; display:flex; align-items:center; justify-content:center}
+  .cal-palette .cp-hint{font-size:11px; color:var(--accent-ink); margin-left:4px}
   .cv-cell.mark{background:color-mix(in srgb, #6F7BE0 20%, transparent); border-color:color-mix(in srgb, #6F7BE0 42%, transparent)}
   .cv-cell.mark .cv-d{color:#6F7BE0}
   .cv-cell:hover:not(.blank){border-color:var(--accent)}
@@ -1154,6 +1162,7 @@
           <button type="button" id="cvNext" aria-label="다음 달">›</button>
         </div>
       </div>
+      <div class="cal-palette" id="calPalette"></div>
       <div class="cv-grid" id="cvGrid"></div>
     </section>
     </div><!-- /main-col -->
@@ -1420,6 +1429,7 @@
   state.subcats = state.subcats || [];
   state.relNames = state.relNames || {};   // 관계(그룹) 표시명 사용자 지정
   state.ledger = state.ledger || {};        // 가계부: {"YYYY-MM":{cells:{catId:금액}, note}}
+  state.dayColors = state.dayColors || {};   // 달력 일자별 배경색 {"YYYY-MM-DD":"#hex"}
   state.ledgerCats = (state.ledgerCats && state.ledgerCats.length) ? state.ledgerCats : defaultLedgerCats();
   migrateLedgerCats();
   migrateReflections();
@@ -3656,16 +3666,32 @@
       var title=e?' title="'+ds.slice(5).replace("-",".")+' · '+esc(calSummary(e))+'"':'';
       var cam=photoDates[ds]?'<span class="cv-cam">📷</span>':'';
       var billHtml = bseen? '<span class="cv-ball8 '+(bWin>bLose?"win":bLose>bWin?"lose":"")+'" title="당구장'+(bWin||bLose?" · "+bWin+"승 "+bLose+"패":"")+'">8</span>' : '';
-      html+='<button class="'+cls+'" data-date="'+ds+'"'+title+'><div class="cv-top"><span class="cv-d">'+d+'</span>'+dot+pico2+cam+'</div>'+holLbl+sched+ppl+place+billHtml+'</button>';
+      var dcol=(state.dayColors||{})[ds], bgStyle=dcol?' style="background:'+dcol+'"':'';
+      html+='<button class="'+cls+(dcol?' painted':'')+'" data-date="'+ds+'"'+bgStyle+title+'><div class="cv-top"><span class="cv-d">'+d+'</span>'+dot+pico2+cam+'</div>'+holLbl+sched+ppl+place+billHtml+'</button>';
     }
     grid.innerHTML=html;
+    if(typeof renderCalPalette==="function") renderCalPalette();
   }
   function openDay(ds){
     var e=state.entries.filter(function(x){return x.date===ds;})[0];
     if(e){ editEntry(e); }
     else { draft={date:ds, people:[], schedule:"", mark:false, meals:emptyMeals(), drinks:emptyDrinks(), thoughts:"", learning:""}; loadDraft(); scrollToComposer(); }
   }
-  $("#cvGrid").addEventListener("click",function(ev){ var b=ev.target.closest(".cv-cell"); if(!b||b.classList.contains("blank"))return; openDay(b.getAttribute("data-date")); });
+  var CAL_PALETTE=["#F7C8C8","#FBD9B0","#FBEFA6","#CDE9C4","#BEE0E6","#CFC8EE","#EFC7E4"];
+  var calPaintColor=null;   // null=칠하기 끔, ""=지우개, "#hex"=칠할 색
+  function renderCalPalette(){
+    var el=$("#calPalette"); if(!el) return;
+    var h='<span class="cp-lbl">🎨 날짜 색칠</span>';
+    h+='<button type="button" class="cp-sw cp-none'+(calPaintColor===""?" on":"")+'" data-c="" title="색 지우기">✕</button>';
+    CAL_PALETTE.forEach(function(c){ h+='<button type="button" class="cp-sw'+(calPaintColor===c?" on":"")+'" data-c="'+c+'" style="background:'+c+'" title="이 색으로 칠하기"></button>'; });
+    h+='<span class="cp-hint">'+(calPaintColor!==null?"날짜를 눌러 칠하세요":"")+'</span>';
+    el.innerHTML=h; el.classList.toggle("on", calPaintColor!==null);
+  }
+  $("#calPalette").addEventListener("click",function(ev){ var b=ev.target.closest(".cp-sw"); if(!b) return; var c=b.getAttribute("data-c"); calPaintColor=(calPaintColor===c)?null:c; renderCalPalette(); });
+  $("#cvGrid").addEventListener("click",function(ev){ var b=ev.target.closest(".cv-cell"); if(!b||b.classList.contains("blank"))return;
+    var ds=b.getAttribute("data-date");
+    if(calPaintColor!==null){ state.dayColors=state.dayColors||{}; if(calPaintColor==="") delete state.dayColors[ds]; else state.dayColors[ds]=calPaintColor; save(); renderCalendar(); return; }   // 칠하기 모드: 열지 않고 색만 변경
+    openDay(ds); });
   $("#cvToday").onclick=function(){ calMonth=monthStr(new Date()); renderCalendar(); syncTimelineHeight(); };
   $("#cvPrev").onclick=function(){ calMonth=shiftMonth(calMonth,-1); renderCalendar(); syncTimelineHeight(); };
   $("#cvNext").onclick=function(){ calMonth=shiftMonth(calMonth,1); renderCalendar(); syncTimelineHeight(); };
@@ -4595,7 +4621,7 @@
     get:function(){ return state; },
     replace:function(s, keepDraft){
       if(!s || !Array.isArray(s.entries)) return;
-      state={ people:s.people||{}, entries:s.entries||[], events:s.events||[], golf:s.golf||{}, todos:s.todos||[], plans:s.plans||[], subcats:s.subcats||[], relNames:s.relNames||{}, ledger:s.ledger||{}, ledgerCats:(s.ledgerCats&&s.ledgerCats.length)?s.ledgerCats:defaultLedgerCats(), ledgerAccounts:s.ledgerAccounts||[] };
+      state={ people:s.people||{}, entries:s.entries||[], events:s.events||[], golf:s.golf||{}, todos:s.todos||[], plans:s.plans||[], subcats:s.subcats||[], relNames:s.relNames||{}, ledger:s.ledger||{}, ledgerCats:(s.ledgerCats&&s.ledgerCats.length)?s.ledgerCats:defaultLedgerCats(), ledgerAccounts:s.ledgerAccounts||[], dayColors:s.dayColors||{} };
       migrateLedgerCats();
       migrateReflections();
       mergeDuplicateDates();
