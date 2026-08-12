@@ -2041,7 +2041,7 @@
     var tip=$("#skyTip"), gv=$("#graphView"); if(!tip||!gv) return;
     var rec=billiardRoundsVs(node.name); if(!rec.length){ hideSkyTip(); return; }
     var wl=billiardRecordVs(node.name);
-    var lines=rec.slice(0,6).map(function(r){ return '<div class="st-b">'+r.date.slice(2).replace(/-/g,".")+' <span class="st-nm">'+esc(r.place)+'</span> '+(r.result==="win"?'<b class="bt-w">승</b>':'<b class="bt-l">패</b>')+'</div>'; }).join("");
+    var lines=rec.slice(0,6).map(function(r){ return '<div class="st-b">'+r.date.slice(2).replace(/-/g,".")+' '+(r.result==="win"?'<b class="bt-w">승</b>':'<b class="bt-l">패</b>')+'</div>'; }).join("");
     tip.innerHTML='<button class="st-x" aria-label="닫기">&times;</button><div class="st-v">🎱 '+esc(node.name)+' · '+wl.w+'승 '+wl.l+'패</div>'+lines;
     var r=gv.getBoundingClientRect(); tip.style.left=(ev.clientX-r.left)+"px"; tip.style.top=(ev.clientY-r.top-14)+"px"; tip.hidden=false;
     var _xb=tip.querySelector(".st-x"); if(_xb) _xb.onclick=function(e){ e.stopPropagation(); hideSkyTip(); };
