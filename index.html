@@ -4019,9 +4019,9 @@
       var task=document.createElement("span"); task.className="pl-task"; task.textContent=p.task||"";
       if(p.ts){ var cd=new Date(p.ts); var cr=document.createElement("span"); cr.className="pl-created"; cr.textContent=String(cd.getFullYear()).slice(2)+"."+pad(cd.getMonth()+1)+"."+pad(cd.getDate())+" 기록"; task.appendChild(document.createTextNode(" ")); task.appendChild(cr); }
       top.appendChild(st); top.appendChild(task);
-      if(p.repeat){ var ped=document.createElement("button"); ped.type="button"; ped.className="pl-edit"; ped.textContent="✏"; ped.title="반복일정 내용 수정";
-        ped.onclick=function(){ askConfirm({ title:"반복일정 수정", message:"반복일정 내용을 입력하세요.", okText:"저장", promptText:true, initial:p.task||"", placeholder:"일정 내용", onOk:function(v){ v=(v||"").trim(); if(!v) return; p.task=v; save(); renderAdminPlan(); updateSkyDate(); } }); };
-        top.appendChild(ped); }
+      var ped=document.createElement("button"); ped.type="button"; ped.className="pl-edit"; ped.textContent="✏"; ped.title="할 일 내용 수정";
+      ped.onclick=function(){ askConfirm({ title:"할 일 수정", message:"할 일 내용을 입력하세요.", okText:"저장", promptText:true, initial:p.task||"", placeholder:"할 일 내용", onOk:function(v){ v=(v||"").trim(); if(!v) return; p.task=v; var td=(state.todos||[]).filter(function(t){return t.id===p.srcId;})[0]; if(td) td.task=v; save(); renderTodos(); renderAdminPlan(); updateSkyDate(); } }); };
+      top.appendChild(ped);
       var flag=document.createElement("input"); flag.type="checkbox"; flag.className="pl-flag"; flag.checked=!!p.flag; flag.title="색상 표시(구분)";   // 납기 앞 체크 → 행 색상
       flag.onchange=function(){ p.flag=flag.checked; row.classList.toggle("flagged", p.flag); save(); };
       top.appendChild(flag);
