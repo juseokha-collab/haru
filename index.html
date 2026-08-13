@@ -133,11 +133,12 @@
   .cv-wd{text-align:center; font-size:11px; color:var(--ink-3); padding:2px 0 4px}
   .cv-wd.sun{color:#D98A8A}
   .cv-wd.sat{color:#8AA6D9}
-  .cv-cell{position:relative; min-height:76px; border:1px solid var(--border); background:color-mix(in srgb, #E7889E 4%, transparent); border-radius:10px; display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:1px; cursor:pointer; font-family:inherit; padding:5px 7px 4px; transition:.12s; overflow:hidden; text-align:left}   /* 아주 옅은 분홍 바탕 */
+  .cv-cell{position:relative; min-height:76px; border:1px solid var(--border); background:color-mix(in srgb, #E7889E 3%, transparent); border-radius:10px; display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:1px; cursor:pointer; font-family:inherit; padding:5px 7px 4px; transition:.12s; overflow:hidden; text-align:left}   /* 아주 옅은 분홍 바탕 */
   .cv-ball8{position:absolute; right:4px; bottom:4px; width:14px; height:14px; border-radius:50%; background:#8A8F98; color:#fff; font-size:9px; font-weight:800; display:flex; align-items:center; justify-content:center; line-height:1; box-shadow:0 1px 2px rgba(0,0,0,.3), inset 0 1px 1px rgba(255,255,255,.35)}
   .cv-ball8.win{background:#D64545}   /* 승 많은 날 = 빨간 공 */
   .cv-ball8.lose{background:#1B1B1F}  /* 패 많은 날 = 검정 공 */
   .cv-cell.blank{background:transparent; cursor:default; pointer-events:none}
+  .cv-cell.future{background:color-mix(in srgb, #8A8F98 3%, transparent)}   /* 내일 이후(미래) = 흐린 회색 */
   /* 기록/강조일 기본 배경 없음 → 팔레트로 칠한 색만 표시 */
   .cv-cell.painted .cv-d, .cv-cell.painted .cv-ppl, .cv-cell.painted .cv-place, .cv-cell.painted .cv-sched{color:#2a2f38}   /* 색칠한 날: 글자 어둡게(대비) */
   /* 달력 날짜 색칠 팔레트 */
@@ -3653,7 +3654,7 @@
       var ds=y+"-"+pad(mo+1)+"-"+pad(d), e=byDate[ds];
       var dow2=new Date(y,mo,d).getDay(), hol=holidayName(y,mo,d);
       var restCls = hol ? ' hol' : (dow2===0 ? ' hol' : (dow2===6 ? ' sat' : ''));
-      var cls='cv-cell'+(e?' has':'')+(e&&e.mark?' mark':'')+(ds===today?' today':'')+restCls;
+      var cls='cv-cell'+(e?' has':'')+(e&&e.mark?' mark':'')+(ds===today?' today':'')+(ds>today?' future':'')+restCls;
       var holLbl = hol ? '<div class="cv-hol">'+esc(hol)+'</div>' : '';
       var dot='';
       if(e && e.drinks && drinkTotal(e.drinks)>0){ var lv=drinkLevel(e.drinks); dot='<span class="cv-dot" style="background:'+(lv===1?'#4FBE86':lv===3?'#E24B41':'#ECC24A')+'"></span>'; }
