@@ -133,21 +133,23 @@
   .cv-wd{text-align:center; font-size:11px; color:var(--ink-3); padding:2px 0 4px}
   .cv-wd.sun{color:#D98A8A}
   .cv-wd.sat{color:#8AA6D9}
-  .cv-cell{position:relative; min-height:76px; border:1px solid transparent; background:var(--surface-2); border-radius:10px; display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:1px; cursor:pointer; font-family:inherit; padding:5px 7px 4px; transition:.12s; overflow:hidden; text-align:left}
+  .cv-cell{position:relative; min-height:76px; border:1px solid var(--border); background:transparent; border-radius:10px; display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:1px; cursor:pointer; font-family:inherit; padding:5px 7px 4px; transition:.12s; overflow:hidden; text-align:left}
   .cv-ball8{position:absolute; right:4px; bottom:4px; width:14px; height:14px; border-radius:50%; background:#8A8F98; color:#fff; font-size:9px; font-weight:800; display:flex; align-items:center; justify-content:center; line-height:1; box-shadow:0 1px 2px rgba(0,0,0,.3), inset 0 1px 1px rgba(255,255,255,.35)}
   .cv-ball8.win{background:#D64545}   /* 승 많은 날 = 빨간 공 */
   .cv-ball8.lose{background:#1B1B1F}  /* 패 많은 날 = 검정 공 */
   .cv-cell.blank{background:transparent; cursor:default; pointer-events:none}
-  .cv-cell.has{background:var(--accent-soft)}
+  /* 기록/강조일 기본 배경 없음 → 팔레트로 칠한 색만 표시 */
   .cv-cell.painted .cv-d, .cv-cell.painted .cv-ppl, .cv-cell.painted .cv-place, .cv-cell.painted .cv-sched{color:#2a2f38}   /* 색칠한 날: 글자 어둡게(대비) */
   /* 달력 날짜 색칠 팔레트 */
   .cal-palette{display:flex; align-items:center; flex-wrap:wrap; gap:6px; padding:4px 2px}
   .cal-palette:empty{display:none}
-  .cal-pal-cell{display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:5px; padding:4px; min-height:0}
+  .cal-pal-cell{display:flex; align-items:flex-end; flex-wrap:wrap; gap:5px; padding:5px 7px; min-height:0}
+  .cal-pal-cell.pal-tl{justify-content:flex-start}
+  .cal-pal-cell.pal-br{justify-content:flex-end}
   .cp-sw{width:19px; height:19px; border:1px solid var(--border); border-radius:6px; cursor:pointer; padding:0; line-height:1; flex:none}
   .cp-sw.on{outline:2px solid var(--accent); outline-offset:1px; border-color:transparent}
   .cp-none{background:var(--surface); color:var(--ink-3); font-size:12px; display:flex; align-items:center; justify-content:center}
-  .cv-cell.mark{background:color-mix(in srgb, #6F7BE0 20%, transparent); border-color:color-mix(in srgb, #6F7BE0 42%, transparent)}
+  .cv-cell.mark{border-color:color-mix(in srgb, #6F7BE0 42%, transparent)}   /* 강조일: 배경 없이 테두리·날짜색만 */
   .cv-cell.mark .cv-d{color:#6F7BE0}
   .cv-cell:hover:not(.blank){border-color:var(--accent)}
   .cv-top{display:flex; align-items:center; gap:5px}
@@ -3641,7 +3643,7 @@
     var palTop=(leading>=2), palBottom=(!palTop && trailing>=2), palBelow=(!palTop && !palBottom);   // 앞 빈칸 2칸↑=좌상단 / 아니면 뒤 빈칸=우하단 / 둘다 없으면 그리드 아래
     var html='';
     WDOW.forEach(function(w,i){ html+='<div class="cv-wd'+(i===0?' sun':i===6?' sat':'')+'">'+w+'</div>'; });
-    if(palTop){ html+='<div class="cal-pal-cell" style="grid-column:span '+leading+'">'+calPaletteHtml()+'</div>'; }
+    if(palTop){ html+='<div class="cal-pal-cell pal-tl" style="grid-column:span '+leading+'">'+calPaletteHtml()+'</div>'; }
     else { for(var b=0;b<leading;b++) html+='<div class="cv-cell blank"></div>'; }
     for(var d=1;d<=daysIn;d++){
       var ds=y+"-"+pad(mo+1)+"-"+pad(d), e=byDate[ds];
@@ -3673,7 +3675,7 @@
       var dcol=(state.dayColors||{})[ds], bgStyle=dcol?' style="background:'+dcol+'"':'';
       html+='<button class="'+cls+(dcol?' painted':'')+'" data-date="'+ds+'"'+bgStyle+title+'><div class="cv-top"><span class="cv-d">'+d+'</span>'+dot+pico2+cam+'</div>'+holLbl+sched+ppl+place+billHtml+'</button>';
     }
-    if(palBottom){ html+='<div class="cal-pal-cell" style="grid-column:span '+trailing+'">'+calPaletteHtml()+'</div>'; }
+    if(palBottom){ html+='<div class="cal-pal-cell pal-br" style="grid-column:span '+trailing+'">'+calPaletteHtml()+'</div>'; }
     grid.innerHTML=html;
     var _pb=$("#calPalette"); if(_pb) _pb.innerHTML = palBelow? calPaletteHtml() : "";   // 좌상단·우하단 자리가 없을 때만 그리드 아래
   }
@@ -3682,7 +3684,7 @@
     if(e){ editEntry(e); }
     else { draft={date:ds, people:[], schedule:"", mark:false, meals:emptyMeals(), drinks:emptyDrinks(), thoughts:"", learning:""}; loadDraft(); scrollToComposer(); }
   }
-  var CAL_PALETTE=["#F7C8C8","#FBD9B0","#FBEFA6","#CDE9C4","#BEE0E6","#CFC8EE","#EFC7E4"];
+  var CAL_PALETTE=["#FBE0E0","#FDF1D2","#E6F3DE","#DDEFF4","#E9E3F7"];   // 옅은 파스텔 5색(빨강·노랑·초록·파랑·보라)
   var calPaintColor=null;   // null=칠하기 끔, ""=지우개, "#hex"=칠할 색
   function calPaletteHtml(){
     var h='<button type="button" class="cp-sw cp-none'+(calPaintColor===""?" on":"")+'" data-c="" title="색 지우기">✕</button>';
