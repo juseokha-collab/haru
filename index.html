@@ -133,7 +133,7 @@
   .cv-wd{text-align:center; font-size:11px; color:var(--ink-3); padding:2px 0 4px}
   .cv-wd.sun{color:#D98A8A}
   .cv-wd.sat{color:#8AA6D9}
-  .cv-cell{position:relative; min-height:76px; border:1px solid var(--border); background:color-mix(in srgb, #E7889E 7%, transparent); border-radius:10px; display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:1px; cursor:pointer; font-family:inherit; padding:5px 7px 4px; transition:.12s; overflow:hidden; text-align:left}   /* 아주 옅은 분홍 바탕 */
+  .cv-cell{position:relative; min-height:76px; border:1px solid var(--border); background:color-mix(in srgb, #E7889E 4%, transparent); border-radius:10px; display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:1px; cursor:pointer; font-family:inherit; padding:5px 7px 4px; transition:.12s; overflow:hidden; text-align:left}   /* 아주 옅은 분홍 바탕 */
   .cv-ball8{position:absolute; right:4px; bottom:4px; width:14px; height:14px; border-radius:50%; background:#8A8F98; color:#fff; font-size:9px; font-weight:800; display:flex; align-items:center; justify-content:center; line-height:1; box-shadow:0 1px 2px rgba(0,0,0,.3), inset 0 1px 1px rgba(255,255,255,.35)}
   .cv-ball8.win{background:#D64545}   /* 승 많은 날 = 빨간 공 */
   .cv-ball8.lose{background:#1B1B1F}  /* 패 많은 날 = 검정 공 */
@@ -1684,6 +1684,10 @@
       node.phase=node.phase!=null?node.phase:Math.random()*6.28;
       nodes.push(node); nodeIndex[n]=node;
     });
+    // 가장 큰·둘째 큰 노드는 나와의 간격을 '원 지름의 1.5배'만큼 확보(중앙 답답함 완화)
+    var _pns=names.map(function(n){return nodeIndex[n];}).filter(Boolean);
+    _pns.forEach(function(nn){ nn.minMe=0; });
+    _pns.slice().sort(function(a,b){ return b.r-a.r; }).slice(0,2).forEach(function(nn){ nn.minMe = 12 + nn.r*4; });   // me.r(12) + node.r + 1.5×지름(=3r)
 
     var anyRel = REL_ORDER.some(function(r){ return !hiddenRels[r]; });   // 관계(인맥)가 하나라도 표시 중인가
     var showPlaceAny={}, showPlaceVis={};
@@ -1893,7 +1897,7 @@
         if(billiardFocus && n.name===centerPlaceName) return;   // 중앙 고정 당구장은 바깥 밀기 제외
         var dx=n.x-me.x, dy=n.y-me.y, d=Math.sqrt(dx*dx+dy*dy)||0.01, target, str;
         if(n.type==="place"){ target = d<placeInner? placeInner : d; str=0.05; }   // 장소: 너무 안쪽이면 바깥으로
-        else { if(d>=minPeopleR) return; target=minPeopleR; str=0.06; }             // 사람: 나와 겹치지 않게 최소거리만
+        else { var mr=Math.max(minPeopleR, n.minMe||0); if(d>=mr) return; target=mr; str=(n.minMe? 0.14 : 0.06); }   // 사람: 최소거리(가장 큰 두 노드는 지름 1.5배 간격까지 강하게)
         var f=(target-d)*str*k;
         n.vx+=dx/d*f; n.vy+=dy/d*f;
       });
