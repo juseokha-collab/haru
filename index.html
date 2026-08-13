@@ -1319,7 +1319,7 @@
           <label class="wt-wrap" title="허리둘레">📏<input type="number" min="0" step="0.1" inputmode="decimal" id="ex-waist" placeholder="cm"></label>
         </div>
         </div>
-        <div class="refl-h"><label for="thoughts">Reflection</label><span class="media-chks"><label><input type="checkbox" class="media-chk" data-m="movie"> 🎬영화</label><label><input type="checkbox" class="media-chk" data-m="music"> 🎵음악</label><label><input type="checkbox" class="media-chk" data-m="book"> 📖책</label></span></div>
+        <div class="refl-h"><label for="thoughts">Reflection</label><span class="media-chks"><label><input type="checkbox" class="media-chk" data-m="youtube"> ▶️Y-tube</label><label><input type="checkbox" class="media-chk" data-m="movie"> 🎬영화</label><label><input type="checkbox" class="media-chk" data-m="music"> 🎵음악</label><label><input type="checkbox" class="media-chk" data-m="book"> 📖책</label></span></div>
         <textarea id="thoughts" placeholder="오늘의 회고 · 배운 것 · 마음에 남은 생각…"></textarea>
         <div id="mediaBoxes"></div>
       </div>
@@ -2276,7 +2276,7 @@
     }
     upBillActive(seg);
   }
-  var MEDIA=[{k:"movie",label:"영화",emoji:"🎬"},{k:"music",label:"음악",emoji:"🎵"},{k:"book",label:"책",emoji:"📖"}];   // Reflection 하위: 영화·음악·책
+  var MEDIA=[{k:"youtube",label:"Y-tube",emoji:"▶️"},{k:"movie",label:"영화",emoji:"🎬"},{k:"music",label:"음악",emoji:"🎵"},{k:"book",label:"책",emoji:"📖"}];   // Reflection 하위: Y-tube·영화·음악·책
   function renderMediaBoxes(){
     var wrap=$("#mediaBoxes"); if(!wrap) return; wrap.innerHTML="";
     MEDIA.forEach(function(mm){
