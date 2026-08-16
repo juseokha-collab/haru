@@ -919,6 +919,7 @@
   .led-svg{display:block; width:100%; height:170px}
   .led-svg .led-bar-inc{fill:#5FBFA0} .led-svg .led-bar-exp{fill:#E58A8A}
   .led-svg .led-axl{fill:var(--ink-3); font-size:9px}
+  .led-svg .led-net{font-size:8px; font-weight:700} .led-svg .led-net.pos{fill:#2f8f52} .led-svg .led-net.neg{fill:#e23b3b}
   .led-empty{padding:20px 8px; text-align:center; color:var(--ink-3); font-size:12.5px}
   .ledcat-modal{max-width:600px; width:100%}
   .ledcat-body{max-height:60vh; overflow-y:auto; margin-top:6px}
@@ -4425,14 +4426,16 @@
     var expV=months.filter(function(o){return o.exp>0;}).map(function(o){return o.exp;});
     var incAvg=incV.length? incV.reduce(function(a,b){return a+b;},0)/incV.length : 0;
     var expAvg=expV.length? expV.reduce(function(a,b){return a+b;},0)/expV.length : 0;
-    var W=Math.max(300,Math.min(680,(window.innerWidth||760)-90)), H=170, pl=8, pr=8, pb=18, pt=8;
+    var W=Math.max(300,Math.min(680,(window.innerWidth||760)-90)), H=182, pl=8, pr=8, pb=32, pt=8;
     var maxV=1; months.forEach(function(o){ maxV=Math.max(maxV,o.inc,o.exp); });
     var bw=(W-pl-pr)/12, yBot=H-pb, ih=yBot-pt, yOf=function(v){ return yBot-(v/maxV)*ih; };
+    function shortWon(v){ var s2=v<0?"-":"", a=Math.abs(Math.round(v)); if(a>=1e8) return s2+(Math.round(a/1e6)/100)+"억"; if(a>=1e4) return s2+Math.round(a/1e4)+"만"; return s2+a; }
     var s='<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" class="led-svg" preserveAspectRatio="none">';
     months.forEach(function(o,i){ var cx=pl+bw*i+bw/2, bwi=bw*0.28;
       if(o.inc) s+='<rect x="'+(cx-bwi-1).toFixed(1)+'" y="'+yOf(o.inc).toFixed(1)+'" width="'+bwi.toFixed(1)+'" height="'+(yBot-yOf(o.inc)).toFixed(1)+'" rx="1.5" class="led-bar-inc" data-t="'+o.m+'월 수입" data-v="'+o.inc+'"/>';
       if(o.exp) s+='<rect x="'+(cx+1).toFixed(1)+'" y="'+yOf(o.exp).toFixed(1)+'" width="'+bwi.toFixed(1)+'" height="'+(yBot-yOf(o.exp)).toFixed(1)+'" rx="1.5" class="led-bar-exp" data-t="'+o.m+'월 지출" data-v="'+o.exp+'"/>';
-      s+='<text x="'+cx.toFixed(1)+'" y="'+(H-5)+'" text-anchor="middle" class="led-axl">'+o.m+'</text>';
+      s+='<text x="'+cx.toFixed(1)+'" y="'+(H-19)+'" text-anchor="middle" class="led-axl">'+o.m+'</text>';
+      if(o.inc||o.exp){ var nv=o.inc-o.exp; s+='<text x="'+cx.toFixed(1)+'" y="'+(H-6)+'" text-anchor="middle" class="led-net '+(nv<0?"neg":"pos")+'">'+shortWon(nv)+'</text>'; }   // 월별 수지
     });
     s+='</svg>';
     var sInc=0,sExp=0; months.forEach(function(o){ sInc+=o.inc; sExp+=o.exp; }); var netY=sInc-sExp;
