@@ -532,6 +532,7 @@
   .todo-row .td-date.empty{color:var(--ink-3)}
   .todo-row .td-date.soon{color:#E06B6B; font-weight:700; border-color:color-mix(in srgb, #E06B6B 55%, transparent); background:color-mix(in srgb, #E06B6B 13%, transparent)}
   .todo-row .td-date.soon.soon2{background:color-mix(in srgb, #E06B6B 30%, transparent); border-color:color-mix(in srgb, #E06B6B 75%, transparent)}   /* 오늘/내일: 더 진하게 */
+  .todo-row .td-date.overdue{background:#4A4F58; color:#fff; border-color:#4A4F58; font-weight:700}   /* 지난 기한: 진회색+흰글씨 */
   .todo-row .td-date:hover{border-color:var(--accent)}
   .todo-row.done .td-task{text-decoration:line-through; color:var(--ink-3)}
   /* 일정관리 */
@@ -3968,7 +3969,7 @@
       if(it.due){ var dd=Math.round((parseD(it.due)-parseD(todayStr()))/864e5);   // 남은 일수: 0=오늘,1=내일,2~7=D-2~D-7, 그 외=월.일
         dlabel.textContent = dd===0?"오늘" : dd===1?"내일" : (dd>=2&&dd<=7)?("D-"+dd) : it.due.slice(5).replace("-","."); }
       else dlabel.textContent="기한";
-      if(it.due && !it.done){ var _dd=Math.round((parseD(it.due)-parseD(todayStr()))/864e5); if(_dd<=7) dlabel.classList.add("soon"); if(_dd<=1) dlabel.classList.add("soon2"); }   // 7일 이내 강조 · 오늘/내일은 더 진하게
+      if(it.due && !it.done){ var _dd=Math.round((parseD(it.due)-parseD(todayStr()))/864e5); if(_dd<0){ dlabel.classList.add("overdue"); } else { if(_dd<=7) dlabel.classList.add("soon"); if(_dd<=1) dlabel.classList.add("soon2"); } }   // 지난 기한=진회색 · 7일 이내=빨강 · 오늘/내일=진한 빨강
       dwrap.appendChild(due); dwrap.appendChild(dlabel);
       var flag=document.createElement("input"); flag.type="checkbox"; flag.className="td-flag"; flag.checked=!!it.flag; flag.title="색상 표시(구분)";   // 행 색상 강조
       flag.onchange=function(r){ return function(){ r.classList.toggle("flagged", r.querySelector(".td-flag").checked); saveTodos(); }; }(row);
