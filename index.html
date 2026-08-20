@@ -1253,7 +1253,7 @@
           <span class="btn ph-btn" id="photoRemove" role="button" tabindex="0" hidden>제거</span>
           <input type="file" id="photoInput" accept="image/*" style="display:none">
         </div>
-        <div class="photo-field">
+        <div class="photo-field" id="photoField" hidden>
           <div class="photo-preview" id="photoPreview"><span class="photo-empty">사진 없음</span></div>
           <span class="photo-msg" id="photoMsg"></span>
           <input type="text" class="name-in" id="photoCaption" placeholder="사진 설명(캡션) · 선택" autocomplete="off">
@@ -2281,22 +2281,38 @@
     upBillActive(seg);
   }
   var MEDIA=[{k:"youtube",label:"Y-tube",emoji:"▶️"},{k:"movie",label:"영화",emoji:"🎬"},{k:"music",label:"음악",emoji:"🎵"},{k:"book",label:"책",emoji:"📖"}];   // Reflection 하위: Y-tube·영화·음악·책
+  function mediaArr(v){ if(Array.isArray(v)) return v; if(v&&(v.title||v.note)) return [{title:v.title||"",note:v.note||""}]; return []; }   // 구형 단일객체 → 배열
+  function mediaHas(v){ return mediaArr(v).some(function(x){return (x.title||"").trim()||(x.note||"").trim();}); }
+  function makeMediaBox(mm, v, i){
+    var box=document.createElement("div"); box.className="media-box"; box.setAttribute("data-m",mm.k);
+    var hd=document.createElement("div"); hd.className="mb-h"; hd.textContent=mm.emoji+" "+mm.label+(i>0?" "+(i+1):""); box.appendChild(hd);
+    var ti=document.createElement("input"); ti.type="text"; ti.className="mb-title"; ti.placeholder=mm.label+" 제목"; ti.value=v.title||"";
+    var no=document.createElement("textarea"); no.className="mb-note"; no.placeholder="내용 · 감상"; no.value=v.note||"";
+    function upd(){ v.title=ti.value; v.note=no.value; mediaMaybeGrow(mm); }
+    ti.oninput=upd; no.oninput=upd;
+    box.appendChild(ti); box.appendChild(no); return box;
+  }
+  function mediaMaybeGrow(mm){   // 마지막 칸에 내용이 들어가면 빈 칸 하나 더 추가(같은 종류 여러 개)
+    var arr=(draft.media||{})[mm.k]; if(!Array.isArray(arr)||!arr.length) return;
+    var last=arr[arr.length-1]; if(!(last.title||last.note)) return;
+    arr.push({title:"",note:""});
+    var wrap=$("#mediaBoxes"), boxes=wrap.querySelectorAll('.media-box[data-m="'+mm.k+'"]'), nb=makeMediaBox(mm, arr[arr.length-1], arr.length-1);
+    if(boxes.length) boxes[boxes.length-1].after(nb); else wrap.appendChild(nb);
+  }
   function renderMediaBoxes(){
-    var wrap=$("#mediaBoxes"); if(!wrap) return; wrap.innerHTML="";
+    var wrap=$("#mediaBoxes"); if(!wrap) return; wrap.innerHTML=""; draft.media=draft.media||{};
     MEDIA.forEach(function(mm){
       var chk=document.querySelector('.media-chk[data-m="'+mm.k+'"]'); if(!chk||!chk.checked) return;
-      var v=(draft.media&&draft.media[mm.k])||{};
-      var box=document.createElement("div"); box.className="media-box"; box.setAttribute("data-m",mm.k);
-      var hd=document.createElement("div"); hd.className="mb-h"; hd.textContent=mm.emoji+" "+mm.label; box.appendChild(hd);
-      var ti=document.createElement("input"); ti.type="text"; ti.className="mb-title"; ti.placeholder=mm.label+" 제목"; ti.value=v.title||"";
-      var no=document.createElement("textarea"); no.className="mb-note"; no.placeholder="내용 · 감상"; no.value=v.note||"";
-      ti.oninput=function(){ draft.media=draft.media||{}; (draft.media[mm.k]=draft.media[mm.k]||{}).title=ti.value; };
-      no.oninput=function(){ draft.media=draft.media||{}; (draft.media[mm.k]=draft.media[mm.k]||{}).note=no.value; };
-      box.appendChild(ti); box.appendChild(no); wrap.appendChild(box);
+      var arr=mediaArr(draft.media[mm.k]);
+      if(!arr.length || (arr[arr.length-1].title||arr[arr.length-1].note)) arr.push({title:"",note:""});   // 항상 마지막 빈 칸
+      draft.media[mm.k]=arr;
+      arr.forEach(function(v,i){ wrap.appendChild(makeMediaBox(mm, v, i)); });
     });
   }
-  function readMedia(){ var out={}; MEDIA.forEach(function(mm){ var chk=document.querySelector('.media-chk[data-m="'+mm.k+'"]'); if(chk&&chk.checked){ var v=(draft.media||{})[mm.k]||{}; var t=(v.title||"").trim(), n=(v.note||"").trim(); if(t||n) out[mm.k]={title:t,note:n}; } }); return out; }
-  function loadMediaUI(){ MEDIA.forEach(function(mm){ var chk=document.querySelector('.media-chk[data-m="'+mm.k+'"]'); if(chk) chk.checked=!!(draft.media && draft.media[mm.k]); }); renderMediaBoxes(); }
+  function readMedia(){ var out={}; MEDIA.forEach(function(mm){ var chk=document.querySelector('.media-chk[data-m="'+mm.k+'"]'); if(!(chk&&chk.checked)) return;
+    var clean=mediaArr((draft.media||{})[mm.k]).map(function(v){ return {title:(v.title||"").trim(), note:(v.note||"").trim()}; }).filter(function(v){ return v.title||v.note; });
+    if(clean.length) out[mm.k]=clean; }); return out; }
+  function loadMediaUI(){ MEDIA.forEach(function(mm){ var chk=document.querySelector('.media-chk[data-m="'+mm.k+'"]'); if(chk) chk.checked=mediaHas((draft.media||{})[mm.k]); }); renderMediaBoxes(); }
   function loadMeals(meals){ MEALS.forEach(function(x){ var v=(meals&&meals[x.key])||{}; var p=document.getElementById("m-"+x.key+"-place"), f=document.getElementById("m-"+x.key+"-food"), w=document.getElementById("m-"+x.key+"-people"); if(p)p.value=v.place||""; if(f)f.value=v.food||""; if(w)w.value=(v.people||[]).join(", "); var chk=document.querySelector('.golf-chk[data-meal="'+x.key+'"]'); if(chk) chk.checked=!!(state.golf && v.place && state.golf[v.place]); setGolfFoodPh(x.key, !!(chk&&chk.checked)); updateBillUI(x.key); var _sg=document.querySelector('.bill-seg[data-meal="'+x.key+'"]'); if(_sg){ _sg.dataset.val=v.bill||""; upBillActive(_sg); } }); renderSpecialExtras(); }
   // 30분 단위 시간 드롭다운(오전/오후 라벨)
   function roundTime30(v){ if(!/^\d{1,2}:\d{2}$/.test(v||"")) return v||""; var p=v.split(":"), h=+p[0], m=+p[1]; m=Math.round(m/30)*30; if(m===60){m=0; h=(h+1)%24;} return ("0"+h).slice(-2)+":"+("0"+m).slice(-2); }
@@ -2424,7 +2440,7 @@
   }
   $("#addP").onclick=addPerson;
   $("#pname").addEventListener("keydown",function(e){ if(e.key==="Enter"){e.preventDefault(); addPerson();} });
-  Array.prototype.forEach.call(document.querySelectorAll(".media-chk"), function(chk){ chk.onchange=function(){ var k=chk.getAttribute("data-m"); draft.media=draft.media||{}; if(chk.checked){ draft.media[k]=draft.media[k]||{title:"",note:""}; } else { delete draft.media[k]; } renderMediaBoxes(); }; });
+  Array.prototype.forEach.call(document.querySelectorAll(".media-chk"), function(chk){ chk.onchange=function(){ var k=chk.getAttribute("data-m"); draft.media=draft.media||{}; if(chk.checked){ draft.media[k]=mediaArr(draft.media[k]); } else { delete draft.media[k]; } renderMediaBoxes(); }; });
   document.querySelector(".meals").addEventListener("input",function(e){   // 장소 입력 중 허슬러/당구 → 승/패 선택 표시
     var mm=(e.target.id||"").match(/^m-(.+)-place$/); if(mm) updateBillUI(mm[1]);
   });
@@ -3378,8 +3394,9 @@
     if(!prev) return;
     PhotoDB.get(date).then(function(rec){
       if(pendingPhotoDate!==date) return;
-      if(rec && rec.img){ renderPhotoPreview(rec); rm.hidden=false; cap.value=rec.caption||""; }
-      else { prev.innerHTML='<span class="photo-empty">사진 없음</span>'; rm.hidden=true; cap.value=""; }
+      var fld=$("#photoField");
+      if(rec && rec.img){ renderPhotoPreview(rec); rm.hidden=false; cap.value=rec.caption||""; if(fld) fld.hidden=false; }
+      else { prev.innerHTML='<span class="photo-empty">사진 없음</span>'; rm.hidden=true; cap.value=""; if(fld) fld.hidden=true; }   // 사진 없으면 창 숨김(추가/변경 눌러야 표시)
     });
   }
   function ingestPhotoFile(f, srcLabel){
@@ -3396,7 +3413,7 @@
     });
   }
   $("#photoInput").addEventListener("change",function(){ var f=this.files[0]; this.value=""; ingestPhotoFile(f,"저장됨"); });
-  $("#photoAdd").onclick=function(){ $("#photoInput").click(); };
+  $("#photoAdd").onclick=function(){ var fld=$("#photoField"); if(fld) fld.hidden=false; $("#photoInput").click(); };
   // PC: 스크린샷 등 이미지를 Ctrl+V 로 바로 붙여넣기 → 오늘의 사진에 저장
   document.addEventListener("paste",function(ev){
     if(!ev.clipboardData) return;
@@ -3406,7 +3423,7 @@
     ev.preventDefault();
     ingestPhotoFile(f, "붙여넣기 저장됨");
   });
-  $("#photoRemove").onclick=function(){ var date=$("#date").value||todayStr(); removePhoto(date); $("#photoPreview").innerHTML='<span class="photo-empty">사진 없음</span>'; this.hidden=true; $("#photoCaption").value=""; $("#photoMsg").textContent=""; };
+  $("#photoRemove").onclick=function(){ var date=$("#date").value||todayStr(); removePhoto(date); $("#photoPreview").innerHTML='<span class="photo-empty">사진 없음</span>'; this.hidden=true; $("#photoCaption").value=""; $("#photoMsg").textContent=""; var fld=$("#photoField"); if(fld) fld.hidden=true; };
   $("#photoCaption").addEventListener("change",function(){
     var date=$("#date").value||todayStr(); if(!photoDates[date]) return;
     PhotoDB.get(date).then(function(rec){ if(rec){ rec.caption=$("#photoCaption").value.trim(); rec.ts=Date.now(); PhotoDB.set(rec); if(window.HARU&&window.HARU.cloudPhoto) try{window.HARU.cloudPhoto.set(date,rec);}catch(e){} if(view==="photo") renderPhotoGallery(); } });
@@ -3595,10 +3612,10 @@
     else html+='<div class="learn-item">회고 기록이 없어요.</div>';
     // 영화 · 음악 · 책
     MEDIA.forEach(function(mm){
-      var items=[]; ent.forEach(function(e){ var md=e.media&&e.media[mm.k]; if(md&&(md.title||md.note)) items.push([e.date, md]); });
+      var items=[]; ent.forEach(function(e){ if(!e.media) return; mediaArr(e.media[mm.k]).forEach(function(md){ if(md.title||md.note) items.push([e.date, md]); }); });
       if(!items.length) return;
       html+='<div class="recap-sec">'+mm.emoji+' '+mm.label+'</div>';
-      items.sort(function(a,b){return a[0]<b[0]?1:-1;}).forEach(function(it){ var md=it[1]; html+='<div class="learn-item rec-refl" data-date="'+it[0]+'"><span class="dt">'+it[0].slice(5).replace("-",".")+'</span><span class="li-t">'+esc(md.title||"")+(md.note?' · '+esc(md.note):'')+'</span></div>'; });
+      items.sort(function(a,b){return a[0]<b[0]?1:-1;}).forEach(function(it){ var md=it[1]; html+='<div class="learn-item rec-refl" data-date="'+it[0]+'"><span class="dt">'+it[0].slice(5).replace("-",".")+'</span><span class="li-t">'+linkifyHtml((md.title||"")+(md.note?' · '+md.note:''))+'</span></div>'; });
     });
     // 2) 함께 먹은 사람
     var tc=topN(comp,5);
