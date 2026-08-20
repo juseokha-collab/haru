@@ -440,6 +440,26 @@
   .pchip button{border:0; background:none; cursor:pointer; color:var(--ink-3); font-size:15px; line-height:1; padding:0 2px}
   .pchip button:hover{color:var(--c-fam)}
   .lab-hint{font-weight:400; color:var(--ink-3); font-size:11.5px; margin-left:4px}
+  /* 미팅 탭 + 요약 + 미팅별 음주 */
+  .mt-head{display:flex; align-items:center; gap:8px; margin-bottom:2px}
+  .mt-head label{margin:0}
+  .mt-tabs{margin-left:auto; display:inline-flex; gap:4px; flex-wrap:wrap}
+  .mt-tabs button{font-family:inherit; font-size:12px; color:var(--ink-2); background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:4px 9px; cursor:pointer}
+  .mt-tabs button.on{background:color-mix(in srgb,var(--accent) 16%,var(--surface)); border-color:color-mix(in srgb,var(--accent) 45%,transparent); color:var(--accent-ink); font-weight:700}
+  .mt-summary{display:flex; flex-direction:column; gap:5px; margin:6px 0}
+  .mt-summary:empty{display:none}
+  .mt-sum-row{text-align:left; font-family:inherit; background:var(--surface-2); border:1px solid var(--border); border-radius:9px; padding:6px 9px; cursor:pointer}
+  .mt-sum-row:hover{border-color:var(--accent)}
+  .mt-sum-l1{font-size:12.5px; font-weight:700; color:var(--ink)}
+  .mt-sum-l2{font-size:11.5px; color:var(--ink-3); margin-top:2px}
+  .mt-sum-l2 .mt-dr{color:#C96F6F; font-weight:700}
+  .mt-sum-l2 .mt-sum-ed{margin-left:4px}
+  .meal-drink{display:flex; align-items:center; gap:5px; flex-wrap:wrap; margin-top:6px}
+  .meal-drink select{font-family:inherit; font-size:12px; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:3px 6px; outline:0}
+  .meal-drink .md-add{font-family:inherit; font-size:11.5px; border:1px solid var(--border); background:var(--surface); color:var(--ink-2); border-radius:6px; padding:3px 9px; cursor:pointer}
+  .meal-drink .md-add:hover{border-color:var(--accent); color:var(--accent-ink)}
+  .meal-drink .md-list{font-size:12px; color:#C96F6F; font-weight:700}
+  .meal-drink .md-list .md-edit{background:none; border:0; cursor:pointer; font-size:12px; padding:0 2px}
   label.same-chk{display:inline-flex; align-items:center; gap:5px; margin:0; white-space:nowrap; flex:none; font-size:12px; color:var(--ink-2); font-weight:500; cursor:pointer; user-select:none}
   label.same-chk.sm{font-size:11px}
   .same-chk input{cursor:pointer; accent-color:var(--accent); flex:none; margin:0; width:13px; height:13px}
@@ -1261,7 +1281,8 @@
       </div>
 
       <div class="cgroup">
-        <label>미팅</label>
+        <div class="mt-head"><label>미팅</label><div class="mt-tabs" id="mtTabs"><button type="button" data-t="breakfast" class="on">🌅 아침</button><button type="button" data-t="lunch">☀️ 점심</button><button type="button" data-t="dinner">🌙 저녁</button><button type="button" data-t="etc">✨ 기타</button></div></div>
+        <div class="mt-summary" id="mtSummary"></div>
         <div class="meals">
           <div class="meal">
             <div class="meal-h row"><span>🌅 아침</span><label class="same-chk sm"><input type="checkbox" class="meal-same" data-meal="breakfast"> 동일</label></div>
@@ -1295,13 +1316,6 @@
       </div>
 
       <div class="cgroup">
-        <label>음주 <span class="lab-hint">병 수 · 0.5=반병</span></label>
-        <div class="drink-grid">
-          <label title="맥주">🍺<input type="number" min="0" step="0.5" inputmode="decimal" id="d-beer" placeholder="0"></label>
-          <label title="소주">🍾<input type="number" min="0" step="0.5" inputmode="decimal" id="d-soju" placeholder="0"></label>
-          <label title="막걸리">🥛<input type="number" min="0" step="0.5" inputmode="decimal" id="d-makgeolli" placeholder="0"></label>
-          <label title="기타">🍷<input type="number" min="0" step="0.5" inputmode="decimal" id="d-etc" placeholder="0"></label>
-        </div>
         <b id="exHome" hidden></b>
         <div id="exBlock">
         <label>운동 <span class="lab-hint">활동 · 시간 · 몸무게</span></label>
@@ -1446,7 +1460,7 @@
   state.ledgerCats = (state.ledgerCats && state.ledgerCats.length) ? state.ledgerCats : defaultLedgerCats();
   migrateLedgerCats();
   migrateReflections();
-  var draft = { date: todayStr(), people: [], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), drinks:emptyDrinks(), exercise:emptyExercise(), golfScore:{}, thoughts:"", learning:"", media:{} };
+  var draft = { date: todayStr(), people: [], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), drinks:emptyDrinks(), exercise:emptyExercise(), golfScore:{}, thoughts:"", learning:"", media:{}, mealDrinks:{} };
   function dailyRandomRels(){   // 첫 화면: 가족·식당 제외하고, 날짜 시드로 매일 다른 관계 그룹을 랜덤 표시(하루 안에선 고정)
     var hid={}; REL_ORDER.forEach(function(r){ hid[r]=true; });   // 기본 전부 숨김
     var counts={}; Object.keys(state.people||{}).forEach(function(n){ var r=relOf(n); counts[r]=(counts[r]||0)+1; });
@@ -2313,7 +2327,7 @@
     var clean=mediaArr((draft.media||{})[mm.k]).map(function(v){ return {title:(v.title||"").trim(), note:(v.note||"").trim()}; }).filter(function(v){ return v.title||v.note; });
     if(clean.length) out[mm.k]=clean; }); return out; }
   function loadMediaUI(){ MEDIA.forEach(function(mm){ var chk=document.querySelector('.media-chk[data-m="'+mm.k+'"]'); if(chk) chk.checked=mediaHas((draft.media||{})[mm.k]); }); renderMediaBoxes(); }
-  function loadMeals(meals){ MEALS.forEach(function(x){ var v=(meals&&meals[x.key])||{}; var p=document.getElementById("m-"+x.key+"-place"), f=document.getElementById("m-"+x.key+"-food"), w=document.getElementById("m-"+x.key+"-people"); if(p)p.value=v.place||""; if(f)f.value=v.food||""; if(w)w.value=(v.people||[]).join(", "); var chk=document.querySelector('.golf-chk[data-meal="'+x.key+'"]'); if(chk) chk.checked=!!(state.golf && v.place && state.golf[v.place]); setGolfFoodPh(x.key, !!(chk&&chk.checked)); updateBillUI(x.key); var _sg=document.querySelector('.bill-seg[data-meal="'+x.key+'"]'); if(_sg){ _sg.dataset.val=v.bill||""; upBillActive(_sg); } }); renderSpecialExtras(); }
+  function loadMeals(meals){ MEALS.forEach(function(x){ var v=(meals&&meals[x.key])||{}; var p=document.getElementById("m-"+x.key+"-place"), f=document.getElementById("m-"+x.key+"-food"), w=document.getElementById("m-"+x.key+"-people"); if(p)p.value=v.place||""; if(f)f.value=v.food||""; if(w)w.value=(v.people||[]).join(", "); var chk=document.querySelector('.golf-chk[data-meal="'+x.key+'"]'); if(chk) chk.checked=!!(state.golf && v.place && state.golf[v.place]); setGolfFoodPh(x.key, !!(chk&&chk.checked)); updateBillUI(x.key); var _sg=document.querySelector('.bill-seg[data-meal="'+x.key+'"]'); if(_sg){ _sg.dataset.val=v.bill||""; upBillActive(_sg); } }); renderSpecialExtras(); ["breakfast","lunch","dinner","special","__biz"].forEach(renderMdList); }
   // 30분 단위 시간 드롭다운(오전/오후 라벨)
   function roundTime30(v){ if(!/^\d{1,2}:\d{2}$/.test(v||"")) return v||""; var p=v.split(":"), h=+p[0], m=+p[1]; m=Math.round(m/30)*30; if(m===60){m=0; h=(h+1)%24;} return ("0"+h).slice(-2)+":"+("0"+m).slice(-2); }
   function timeOptsHtml(sel){ sel=roundTime30(sel); var o='<option value="">시간</option>'; for(var t=8*60; t<=17*60+30; t+=30){ var h=Math.floor(t/60), m=t%60, v=("0"+h).slice(-2)+":"+("0"+m).slice(-2), ap=h<12?"오전":"오후", h12=h%12||12; o+='<option value="'+v+'"'+(v===sel?" selected":"")+'>'+ap+" "+h12+":"+("0"+m).slice(-2)+'</option>'; } return o; }
@@ -2323,6 +2337,52 @@
   function readBizmeets(){ var out=[readBiz()]; Array.prototype.forEach.call(document.querySelectorAll("#bizExtra .br-row"),function(row){ out.push({ name:(row.querySelector(".br-name").value||"").trim(), time:(row.querySelector(".br-time").value||"").trim(), people:parseNames(row.querySelector(".br-people").value) }); }); return out; }
   function _hasSp(v){ return !!(v && (v.place||v.food||(v.people&&v.people.length))); }
   function _hasBz(v){ return !!(v && (v.name||v.time||(v.people&&v.people.length))); }
+  // ── 미팅 탭 + 미팅별 음주 ─────────────────────────
+  var MD_KINDS=[{k:"soju",n:"소주"},{k:"beer",n:"맥주"},{k:"makgeolli",n:"막걸리"},{k:"etc",n:"기타"}], MD_QTY=[0.5,1,1.5,2,2.5,3];
+  var MT_INFO={ breakfast:{ico:"🌅",n:"아침",tab:"breakfast"}, lunch:{ico:"☀️",n:"점심",tab:"lunch"}, dinner:{ico:"🌙",n:"저녁",tab:"dinner"}, special:{ico:"✨",n:"기타",tab:"etc"}, __biz:{ico:"💼",n:"기타",tab:"etc"} };
+  var mtTab="breakfast";
+  function slotTab(slot){ return (slot==="breakfast"||slot==="lunch"||slot==="dinner")? slot : "etc"; }
+  function injectMealDrinks(){   // 각 미팅 편집칸에 음주 입력(주종·양·추가) 1회 주입
+    Array.prototype.forEach.call(document.querySelectorAll(".meals .meal"), function(md){
+      if(md.querySelector(".meal-drink")) return;
+      var chk=md.querySelector(".meal-same"), slot=chk?chk.getAttribute("data-meal"):null; if(!slot) return;
+      var ctl=document.createElement("div"); ctl.className="meal-drink"; ctl.setAttribute("data-slot",slot);
+      ctl.innerHTML='<select class="md-kind"><option value="">🍶 음주</option>'+MD_KINDS.map(function(x){return '<option value="'+x.k+'">'+x.n+'</option>';}).join("")+'</select>'+
+        '<select class="md-qty"><option value="">양</option>'+MD_QTY.map(function(q){return '<option value="'+q+'">'+q+'병</option>';}).join("")+'</select>'+
+        '<button type="button" class="md-add">추가</button><span class="md-list"></span>';
+      md.appendChild(ctl);
+    });
+  }
+  function renderMdList(slot){
+    var ctl=document.querySelector('.meal-drink[data-slot="'+slot+'"]'); if(!ctl) return;
+    var d=(draft.mealDrinks||{})[slot]||{}, parts=[];
+    MD_KINDS.forEach(function(x){ var q=+d[x.k]||0; if(q>0) parts.push(x.n+" "+q+"병"); });
+    ctl.querySelector(".md-list").innerHTML = parts.length? esc(parts.join(" · "))+' <button type="button" class="md-edit" title="음주 지우고 다시">✏️</button>' : '';
+  }
+  function aggMealDrinks(){ var agg=emptyDrinks(); Object.keys(draft.mealDrinks||{}).forEach(function(slot){ var d=draft.mealDrinks[slot]||{}; DRINKS.forEach(function(x){ agg[x.key]+=(+d[x.key]||0); }); }); return agg; }
+  function renderMeetingTabs(){
+    Array.prototype.forEach.call(document.querySelectorAll("#mtTabs button"), function(b){ b.classList.toggle("on", b.getAttribute("data-t")===mtTab); });
+    Array.prototype.forEach.call(document.querySelectorAll(".meals .meal"), function(md){ var chk=md.querySelector(".meal-same"), slot=chk?chk.getAttribute("data-meal"):null; if(!slot) return; md.style.display=(slotTab(slot)===mtTab)?"":"none"; });
+    var se=$("#specialExtra"), be=$("#bizExtra"); if(se) se.style.display=(mtTab==="etc")?"":"none"; if(be) be.style.display=(mtTab==="etc")?"":"none";
+    renderMeetingSummary();
+  }
+  function renderMeetingSummary(){
+    var wrap=$("#mtSummary"); if(!wrap) return; wrap.innerHTML="";
+    var meals=readMeals(), biz=readBiz();
+    [["breakfast",meals.breakfast],["lunch",meals.lunch],["dinner",meals.dinner],["special",meals.special],["__biz",biz]].forEach(function(pair){
+      var slot=pair[0], m=pair[1]||{}, info=MT_INFO[slot]; if(info.tab===mtTab) return;
+      var filled = slot==="__biz" ? !!(m.name||(m.people&&m.people.length)) : !!(m.place||m.food||(m.people&&m.people.length));
+      var dr=(draft.mealDrinks||{})[slot], drTot=dr?drinkTotal(dr):0;
+      if(!filled && drTot===0) return;
+      var l1 = info.ico+" "+esc((m.people&&m.people.length)? m.people.join(", ") : info.n);
+      var l2=[]; if(slot==="__biz"){ if(m.name) l2.push(esc(m.name)); if(m.time) l2.push(esc(m.time)); } else { if(m.place) l2.push(esc(m.place)); if(m.food) l2.push(esc(m.food)); }
+      if(drTot>0){ var dp=[]; MD_KINDS.forEach(function(x){ var q=+dr[x.k]||0; if(q>0) dp.push(x.n+" "+q+"병"); }); l2.push('<b class="mt-dr">'+dp.join(" · ")+'</b>'); }
+      var row=document.createElement("button"); row.type="button"; row.className="mt-sum-row"; row.setAttribute("data-tab",info.tab);
+      row.innerHTML='<div class="mt-sum-l1">'+l1+'</div><div class="mt-sum-l2">'+(l2.join(" · ")||"—")+' <span class="mt-sum-ed">✏️</span></div>';
+      row.onclick=function(){ mtTab=this.getAttribute("data-tab"); renderMeetingTabs(); };
+      wrap.appendChild(row);
+    });
+  }
   // 추가 Special 행 렌더: 첫 Special이 채워지면 빈 행 하나 생성(최대 4개 추가)
   function renderSpecialExtras(){
     var wrap=$("#specialExtra"); if(!wrap) return;
@@ -2456,8 +2516,18 @@
     draft.bizmeets=readBizmeets(); renderBizExtras();
     renderGolfScore();
   });
+  // 미팅 탭 전환 + 미팅별 음주 추가/지우기
+  injectMealDrinks();
+  $("#mtTabs").addEventListener("click",function(e){ var b=e.target.closest("button"); if(!b)return; mtTab=b.getAttribute("data-t"); renderMeetingTabs(); });
+  document.querySelector(".meals").addEventListener("click",function(e){
+    var add=e.target.closest(".md-add");
+    if(add){ var ctl=add.closest(".meal-drink"), slot=ctl.getAttribute("data-slot"); var ks=ctl.querySelector(".md-kind"), qs=ctl.querySelector(".md-qty"), k=ks.value, q=parseFloat(qs.value);
+      if(k&&q>0){ draft.mealDrinks=draft.mealDrinks||{}; var d=draft.mealDrinks[slot]=draft.mealDrinks[slot]||{}; d[k]=(+d[k]||0)+q; ks.value=""; qs.value=""; renderMdList(slot); } return; }
+    var ed=e.target.closest(".md-edit");
+    if(ed){ var ctl2=ed.closest(".meal-drink"), slot2=ctl2.getAttribute("data-slot"); if(draft.mealDrinks) delete draft.mealDrinks[slot2]; renderMdList(slot2); return; }
+  });
 
-  function loadDraft(){ var scs=document.querySelectorAll(".meal-same"); for(var si=0;si<scs.length;si++) scs[si].checked=false; loadPhotoForDate(draft.date); $("#date").value=draft.date; $("#schedule").value=draft.schedule||""; $("#schedMark").checked=!!draft.mark; loadMeals(draft.meals); draft.bizmeets=(draft.bizmeets&&draft.bizmeets.length)?draft.bizmeets:[draft.bizmeet||emptyBiz()]; loadBiz(draft.bizmeets[0]); renderBizExtras(); loadDrinks(draft.drinks); loadExercise(draft.exercise); $("#thoughts").value=draft.thoughts; var _le2=$("#learning"); if(_le2) _le2.value=draft.learning||""; loadMediaUI(); renderDraftChips(); renderGolfScore(); var _ed=$("#editing"); _ed.textContent = existingFor(draft.date)?"수정중":""; _ed.className="sub"; }
+  function loadDraft(){ var scs=document.querySelectorAll(".meal-same"); for(var si=0;si<scs.length;si++) scs[si].checked=false; loadPhotoForDate(draft.date); $("#date").value=draft.date; $("#schedule").value=draft.schedule||""; $("#schedMark").checked=!!draft.mark; loadMeals(draft.meals); draft.bizmeets=(draft.bizmeets&&draft.bizmeets.length)?draft.bizmeets:[draft.bizmeet||emptyBiz()]; loadBiz(draft.bizmeets[0]); renderBizExtras(); renderMeetingTabs(); loadExercise(draft.exercise); $("#thoughts").value=draft.thoughts; var _le2=$("#learning"); if(_le2) _le2.value=draft.learning||""; loadMediaUI(); renderDraftChips(); renderGolfScore(); var _ed=$("#editing"); _ed.textContent = existingFor(draft.date)?"수정중":""; _ed.className="sub"; }
   function existingFor(date){ return state.entries.filter(function(e){return e.date===date;})[0]; }
   function dueTodoText(date){   // 해당 날짜가 기한인 미완료 Things to do → "⏰ 내용" 목록(주요일정 기본값용)
     var arr=(state.todos||[]).filter(function(x){ return x.task && x.task.trim() && x.due===date && !x.done; }).map(function(x){ return "⏰ "+x.task.trim(); });
@@ -2472,7 +2542,7 @@
     state.golf=state.golf||{};
     MEALS.forEach(function(x){ var pl=(draft.meals[x.key]||{}).place; var chk=document.querySelector('.golf-chk[data-meal="'+x.key+'"]'); if(pl){ if(chk&&chk.checked) state.golf[pl]=true; else if(chk) delete state.golf[pl]; } });
     draft.bizmeets=readBizmeets().filter(bizHasContent); draft.bizmeet=draft.bizmeets[0]||emptyBiz();
-    draft.drinks=readDrinks();
+    var _agg=aggMealDrinks(); draft.drinks = drinkTotal(_agg)>0 ? _agg : (draft.drinks||_agg);   // 미팅별 음주 합계(없으면 기존값 보존)
     draft.exercise=readExercise();
     draft.thoughts=$("#thoughts").value.trim();
     var _le=$("#learning"); draft.learning = _le? _le.value.trim() : (draft.learning||"");   // Learning 입력은 통합·제거 → 기존 값 보존
@@ -2489,8 +2559,8 @@
     var ex=existingFor(draft.date);
     var names=draft.people.map(function(p){return p.name;});
     withAll.forEach(function(n){ if(names.indexOf(n)<0) names.push(n); }); // 식사·업무미팅 동행도 만난 사람에 포함
-    if(ex){ ex.people=names; ex.schedule=draft.schedule; ex.mark=draft.mark; ex.meals=draft.meals; ex.bizmeet=draft.bizmeet; ex.bizmeets=draft.bizmeets; ex.drinks=draft.drinks; ex.exercise=draft.exercise; ex.golfScore={}; ex.golfScores=gScores; ex.thoughts=draft.thoughts; ex.learning=draft.learning; ex.media=draft.media; ex.ts=Date.now(); }
-    else state.entries.push({id:id(), date:draft.date, people:names, schedule:draft.schedule, mark:draft.mark, meals:draft.meals, bizmeet:draft.bizmeet, bizmeets:draft.bizmeets, drinks:draft.drinks, exercise:draft.exercise, golfScore:{}, golfScores:gScores, thoughts:draft.thoughts, learning:draft.learning, media:draft.media, ts:Date.now()});
+    if(ex){ ex.people=names; ex.schedule=draft.schedule; ex.mark=draft.mark; ex.meals=draft.meals; ex.bizmeet=draft.bizmeet; ex.bizmeets=draft.bizmeets; ex.drinks=draft.drinks; ex.mealDrinks=draft.mealDrinks; ex.exercise=draft.exercise; ex.golfScore={}; ex.golfScores=gScores; ex.thoughts=draft.thoughts; ex.learning=draft.learning; ex.media=draft.media; ex.ts=Date.now(); }
+    else state.entries.push({id:id(), date:draft.date, people:names, schedule:draft.schedule, mark:draft.mark, meals:draft.meals, bizmeet:draft.bizmeet, bizmeets:draft.bizmeets, drinks:draft.drinks, mealDrinks:draft.mealDrinks, exercise:draft.exercise, golfScore:{}, golfScores:gScores, thoughts:draft.thoughts, learning:draft.learning, media:draft.media, ts:Date.now()});
     save();
     flash("저장했어요 ✦");
     loadDraft();   // 저장 후에도 입력 내용을 비우지 않고 그대로 남김
@@ -2499,7 +2569,7 @@
   }
   // 직전 기록의 몸무게·허리둘레(새 기록 작성 시 미리 채워 수정)
   function lastBody(){ var w="", ws="", arr=state.entries.slice().sort(byDateDesc); for(var i=0;i<arr.length;i++){ var x=arr[i].exercise||{}; if(w===""&&(x.weight===0||x.weight)) w=x.weight; if(ws===""&&(x.waist===0||x.waist)) ws=x.waist; if(w!==""&&ws!=="") break; } return {weight:w, waist:ws}; }
-  function resetDraft(){ var lb=lastBody(); draft={date:todayStr(), people:[], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), bizmeets:[emptyBiz()], drinks:emptyDrinks(), exercise:{activity:"", minutes:0, weight:lb.weight, waist:lb.waist}, golfScore:{}, golfScores:{}, thoughts:"", learning:"", media:{}}; loadDraft(); }
+  function resetDraft(){ var lb=lastBody(); draft={date:todayStr(), people:[], schedule:"", mark:false, meals:emptyMeals(), bizmeet:emptyBiz(), bizmeets:[emptyBiz()], drinks:emptyDrinks(), exercise:{activity:"", minutes:0, weight:lb.weight, waist:lb.waist}, golfScore:{}, golfScores:{}, thoughts:"", learning:"", media:{}, mealDrinks:{}}; loadDraft(); }
   $("#saveBtn").onclick=saveEntry;
   $("#saveBtn2").onclick=saveEntry;
   // 저장 후 다시 편집하면 '수정완료' → '수정중'으로 되돌림
@@ -2514,7 +2584,7 @@
 
   function scrollToComposer(){ var c=document.querySelector(".composer-wide"); if(c){ c.scrollIntoView({behavior:reduce?"auto":"smooth", block:"start"}); var f=document.getElementById("schedule"); } }
   function editEntry(e, noScroll){
-    draft={ date:e.date, people:e.people.map(function(n){return {name:n, rel:relOf(n)};}), schedule:e.schedule||"", mark:!!e.mark, meals:e.meals?JSON.parse(JSON.stringify(e.meals)):emptyMeals(), bizmeet:e.bizmeet?JSON.parse(JSON.stringify(e.bizmeet)):emptyBiz(), bizmeets:(e.bizmeets&&e.bizmeets.length)?JSON.parse(JSON.stringify(e.bizmeets)):(e.bizmeet?[JSON.parse(JSON.stringify(e.bizmeet))]:[emptyBiz()]), drinks:e.drinks?JSON.parse(JSON.stringify(e.drinks)):emptyDrinks(), exercise:e.exercise?JSON.parse(JSON.stringify(e.exercise)):emptyExercise(), golfScore:e.golfScore?JSON.parse(JSON.stringify(e.golfScore)):{}, golfScores:e.golfScores?JSON.parse(JSON.stringify(e.golfScores)):{}, thoughts:e.thoughts, learning:e.learning, media:e.media?JSON.parse(JSON.stringify(e.media)):{} };
+    draft={ date:e.date, people:e.people.map(function(n){return {name:n, rel:relOf(n)};}), schedule:e.schedule||"", mark:!!e.mark, meals:e.meals?JSON.parse(JSON.stringify(e.meals)):emptyMeals(), bizmeet:e.bizmeet?JSON.parse(JSON.stringify(e.bizmeet)):emptyBiz(), bizmeets:(e.bizmeets&&e.bizmeets.length)?JSON.parse(JSON.stringify(e.bizmeets)):(e.bizmeet?[JSON.parse(JSON.stringify(e.bizmeet))]:[emptyBiz()]), drinks:e.drinks?JSON.parse(JSON.stringify(e.drinks)):emptyDrinks(), exercise:e.exercise?JSON.parse(JSON.stringify(e.exercise)):emptyExercise(), golfScore:e.golfScore?JSON.parse(JSON.stringify(e.golfScore)):{}, golfScores:e.golfScores?JSON.parse(JSON.stringify(e.golfScores)):{}, thoughts:e.thoughts, learning:e.learning, media:e.media?JSON.parse(JSON.stringify(e.media)):{}, mealDrinks:e.mealDrinks?JSON.parse(JSON.stringify(e.mealDrinks)):{} };
     loadDraft(); if(!noScroll) scrollToComposer();
   }
   function delEntry(e){
