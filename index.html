@@ -824,6 +824,8 @@
   .led-ap-list{flex-basis:100%; margin:2px 0 1px; padding:3px 2px 1px; border-top:1px solid var(--border)}
   .led-ap-row{display:grid; grid-template-columns:34px 1fr auto; align-items:baseline; gap:6px; font-size:11px; padding:1.5px 0; color:var(--ink-2)}
   .led-ap-row .lap-d{color:var(--ink-3); font-variant-numeric:tabular-nums}
+  .led-ap-row.apdue .lap-d{color:#e23b3b; font-weight:800}
+  .led-ap-row.apdue .lap-n{color:#e23b3b}   /* 결제일 오늘/내일: 빨강 강조 */
   .led-ap-row .lap-n{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .led-ap-row .lap-n .lap-m{font-style:normal; font-size:9.5px; color:var(--ink-3); margin-left:3px}
   .led-ap-row .lap-a{text-align:right; font-variant-numeric:tabular-nums}
@@ -4207,6 +4209,7 @@
     var el=$("#adminLedger"); if(!el) return;
     var yr=adminYear==="all"?String(new Date().getFullYear()):adminYear, ym=yr+"-"+pad(ledgerMonth);
     var bankChain=computeBankChain(ym);   // 같은 구좌 카드 잔액 연쇄
+    var _todayDay=new Date().getDate(), _tmrDay=new Date(Date.now()+864e5).getDate();   // 자동이체 결제일 오늘/내일 강조용
     el.innerHTML="";
     // 상단 헤더: 월 선택은 상단 셀렉트(2026.08월)로 통합, 여기엔 PC 편집 버튼만
     var head=document.createElement("div"); head.className="led-head";
@@ -4278,7 +4281,8 @@
             var list=document.createElement("div"); list.className="led-ap-list";
             ap.slice().sort(function(a,b){ return (a.day||99)-(b.day||99); }).forEach(function(a){
               var ex=apExcluded(a.memo);
-              var r=document.createElement("div"); r.className="led-ap-row"+(ex?" ex":"");
+              var _apDue = a.day && (a.day===_todayDay || a.day===_tmrDay);   // 결제일이 오늘/내일(하루전) → 빨강
+              var r=document.createElement("div"); r.className="led-ap-row"+(ex?" ex":"")+(_apDue?" apdue":"");
               r.innerHTML='<span class="lap-d">'+(a.day?a.day+"일":"—")+'</span><span class="lap-n">'+esc(a.name||"")+(a.memo?' <i class="lap-m">'+esc(a.memo)+'</i>':'')+'</span><span class="lap-a">'+fmtWon(+a.amt||0)+'</span>';
               list.appendChild(r);
             });
