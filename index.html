@@ -926,7 +926,8 @@
   .ledn-row:hover{background:var(--surface-2)}
   .ledn-row.on{background:color-mix(in srgb,var(--accent) 10%,transparent)}
   .ledn-m{flex:none; width:34px; font-size:11.5px; font-weight:700; color:var(--ink-2); font-variant-numeric:tabular-nums; padding-top:2px}
-  .ledn-notes{flex:1; min-width:0; display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:3px 12px}
+  .ledn-cols{flex:1; min-width:0; display:grid; grid-template-columns:repeat(4,1fr); gap:3px 12px}   /* 수입·카드지출·정기지출·(투자/현금) 고정 4열 */
+  .ledn-col{min-width:0; display:flex; flex-direction:column; gap:3px}
   .ledn-item{min-width:0; display:flex; align-items:baseline; gap:5px; font-size:12px; color:var(--ink); overflow:hidden; white-space:nowrap}
   .ledn-item .lni-g{flex:none; font-size:10px; font-weight:700; color:var(--accent-ink); background:color-mix(in srgb,var(--accent) 12%,transparent); border-radius:5px; padding:1px 6px}
   .ledn-item .lni-t{min-width:0; overflow:hidden; text-overflow:ellipsis}
@@ -1114,7 +1115,7 @@
     /* 가계부: 편집 버튼 줄(항목·엑셀)은 PC에서만 → 모바일은 상단 월 셀렉트만 사용 */
     .led-head{ display:none; }
     /* 비고 모아보기: 모바일에서도 한 줄에 2건 들어가도록 열 최소폭 축소 */
-    .ledn-notes{ grid-template-columns:repeat(auto-fill,minmax(138px,1fr)); column-gap:8px; }
+    .ledn-cols{ column-gap:8px; }
   }
 
   @media (prefers-reduced-motion:reduce){ *{scroll-behavior:auto} .modal-input.shake{animation:none} }
@@ -4481,16 +4482,26 @@
   function buildLedgerNotes(yr){
     var box=document.createElement("div"); box.className="led-notes";
     box.innerHTML='<div class="led-year-h">'+yr+'년 비고 모아보기</div>';
-    var any=false;
+    var any=false, NCOLS=[["income"],["card"],["regular"],["invest","cash"]];   // 항목별 고정 컬럼(투자·현금은 4번째 열에 세로로)
+    var gName={}; LEDGER_GROUPS.forEach(function(g){ gName[g.k]=g.n; });
     for(var m=1;m<=12;m++){ var ym=yr+"-"+pad(m);
-      var items=[]; LEDGER_GROUPS.forEach(function(g){ var nt=ledNoteEff(ym, g.k); if(nt) items.push({g:g.n, k:g.k, t:nt}); });
-      if(!items.length) continue; any=true;
-      var row=document.createElement("div"); row.className="ledn-row"+(m===ledgerMonth?" on":""); row.setAttribute("data-m",m); row.setAttribute("data-jg", items[0].k);
+      var notes={}, firstK=null; LEDGER_GROUPS.forEach(function(g){ var nt=ledNoteEff(ym, g.k); if(nt){ notes[g.k]=nt; if(!firstK) firstK=g.k; } });
+      if(!firstK) continue; any=true;
+      var row=document.createElement("div"); row.className="ledn-row"+(m===ledgerMonth?" on":""); row.setAttribute("data-m",m); row.setAttribute("data-jg", firstK);
       row.onclick=function(){ ledgerMonth=+this.getAttribute("data-m"); ledJumpGroup=this.getAttribute("data-jg"); renderAdminLedger(); };
       var ml=document.createElement("span"); ml.className="ledn-m"; ml.textContent=m+"월"; row.appendChild(ml);
-      var ntw=document.createElement("div"); ntw.className="ledn-notes";
-      items.forEach(function(it){ var sp=document.createElement("span"); sp.className="ledn-item"; sp.title=it.g+" · "+it.t+" (클릭 → 이 달·항목으로)"; sp.setAttribute("data-m", m); sp.setAttribute("data-g", it.k); sp.innerHTML='<b class="lni-g">'+esc(it.g)+'</b> <span class="lni-t">'+esc(it.t)+'</span>'; sp.onclick=function(ev){ ev.stopPropagation(); ledgerMonth=+this.getAttribute("data-m"); ledJumpGroup=this.getAttribute("data-g"); renderAdminLedger(); }; ntw.appendChild(sp); });
-      row.appendChild(ntw); box.appendChild(row);
+      var cols=document.createElement("div"); cols.className="ledn-cols";
+      NCOLS.forEach(function(colKeys){
+        var cell=document.createElement("div"); cell.className="ledn-col";
+        colKeys.forEach(function(gk){ if(!notes[gk]) return;
+          var sp=document.createElement("span"); sp.className="ledn-item"; sp.title=gName[gk]+" · "+notes[gk]+" (클릭 → 이 달·항목으로)"; sp.setAttribute("data-m", m); sp.setAttribute("data-g", gk);
+          sp.innerHTML='<b class="lni-g">'+esc(gName[gk])+'</b> <span class="lni-t">'+esc(notes[gk])+'</span>';
+          sp.onclick=function(ev){ ev.stopPropagation(); ledgerMonth=+this.getAttribute("data-m"); ledJumpGroup=this.getAttribute("data-g"); renderAdminLedger(); };
+          cell.appendChild(sp);
+        });
+        cols.appendChild(cell);
+      });
+      row.appendChild(cols); box.appendChild(row);
     }
     if(!any){ var em=document.createElement("div"); em.className="led-empty"; em.textContent="이 해 비고가 없어요. (각 대분류 아래 ‘…비고’에 적으면 여기 모여요)"; box.appendChild(em); }
     return box;
