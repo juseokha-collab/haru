@@ -789,8 +789,10 @@
   .led-imp:hover{border-color:var(--accent); color:var(--accent-ink)}
   .led-sum{display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; position:sticky; top:0; z-index:5; background:var(--surface); padding:6px 0 8px; box-shadow:0 6px 8px -6px rgba(0,0,0,.15)}
   .led-s{flex:1; min-width:80px; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:7px 6px; text-align:center}
-  .led-s i{display:block; font-size:10.5px; font-style:normal; color:var(--ink-3); margin-bottom:3px}
+  .led-s .ls-1{display:inline-flex; align-items:baseline; gap:5px; justify-content:center}
+  .led-s i{font-size:11px; font-style:normal; color:var(--ink-3)}
   .led-s b{font-size:14px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums}
+  .led-s .ls-sub{margin-top:3px; font-size:10px; color:var(--ink-3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .led-s.net{background:color-mix(in srgb,var(--accent) 10%,var(--surface-2)); border-color:color-mix(in srgb,var(--accent) 30%,transparent)}
   .led-s b.pos{color:#2f8f52} .led-s b.neg{color:#e23b3b}
   .won-neg{color:#e23b3b} .led-in.neg{color:#e23b3b}
@@ -4307,7 +4309,11 @@
     head.appendChild(cfg); el.appendChild(head);
     var t=ledMonthTotals(ym);
     var sum=document.createElement("div"); sum.className="led-sum";
-    sum.innerHTML='<div class="led-s"><i>수입</i><b>'+wonH(t.income)+'</b></div><div class="led-s"><i>지출</i><b>'+wonH(t.expense)+'</b></div><div class="led-s"><i>투자</i><b>'+wonH(t.invest)+'</b></div><div class="led-s net"><i>수지</i><b class="'+(t.net<0?"neg":"pos")+'">'+fmtWon(t.net)+'</b></div>';
+    var _regNote=ledNoteEff(ym,"regular");   // 지출 칸 2줄: 정기지출 비고
+    sum.innerHTML='<div class="led-s"><span class="ls-1"><i>수입</i> <b>'+wonH(t.income)+'</b></span></div>'+
+      '<div class="led-s"><span class="ls-1"><i>지출</i> <b>'+wonH(t.expense)+'</b></span>'+(_regNote?'<div class="ls-sub">정기 · '+esc(_regNote)+'</div>':'')+'</div>'+
+      '<div class="led-s"><span class="ls-1"><i>투자</i> <b>'+wonH(t.invest)+'</b></span></div>'+
+      '<div class="led-s net"><span class="ls-1"><i>수지</i> <b class="'+(t.net<0?"neg":"pos")+'">'+fmtWon(t.net)+'</b></span></div>';
     el.appendChild(sum);
     LEDGER_GROUPS.forEach(function(g){
       var cats=ledCatsOf(g.k).filter(function(c){ return catActive(c, ym); }); if(!cats.length) return;   // 해당 월 활성 항목만
