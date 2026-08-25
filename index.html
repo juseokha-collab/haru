@@ -630,6 +630,9 @@
 
   .tl-meals{margin-top:6px; display:flex; flex-direction:column; gap:2px}
   .tl-meal{font-size:12px; color:var(--ink-2); line-height:1.55}
+  .tl-ball{display:inline-block; width:11px; height:11px; border-radius:50%; vertical-align:-1px; background:radial-gradient(circle at 34% 30%, rgba(255,255,255,.9) 0 1.5px, transparent 2.2px), #8A8F98; box-shadow:inset -1px -1px 1.5px rgba(0,0,0,.3)}
+  .tl-ball.win{background:radial-gradient(circle at 34% 30%, rgba(255,255,255,.9) 0 1.5px, transparent 2.2px), #D64545}   /* 승=빨간공 */
+  .tl-ball.lose{background:radial-gradient(circle at 34% 30%, rgba(255,255,255,.9) 0 1.5px, transparent 2.2px), #1B1B1F}  /* 패=까만공 */
   .tl-meal .m-who{color:var(--ink-3)}
 
   .save-row{display:flex; gap:8px; padding:4px 16px 16px}
@@ -2713,9 +2716,10 @@
     var rows=[];
     mealKeys({meals:meals}).forEach(function(key){
       var m=meals[key]; if(!m) return; var meta=mealMeta(key);
+      var ico = (m.place && placeEmoji(m.place)) ? ('<span class="tl-ball '+(m.bill==="win"?"win":m.bill==="lose"?"lose":"")+'"></span>') : meta.ico;   // 당구장(허슬러)=승패색 당구공
       var parts=[]; if(m.place)parts.push(esc(m.place)); if(m.food)parts.push(esc(m.food));
       var who=(m.people&&m.people.length)?' <span class="m-who">('+m.people.map(esc).join(", ")+')</span>':'';
-      if(parts.length||who) rows.push('<div class="tl-meal">'+meta.ico+' '+parts.join(" · ")+who+'</div>');
+      if(parts.length||who) rows.push('<div class="tl-meal">'+ico+' '+parts.join(" · ")+who+'</div>');
     });
     return rows.length? '<div class="tl-meals">'+rows.join("")+'</div>' : "";
   }
