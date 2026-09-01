@@ -3804,7 +3804,7 @@
     if(e){ editEntry(e); }
     else { draft={date:ds, people:[], schedule:"", mark:false, meals:emptyMeals(), drinks:emptyDrinks(), thoughts:"", learning:""}; loadDraft(); scrollToComposer(); }
   }
-  var CAL_PALETTE=["#FBE0E0","#FDF1D2","#E6F3DE","#DDEFF4","#E9E3F7"];   // 옅은 파스텔 5색(빨강·노랑·초록·파랑·보라)
+  var CAL_PALETTE=["#FBE0E0","#FDF1D2","#E6F3DE","#DDEFF4","#E9E3F7","#CFD3DA"];   // 옅은 파스텔 5색 + 회색(달력 배경보다 진함)
   var calPaintColor=null;   // null=칠하기 끔, ""=지우개, "#hex"=칠할 색
   function calPaletteHtml(){
     var h='<button type="button" class="cp-sw cp-none'+(calPaintColor===""?" on":"")+'" data-c="" title="색 지우기">✕</button>';
