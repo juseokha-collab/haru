@@ -376,6 +376,15 @@
   .rv-chip.rv-fchip:hover{border-color:rgba(143,224,172,.5)}
   .rv-chip.rv-fchip.on{background:rgba(143,224,172,.16); border-color:#8FE0AC}
   .rv-chip.rv-fchip.on b, .rv-chip.rv-fchip.on i{color:#8FE0AC}
+  .rv-selrow{display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:0 0 10px}
+  .rv-selchip{display:flex; align-items:center; gap:2px; background:rgba(143,224,172,.16); border:1px solid rgba(143,224,172,.4); border-radius:999px; padding:4px 4px 4px 10px; font-size:12px; font-weight:700; color:#8FE0AC}
+  .rv-selchip button{background:none; border:none; color:#8FE0AC; font-size:14px; line-height:1; cursor:pointer; padding:2px 6px}
+  .rv-selpick{font-size:12px; padding:5px 8px; border-radius:999px; border:1px dashed rgba(150,166,210,.4); background:rgba(255,255,255,.04); color:var(--sky-ink-2)}
+  .rv-pchip{flex:1; min-width:92px; background:rgba(255,255,255,.05); border:1px solid rgba(150,166,210,.16); border-radius:10px; padding:8px 6px; text-align:center}
+  .rv-pchip .rv-pname{display:block; font-size:10px; color:var(--sky-ink-2); margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .rv-pchip .rv-pavg{display:block; font-size:17px; font-weight:800; color:var(--sky-ink); font-variant-numeric:tabular-nums; line-height:1.1}
+  .rv-pchip .rv-psub{display:block; font-size:10px; color:var(--sky-ink-2); margin-top:3px}
+  .rv-pchip .rv-psub b{color:#8FE0AC; font-weight:700}
   .rv-yh{font-size:11px; font-weight:800; letter-spacing:.05em; color:#8FE0AC; text-transform:uppercase; margin:14px 0 5px; padding-bottom:3px; border-bottom:1px solid rgba(143,224,172,.25)}
   .rv-row{padding:7px 4px; border-bottom:1px solid rgba(150,166,210,.1); cursor:pointer; border-radius:6px}
   .rv-row:hover{background:rgba(255,255,255,.05)}
@@ -3652,6 +3661,51 @@
 
   // 골프 라운딩 로그: 기존 골프 기록(골프 체크된 장소)을 연도별로 예쁘게 나열
   var rvFilter=null;   // null | "best" | "singles" (칩 토글)
+  var roundingSel=[];   // 상단 이름 선택(최대 3명, 나 포함 최대 4명 비교)
+  // 골프 라운드에 동반자로 등장한 적 있는 이름 목록(선택창 옵션)
+  function golfPersonNames(){
+    var names={};
+    state.entries.forEach(function(e){
+      roundsOf(e).forEach(function(r){
+        if(!(state.golf && state.golf[r.place])) return;
+        var slotM=(r.slot!=null && e.meals && e.meals[r.slot]) || null;
+        var mp=(slotM && slotM.people) || e.people || [];
+        mp.forEach(function(n){ if(n && n!=="나") names[n]=1; });
+        Object.keys(r.scores||{}).forEach(function(n){ if(n!=="나") names[n]=1; });
+      });
+    });
+    return Object.keys(names).sort();
+  }
+  // 라운드 r에서 특정 인물(name)의 원점수(미입력 시 null). "나"는 r.mine, 그 외는 comps에서 조회
+  function roundScoreOf(r, name){
+    if(name==="나") return r.mine;
+    var c=r.comps.filter(function(x){ return x.name===name; })[0];
+    return c? c.score : null;
+  }
+  // 인물 목록(players) 중 name의, list 라운드들에 대한 평균(18홀 환산)·베스트·1등(동률 포함) 횟수
+  function personRoundStats(list, name, players){
+    var convs=[], winCnt=0;
+    list.forEach(function(r){
+      var raw=roundScoreOf(r,name), holes=r.holes||18;
+      var conv=raw!=null? Math.round(raw*18/holes) : null;
+      if(conv!=null) convs.push(conv);
+      var roundConvs=players.map(function(p){ var rv=roundScoreOf(r,p); return rv!=null? Math.round(rv*18/holes) : null; }).filter(function(v){ return v!=null; });
+      if(conv!=null && roundConvs.length && conv===Math.min.apply(null,roundConvs)) winCnt++;
+    });
+    return { avg: convs.length? (convs.reduce(function(s,v){return s+v;},0)/convs.length) : null, best: convs.length? Math.min.apply(null,convs) : null, winCnt:winCnt };
+  }
+  function rvIntervalLabel(list){
+    var dates=list.map(function(r){return r.date;}).filter(Boolean).sort();
+    if(dates.length<2) return "–";
+    var gaps=[]; for(var i=1;i<dates.length;i++){ gaps.push((new Date(dates[i])-new Date(dates[i-1]))/86400000); }
+    var avgGap=gaps.reduce(function(a,b){return a+b;},0)/gaps.length;
+    return Math.round(avgGap)+"일";
+  }
+  function rvTopWinner(statList){
+    var max=-1; statList.forEach(function(x){ if(x.s.winCnt>max) max=x.s.winCnt; });
+    if(max<=0) return "–";
+    return statList.filter(function(x){ return x.s.winCnt===max; }).map(function(x){ return x.name; }).join(", ");
+  }
   function renderRoundingView(){
     var el=$("#roundingView"); if(!el) return;
     var rounds=[];
@@ -3670,19 +3724,59 @@
     });
     if(!rounds.length){ el.innerHTML='<div class="pv-empty">식사 장소에 <b>⛳ 골프</b>를 체크하면<br>라운딩이 여기에 기록돼요.</div>'; return; }
     rounds.sort(byDateDesc);
-    var courseSet={}, convs=[]; rounds.forEach(function(r){ courseSet[r.place]=1; if(r.conv!=null) convs.push(r.conv); });
-    var avg=convs.length? (convs.reduce(function(s,v){return s+v;},0)/convs.length) : null;
-    var best=convs.length? Math.min.apply(null,convs) : null;
-    var singles=convs.filter(function(v){return v<=79;}).length;
-    var trophies=rounds.filter(function(r){ return r.note; }).length;   // 이글·홀인원 등 특이사항 입력된 라운드
+
+    var allNames=golfPersonNames();
+    roundingSel=roundingSel.filter(function(n){ return allNames.indexOf(n)>=0; });
+    var N=roundingSel.length;
+    var filtered=rounds;
+    if(N>0) filtered=rounds.filter(function(r){ return roundingSel.every(function(n){ return r.comps.some(function(c){ return c.name===n; }); }); });
+
+    var selHtml='<div class="rv-selrow">';
+    roundingSel.forEach(function(n,i){ selHtml+='<span class="rv-selchip">'+esc(n)+'<button type="button" class="rv-selx" data-i="'+i+'" aria-label="선택 해제">&times;</button></span>'; });
+    if(N<3){
+      var opts=allNames.filter(function(n){ return roundingSel.indexOf(n)<0; });
+      selHtml+='<select class="rv-selpick"><option value="">+ 이름 선택</option>'+opts.map(function(n){ return '<option value="'+esc(n)+'">'+esc(n)+'</option>'; }).join("")+'</select>';
+    }
+    selHtml+='</div>';
+
     var chip=function(v,lbl,fk){ return '<div class="rv-chip'+(fk?" rv-fchip":"")+(fk&&rvFilter===fk?" on":"")+'"'+(fk?' data-f="'+fk+'"':"")+'><b>'+v+'</b><i>'+lbl+'</i></div>'; };
-    var html='<div class="pv-h"><h3>⛳ 나의 골프 라운딩</h3><b style="color:var(--sky-ink-2);font-size:12px;font-weight:600">'+rounds.length+' 라운딩</b></div>';
-    html+='<div class="rv-stats">'+chip(rounds.length,"라운딩")+chip(Object.keys(courseSet).length,"골프장")+
-      (avg!=null?chip(avg.toFixed(1),"평균"):"")+(best!=null?chip(best,"베스트","best"):"")+chip(singles,"싱글","singles")+chip(trophies,"🏆 트로피","trophy")+'</div>';
-    var list=rounds;
-    if(rvFilter==="best" && best!=null) list=rounds.filter(function(r){ return r.conv===best; });
-    else if(rvFilter==="singles") list=rounds.filter(function(r){ return r.conv!=null && r.conv<=79; });
-    else if(rvFilter==="trophy") list=rounds.filter(function(r){ return r.note; });
+    var courseSet={}; filtered.forEach(function(r){ courseSet[r.place]=1; });
+    var html='<div class="pv-h"><h3>⛳ 나의 골프 라운딩</h3><b style="color:var(--sky-ink-2);font-size:12px;font-weight:600">'+filtered.length+' 라운딩</b></div>';
+    html+=selHtml;
+    var best=null;
+    if(N===0){
+      var convs=[]; rounds.forEach(function(r){ if(r.conv!=null) convs.push(r.conv); });
+      var avg=convs.length? (convs.reduce(function(s,v){return s+v;},0)/convs.length) : null;
+      best=convs.length? Math.min.apply(null,convs) : null;
+      var singles=convs.filter(function(v){return v<=79;}).length;
+      var trophies=rounds.filter(function(r){ return r.note; }).length;   // 이글·홀인원 등 특이사항 입력된 라운드
+      html+='<div class="rv-stats">'+chip(rounds.length,"라운딩")+chip(Object.keys(courseSet).length,"골프장")+
+        (avg!=null?chip(avg.toFixed(1),"평균"):"")+(best!=null?chip(best,"베스트","best"):"")+chip(singles,"싱글","singles")+chip(trophies,"🏆 트로피","trophy")+'</div>';
+    } else {
+      var players=["나"].concat(roundingSel);
+      var groupLabels=["나의 평균","추가 선수 평균","세번째 선수 평균","네번째 선수 평균"];
+      var statList=players.map(function(p){ return {name:p, s:personRoundStats(filtered,p,players)}; });
+      var pchip=function(label,st){
+        return '<div class="rv-pchip"><span class="rv-pname">'+label+' · '+esc(st.name)+'</span>'+
+          '<span class="rv-pavg">'+(st.s.avg!=null?st.s.avg.toFixed(1):"–")+'</span>'+
+          '<span class="rv-psub">'+(N===1?"승":"1등")+' <b>'+st.s.winCnt+'</b> · 베스트 <b>'+(st.s.best!=null?st.s.best:"–")+'</b></span></div>';
+      };
+      html+='<div class="rv-stats">'+chip(filtered.length,"라운딩")+chip(Object.keys(courseSet).length,"골프장");
+      statList.forEach(function(st,i){ html+=pchip(groupLabels[i],st); });
+      if(N===1){
+        var compSet={}; filtered.forEach(function(r){ r.comps.forEach(function(c){ if(roundingSel.indexOf(c.name)<0) compSet[c.name]=1; }); });
+        html+=chip(Object.keys(compSet).length,"같이한 동반자 수")+chip(rvIntervalLabel(filtered),"경기 Interval");
+      } else if(N===2){
+        html+=chip(rvTopWinner(statList),"최다우승자");
+      }
+      html+='</div>';
+    }
+    var list=filtered;
+    if(N===0){
+      if(rvFilter==="best" && best!=null) list=rounds.filter(function(r){ return r.conv===best; });
+      else if(rvFilter==="singles") list=rounds.filter(function(r){ return r.conv!=null && r.conv<=79; });
+      else if(rvFilter==="trophy") list=rounds.filter(function(r){ return r.note; });
+    }
     if(!list.length){ html+='<div class="pv-empty" style="height:auto;padding:24px 0">해당 기록이 없어요</div>'; }
     var prevY=null;
     list.forEach(function(r){
@@ -3700,6 +3794,9 @@
     el.innerHTML=html;
     Array.prototype.forEach.call(el.querySelectorAll(".rv-fchip"), function(c){ c.onclick=function(){ var f=c.getAttribute("data-f"); rvFilter=(rvFilter===f)?null:f; renderRoundingView(); }; });
     Array.prototype.forEach.call(el.querySelectorAll(".gs-click"), function(row){ row.onclick=function(){ var e=existingFor(row.getAttribute("data-date")); if(e) editEntry(e); }; });
+    var selEl=el.querySelector(".rv-selpick");
+    if(selEl) selEl.onchange=function(){ var v=selEl.value; if(v){ roundingSel.push(v); renderRoundingView(); } };
+    Array.prototype.forEach.call(el.querySelectorAll(".rv-selx"), function(b){ b.onclick=function(){ roundingSel=roundingSel.slice(0,+b.getAttribute("data-i")); renderRoundingView(); }; });
   }
 
   function monthStr(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1); }
