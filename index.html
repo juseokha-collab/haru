@@ -513,14 +513,11 @@
   .golf-score{margin-top:10px}
   .golf-score>label{display:block; font-size:12.5px; font-weight:600; color:var(--ink-2); margin:0 0 6px; letter-spacing:.01em}
   .gs-grid{display:grid; grid-template-columns:1fr 1fr; gap:6px}
-  .gs-row{display:flex; align-items:center; gap:6px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:3px 4px 3px 9px; margin:0}
-  .gs-row .gs-nm{flex:1; min-width:0; font-size:12px; color:var(--ink); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-  .gs-row .gs-in{width:58px; flex:none; text-align:right; font-family:inherit; font-size:13px; color:var(--ink); background:transparent; border:0; border-left:1px solid var(--border); padding:4px 7px; outline:0; -moz-appearance:textfield}
-  .gs-row .gs-in:focus{color:var(--accent-ink)}
-  .gs-crow{display:flex; align-items:center; gap:6px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:3px 4px 3px 9px; margin:0}
-  .gs-crow .gsc-nm{flex:none; font-size:12px; color:var(--ink-3); font-weight:600; white-space:nowrap}
-  .gs-crow .gsc-in{flex:1; min-width:0; text-align:right; font-family:inherit; font-size:13px; color:var(--ink); background:transparent; border:0; border-left:1px solid var(--border); padding:4px 7px; outline:0}
-  .gs-crow .gsc-in:focus{color:var(--accent-ink)}
+  .gs-row, .gs-crow{display:flex; align-items:center; gap:6px; min-width:0; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:3px 4px 3px 9px; margin:0}
+  .gs-row .gs-nm, .gs-crow .gsc-nm{flex:none; width:46px; font-size:12px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .gs-row .gs-nm{color:var(--ink)} .gs-crow .gsc-nm{color:var(--ink-3)}
+  .gs-row .gs-in, .gs-crow .gsc-in{flex:1 1 0; min-width:0; text-align:left; font-family:inherit; font-size:13px; color:var(--ink); background:transparent; border:0; border-left:1px solid var(--border); padding:4px 8px; outline:0; -moz-appearance:textfield}
+  .gs-row .gs-in:focus, .gs-crow .gsc-in:focus{color:var(--accent-ink)}
   .ex-grid{display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:7px}
   .ex-grid>input, .ex-grid select, .ex-grid .wt-wrap{height:36px; box-sizing:border-box; min-width:0}
   .ex-grid>input, .ex-grid select{font-family:inherit; font-size:13px; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:0 9px; outline:0}
