@@ -1213,7 +1213,7 @@
         <div class="sky-row b">
           <select class="sky-year" id="graphYearSel" title="연도(만난횟수 기준 기간)"></select>
           <div class="seg on-sky" id="minMeetSeg" title="만난/방문 횟수 이상만 표시 (사람·식당 공통)">
-            <button type="button" data-m="1" data-mode="min">1+</button><button type="button" data-m="2" data-mode="min" class="on">2+</button><button type="button" data-m="3" data-mode="min">3+</button><button type="button" data-m="5" data-mode="min">5+</button>
+            <button type="button" data-m="1" data-mode="min">1+</button><button type="button" data-m="2" data-mode="min" class="on">2+</button><button type="button" data-m="3" data-mode="min">3+</button><button type="button" data-m="5" data-mode="min">5+</button><button type="button" data-m="8" data-mode="min">8+</button>
           </div>
           <div class="search" id="searchWrap">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
@@ -3462,9 +3462,9 @@
   // search
   // 입력어가 서브그룹인지 판별(사람 이름과 겹치면 사람 우선)
   function subGroupOf(term){ term=(term||"").trim(); if(!term || /[,，]/.test(term)) return null; var subs=state.subcats||[]; if(subs.indexOf(term)>=0) return term; if(Object.keys(state.people||{}).some(function(n){ return n.indexOf(term)>=0; })) return null; return subs.filter(function(s){ return s.indexOf(term)>=0; })[0]||null; }
-  var MEET_ALL=[3,5,8,13], MEET_NORM=[1,2,3,5];   // 연도=전체면 임계값을 동적으로 상향(3/5/8/13)
+  var MEET_ALL=[1,3,5,8,13], MEET_NORM=[1,2,3,5];   // 연도=전체면 임계값을 동적으로 상향(1/3/5/8/13)
   function meetSet(){ return graphYear==="all"? MEET_ALL : MEET_NORM; }
-  function renderMinMeetSeg(){ var seg=$("#minMeetSeg"); if(!seg) return; var set=meetSet(), kids=seg.children; for(var i=0;i<kids.length && i<set.length;i++){ kids[i].setAttribute("data-m", set[i]); kids[i].textContent=set[i]+"+"; kids[i].classList.toggle("on", i===minMeetIdx); } minMeet=set[minMeetIdx]; meetExact=false; }
+  function renderMinMeetSeg(){ var seg=$("#minMeetSeg"); if(!seg) return; var set=meetSet(), kids=seg.children; if(minMeetIdx>=set.length) minMeetIdx=set.length-1; for(var i=0;i<kids.length;i++){ if(i<set.length){ kids[i].style.display=""; kids[i].setAttribute("data-m", set[i]); kids[i].textContent=set[i]+"+"; kids[i].classList.toggle("on", i===minMeetIdx); } else { kids[i].style.display="none"; kids[i].classList.remove("on"); } } minMeet=set[minMeetIdx]; meetExact=false; }
   $("#search").addEventListener("input",function(){
     searchQ=this.value.trim();
     closeDetail(); hover=null;
