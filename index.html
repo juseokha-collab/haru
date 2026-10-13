@@ -518,6 +518,8 @@
   .gs-row .gs-nm{color:var(--ink)} .gs-crow .gsc-nm{color:var(--ink-3)}
   .gs-row .gs-in, .gs-crow .gsc-in{min-width:0; width:100%; box-sizing:border-box; text-align:left; font-family:inherit; font-size:13px; color:var(--ink); background:transparent; border:0; border-left:1px solid var(--border); padding:4px 0 4px 8px; outline:0; -moz-appearance:textfield}
   .gs-row .gs-in:focus, .gs-crow .gsc-in:focus{color:var(--accent-ink)}
+  .gs-crow{grid-template-columns:auto minmax(0,1fr)}   /* 비용 라벨(케디피+겜비 등)은 폭 가변 */
+  .gs-crow .gsc-nm{max-width:84px}
   .ex-grid{display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:7px}
   .ex-grid>input, .ex-grid select, .ex-grid .wt-wrap{height:36px; box-sizing:border-box; min-width:0}
   .ex-grid>input, .ex-grid select{font-family:inherit; font-size:13px; color:var(--ink); background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:0 9px; outline:0}
@@ -2501,7 +2503,7 @@
       });
       // 그린피·음식값 (스코어와 같은 그리드에 이어붙여 크기·간격 통일)
       var costMap = draft.golfCosts[sl.slot] = draft.golfCosts[sl.slot] || {};
-      [["green","그린피"],["food","음식값"]].forEach(function(cf,ci){
+      [["green","그린피"],["caddie","케디피+겜비"],["food","음식값"]].forEach(function(cf,ci){
         var row=document.createElement("label"); row.className="gs-crow"; if(ci===0) row.style.gridColumn="1";
         var cn=document.createElement("span"); cn.className="gsc-nm"; cn.textContent=cf[1];
         var inp=document.createElement("input"); inp.type="text"; inp.className="gsc-in"; inp.inputMode="numeric"; inp.placeholder="0원"; if(costMap[cf[0]]!=null && costMap[cf[0]]!=="") inp.value=fmtWon(costMap[cf[0]]);
@@ -2633,7 +2635,7 @@
     draft.golfScores=gScores; draft.golfScore={};
     // 그린피·음식값(골프 슬롯별)
     var gCosts={};
-    gSlots.forEach(function(sl){ var src=(draft.golfCosts&&draft.golfCosts[sl.slot])||{}, m={}; if(+src.green>0) m.green=+src.green; if(+src.food>0) m.food=+src.food; if(Object.keys(m).length) gCosts[sl.slot]=m; });
+    gSlots.forEach(function(sl){ var src=(draft.golfCosts&&draft.golfCosts[sl.slot])||{}, m={}; if(+src.green>0) m.green=+src.green; if(+src.caddie>0) m.caddie=+src.caddie; if(+src.food>0) m.food=+src.food; if(Object.keys(m).length) gCosts[sl.slot]=m; });
     draft.golfCosts=gCosts;
     var ex=existingFor(draft.date);
     var names=draft.people.map(function(p){return p.name;});
@@ -3241,12 +3243,12 @@
       var v=p[1], has=(v!=null&&v!==""&&!isNaN(+v)), win=has&&+v===minV;
       var sp=document.createElement("span"); sp.className="gc-pl"+(win?" win":""); sp.style.gridColumn=String(col); sp.style.gridRow=String(rr); if(sep && (i%R===0)) sp.style.marginTop=sep;
       sp.innerHTML='<span class="gc-nm">'+esc(p[0])+'</span> <span class="gc-v">'+(has?(+v):"")+'</span>'; grid.appendChild(sp); });
-    // 그린피(첫 줄)·음식값(둘째 줄) — col4에 세로로
-    var costs=r.costs||{}, cItems=[]; if(+costs.green>0) cItems.push(["그린피",+costs.green]); if(+costs.food>0) cItems.push(["음식",+costs.food]);
-    cItems.forEach(function(c,ci){ var rr=startRow+Math.min(ci, Math.max(0,R-1));
+    // 그린피·캐디+겜비·음식값 — col4에 세로로
+    var costs=r.costs||{}, cItems=[]; if(+costs.green>0) cItems.push(["그린피",+costs.green]); if(+costs.caddie>0) cItems.push(["캐디+겜비",+costs.caddie]); if(+costs.food>0) cItems.push(["음식",+costs.food]);
+    cItems.forEach(function(c,ci){ var rr=startRow+ci;
       var sp=document.createElement("span"); sp.className="gc-cost"; sp.style.gridColumn="4"; sp.style.gridRow=String(rr); if(sep && ci===0) sp.style.marginTop=sep;
       sp.innerHTML='<span class="gc-cnm">'+c[0]+'</span> <span class="gc-cv">'+fmtWon(c[1])+'원</span>'; grid.appendChild(sp); });
-    return startRow + R;
+    return startRow + Math.max(R, cItems.length);
   }
   // 편집 폼(날짜·골프장·홀·나/동반자 점수·동반자 추가) — form._apply로 커밋
   function buildGolfEditForm(r){
@@ -3272,15 +3274,16 @@
     var costs=r.costs||{};
     var cline=document.createElement("div"); cline.className="agr-costs";
     var gIn=document.createElement("input"); gIn.type="text"; gIn.className="agr-cost-in"; gIn.inputMode="numeric"; gIn.placeholder="그린피(원)"; if(+costs.green>0) gIn.value=fmtWon(+costs.green);
+    var cdIn=document.createElement("input"); cdIn.type="text"; cdIn.className="agr-cost-in"; cdIn.inputMode="numeric"; cdIn.placeholder="케디피+겜비(원)"; if(+costs.caddie>0) cdIn.value=fmtWon(+costs.caddie);
     var fIn=document.createElement("input"); fIn.type="text"; fIn.className="agr-cost-in"; fIn.inputMode="numeric"; fIn.placeholder="음식값(원)"; if(+costs.food>0) fIn.value=fmtWon(+costs.food);
-    var fmtOnBlur=function(el){ el.onblur=function(){ var v=parseWon(el.value); el.value=v?fmtWon(v):""; }; }; fmtOnBlur(gIn); fmtOnBlur(fIn);
-    var gl=document.createElement("span"); gl.className="agr-cost-l"; gl.textContent="⛳"; cline.appendChild(gl); cline.appendChild(gIn); cline.appendChild(fIn);
+    var fmtOnBlur=function(el){ el.onblur=function(){ var v=parseWon(el.value); el.value=v?fmtWon(v):""; }; }; fmtOnBlur(gIn); fmtOnBlur(cdIn); fmtOnBlur(fIn);
+    var gl=document.createElement("span"); gl.className="agr-cost-l"; gl.textContent="⛳"; cline.appendChild(gl); cline.appendChild(gIn); cline.appendChild(cdIn); cline.appendChild(fIn);
     form.appendChild(head); form.appendChild(line2); form.appendChild(cline);
     form._apply=function(){
       var e2=applyGolfRound(e, r.place, dIn, pIn, sc, hSel, r.slot, null);
       var np=(pIn.value||"").trim()||r.place||"(장소 미지정)", slot=null;
       if(e2.meals) MEALS.forEach(function(x){ if(slot===null && e2.meals[x.key] && e2.meals[x.key].place===np) slot=x.key; });
-      if(slot!==null){ e2.golfCosts=e2.golfCosts||{}; var m={}, gv=parseWon(gIn.value), fv=parseWon(fIn.value); if(gv>0)m.green=gv; if(fv>0)m.food=fv; if(Object.keys(m).length) e2.golfCosts[slot]=m; else if(e2.golfCosts[slot]) delete e2.golfCosts[slot]; }
+      if(slot!==null){ e2.golfCosts=e2.golfCosts||{}; var m={}, gv=parseWon(gIn.value), cv=parseWon(cdIn.value), fv=parseWon(fIn.value); if(gv>0)m.green=gv; if(cv>0)m.caddie=cv; if(fv>0)m.food=fv; if(Object.keys(m).length) e2.golfCosts[slot]=m; else if(e2.golfCosts[slot]) delete e2.golfCosts[slot]; }
       return e2;
     };
     return form;
