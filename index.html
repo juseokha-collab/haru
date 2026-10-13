@@ -3104,7 +3104,8 @@
     top.appendChild(stats); top.appendChild(periods);
     wrap.appendChild(top);
     var chart=document.createElement("div"); chart.className="gc-chart";
-    var targetW=Math.max(300, Math.min(700, (window.innerWidth||760)-90));   // 화면 폭에 맞춰 꽉 채움
+    var modalW=Math.min((window.innerWidth||1120)-32, 1120);   // 팝업 실제 폭(최대 1120)
+    var targetW=Math.max(300, modalW-60);   // 팝업 안쪽 여백(본문 36 + 차트박스 24) 제외하고 꽉 채움
     if(golfChartPeriod==="yearly" && !yrFilter){ chart.innerHTML=golfYearlySvg(golfYearlyData(), targetW); }
     else chart.innerHTML=golfChartSvg(myPts, avg, golfCompare?cmpPts:[], golfCompare, targetW);
     var tipEl=document.createElement("div"); tipEl.className="gc-tip"; tipEl.hidden=true; chart.appendChild(tipEl);
