@@ -1004,8 +1004,10 @@
   .gc-dp2{white-space:nowrap}
   .gc-dp2 .gc-d{font-size:11px; color:var(--ink-3); font-variant-numeric:tabular-nums}
   .gc-dp2 .gc-pp{font-size:13px; color:var(--ink); margin-left:3px}
-  .gc-dp2 .gsum-edit{margin-left:6px; align-self:center}
-  @media (max-width:640px){ .gc-dp2 .gsum-edit{display:none} }   /* 안드로이드: 수정은 PC에서만 */
+  .gc-dp2 .gc-myv{font-size:13px; color:var(--ink); font-variant-numeric:tabular-nums; margin-left:2px}
+  .gc-dp2 .gc-myv.win{color:#3FA35A; font-weight:700}
+  .gc-edit-cell{white-space:nowrap; align-self:center}
+  @media (max-width:640px){ .gc-edit-cell{display:none} }   /* 안드로이드: 수정은 PC에서만 */
   .gc-pl{font-size:12.5px; color:var(--ink-2); font-variant-numeric:tabular-nums; white-space:nowrap}
   .gc-pl .gc-nm{color:var(--ink); margin-right:2px}
   .gc-pl .gc-v{color:var(--ink)}
@@ -3046,9 +3048,9 @@
       var box=document.createElement("div"); box.className="gc-mbox";
       var mh=document.createElement("div"); mh.className="gc-mbox-h"; mh.textContent=ym.slice(2).replace("-",".")+"  ·  "+rounds.length+"라운딩"; box.appendChild(mh);
       var grid=document.createElement("div"); grid.className="gc-mgrid2";   // 월 전체 공유 그리드 → 라운드 간 열 정렬
-      var maxP=1; rounds.forEach(function(r){ var cnt=1+((r.ppl&&r.ppl.length)||0); if(cnt>maxP) maxP=cnt; });   // 월 내 최다 인원 → 선수 1줄 표기
-      grid.style.gridTemplateColumns="auto "+"minmax(0,max-content) ".repeat(maxP)+"1fr";
-      var rc=1; rounds.forEach(function(r,ri){ rc=appendGolfRound(grid, r, ri, rc, maxP); });
+      var maxC=0; rounds.forEach(function(r){ var cnt=(r.ppl&&r.ppl.length)||0; if(cnt>maxC) maxC=cnt; });   // 월 내 최다 동반자 → 한 줄 표기
+      grid.style.gridTemplateColumns="auto auto "+"minmax(0,max-content) ".repeat(maxC)+"1fr";   // 날짜 / ✏️ / 동반자들 / 비용
+      var rc=1; rounds.forEach(function(r,ri){ rc=appendGolfRound(grid, r, ri, rc, maxC); });
       box.appendChild(grid); listWrap.appendChild(box);
     });
     if(!listRounds.length){ var em=document.createElement("div"); em.className="adm-empty";
@@ -3232,24 +3234,31 @@
     if(!fixed){ var x=document.createElement("button"); x.type="button"; x.className="agr-sc-del"; x.title="이 동반자 삭제"; x.textContent="×"; x.onclick=function(){ cell.parentNode.removeChild(cell); }; cell.appendChild(x); }
     return cell;
   }
-  // 라운드 1건을 월 공유 그리드에 추가: 인물은 한 줄(col2~)로 가로 정렬. col1=날짜/골프장(+PC ✏️), 마지막 열=비용
+  // 라운드 1건을 월 공유 그리드에 추가. col1=날짜/골프장(나 점수), col2=✏️(세로 정렬), col3~=동반자(스코어 낮은 순), 마지막 열=비용
   // 반환: 다음 라운드 시작 grid-row
-  function appendGolfRound(grid, r, ri, startRow, maxP){
+  function appendGolfRound(grid, r, ri, startRow, maxC){
     var gs=r.scores||{}, holes=r.holes||18;
-    var players=[["나",gs["나"]]].concat(r.ppl.map(function(n){return [n,gs[n]];}));
-    var vals=[]; players.forEach(function(p){ var v=p[1]; if(v!=null&&v!==""&&!isNaN(+v)) vals.push(+v); });
-    var minV=vals.length?Math.min.apply(null,vals):null;
+    var numv=function(v){ return (v!=null&&v!==""&&!isNaN(+v))?+v:null; };
+    var myV=numv(gs["나"]);
+    var comps=(r.ppl||[]).map(function(n){ return [n, gs[n]]; });
+    comps.sort(function(a,b){ var av=numv(a[1]), bv=numv(b[1]); if(av==null&&bv==null) return 0; if(av==null) return 1; if(bv==null) return -1; return av-bv; });   // 동반자: 스코어 낮은 순
+    var allV=[]; if(myV!=null) allV.push(myV); comps.forEach(function(c){ var x=numv(c[1]); if(x!=null) allV.push(x); });
+    var minV=allV.length?Math.min.apply(null,allV):null;
     var sep=(ri>0?"6px":"");
+    var myHtml=(myV!=null)? ' <span class="gc-myv'+(myV===minV?" win":"")+'">('+myV+')</span>' : '';
     var dp=document.createElement("span"); dp.className="gc-dp2"; dp.style.gridColumn="1"; dp.style.gridRow=String(startRow); if(sep)dp.style.marginTop=sep;
-    dp.innerHTML='<span class="gc-d">'+(r.date||"").slice(2).replace(/-/g,".")+'</span> <span class="gc-pp" title="'+esc(r.place||"")+'">'+esc(r.place||"")+(holes!==18?'('+holes+'홀)':'')+'</span><button type="button" class="gsum-edit" title="수정">✏️</button>';
-    var eb=dp.querySelector(".gsum-edit"); if(eb) eb.onclick=function(){ openGolfEdit(r); };
+    dp.innerHTML='<span class="gc-d">'+(r.date||"").slice(2).replace(/-/g,".")+'</span> <span class="gc-pp" title="'+esc(r.place||"")+'">'+esc(r.place||"")+(holes!==18?'('+holes+'홀)':'')+'</span>'+myHtml;
     grid.appendChild(dp);
-    players.forEach(function(p,i){ var col=2+i;   // 한 줄 가로 배치
-      var v=p[1], has=(v!=null&&v!==""&&!isNaN(+v)), win=has&&+v===minV;
+    var ed=document.createElement("span"); ed.className="gc-edit-cell"; ed.style.gridColumn="2"; ed.style.gridRow=String(startRow); if(sep)ed.style.marginTop=sep;
+    ed.innerHTML='<button type="button" class="gsum-edit" title="수정">✏️</button>';
+    ed.querySelector("button").onclick=function(){ openGolfEdit(r); };
+    grid.appendChild(ed);
+    comps.forEach(function(p,i){ var col=3+i;   // 동반자 한 줄 가로 배치
+      var v=numv(p[1]), has=v!=null, win=has&&v===minV;
       var sp=document.createElement("span"); sp.className="gc-pl"+(win?" win":""); sp.style.gridColumn=String(col); sp.style.gridRow=String(startRow); if(sep) sp.style.marginTop=sep;
-      sp.innerHTML='<span class="gc-nm">'+esc(p[0])+'</span> <span class="gc-v">'+(has?(+v):"")+'</span>'; grid.appendChild(sp); });
+      sp.innerHTML='<span class="gc-nm">'+esc(p[0])+'</span> <span class="gc-v">'+(has?v:"")+'</span>'; grid.appendChild(sp); });
     // 그린피·캐디+겜비·음식값 — 마지막 열에 세로로
-    var costCol=2+(maxP||players.length);
+    var costCol=3+(maxC||comps.length);
     var costs=r.costs||{}, cItems=[]; if(+costs.green>0) cItems.push(["그린피",+costs.green]); if(+costs.caddie>0) cItems.push(["캐디+겜비",+costs.caddie]); if(+costs.food>0) cItems.push(["음식",+costs.food]);
     cItems.forEach(function(c,ci){ var rr=startRow+ci;
       var sp=document.createElement("span"); sp.className="gc-cost"; sp.style.gridColumn=String(costCol); sp.style.gridRow=String(rr); if(sep && ci===0) sp.style.marginTop=sep;
