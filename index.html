@@ -3049,6 +3049,7 @@
       var mh=document.createElement("div"); mh.className="gc-mbox-h"; mh.textContent=ym.slice(2).replace("-",".")+"  ·  "+rounds.length+"라운딩"; box.appendChild(mh);
       var grid=document.createElement("div"); grid.className="gc-mgrid2";   // 월 전체 공유 그리드 → 라운드 간 열 정렬
       var maxC=0; rounds.forEach(function(r){ var cnt=(r.ppl&&r.ppl.length)||0; if(cnt>maxC) maxC=cnt; });   // 월 내 최다 동반자 → 한 줄 표기
+      grid.setAttribute("data-maxc", maxC);
       grid.style.gridTemplateColumns="auto auto "+"minmax(0,max-content) ".repeat(maxC)+"1fr";   // 날짜 / ✏️ / 동반자들 / 비용
       var rc=1; rounds.forEach(function(r,ri){ rc=appendGolfRound(grid, r, ri, rc, maxC); });
       box.appendChild(grid); listWrap.appendChild(box);
@@ -3057,6 +3058,13 @@
       em.textContent = golfSearchQ? ("‘"+golfSearchQ+"’ 골프장 기록이 없어요.") : (golfCompare? ("‘"+golfCompare+"’ 님과 함께한 라운드가 없어요"+(golfListPeriod!=="all"?" ("+golfListPeriod+"년)":"")+".") : (allRounds.length? "이 기간 기록이 없어요." : "골프 기록이 없어요. ‘+ 새 라운드’로 추가하세요."));
       listWrap.appendChild(em); }
     el.appendChild(listWrap);
+    // 모든 월의 날짜/골프장 열 폭을 전체 최댓값으로 통일 → ✏️가 월 간에도 세로로 정렬
+    requestAnimationFrame(function(){
+      var dps=listWrap.querySelectorAll(".gc-dp2"), mw=0;
+      for(var i=0;i<dps.length;i++){ var w=dps[i].offsetWidth; if(w>mw) mw=w; }
+      if(mw>0){ var grids=listWrap.querySelectorAll(".gc-mgrid2");
+        for(var j=0;j<grids.length;j++){ var mc=+grids[j].getAttribute("data-maxc")||0; grids[j].style.gridTemplateColumns=mw+"px auto "+"minmax(0,max-content) ".repeat(mc)+"1fr"; } }
+    });
     newBtn.onclick=function(){ openGolfEdit({e:null, date:todayStr(), place:"", ppl:[], holes:18, scores:{}}); };
   }
   var golfChartPeriod="1y", golfCompare="", golfListPeriod="all", golfDrafts=[];
