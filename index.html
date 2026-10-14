@@ -4299,9 +4299,6 @@
       x.onclick=function(){ askConfirm({ title:"일정 완전 삭제", message:"‘"+(p.task||"")+"’ 을(를) 완전히 삭제할까요?\n되돌릴 수 없어요.", okText:"삭제", danger:true, onOk:function(){ state.plans=state.plans.filter(function(q){return q!==p;}); save(); renderAdminPlan(); updateSkyDate(); } }); };
       top.appendChild(x);
       row.appendChild(top);
-      var res=document.createElement("input"); res.type="text"; res.className="pl-result"; res.placeholder="결과·메모 기록"; res.value=p.result||"";
-      res.onchange=function(){ p.result=res.value.trim(); save(); };
-      row.appendChild(res);
       return row;
     }
     function stageBlock(label, arr){ if(!arr.length) return; var d=document.createElement("div"); d.className="plan-div"; d.textContent=label+" · "+arr.length; el.appendChild(d); var box=document.createElement("div"); box.className="plan-box"; arr.forEach(function(p){ box.appendChild(buildPlanRow(p)); }); el.appendChild(box); }
